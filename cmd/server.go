@@ -93,7 +93,7 @@ func (s *Server) setRoutes() *chi.Mux {
 		r.Use(middleware.BasicAuth("restricted", credentials))
 		r.Use(render.SetContentType(render.ContentTypeJSON))
 
-		// Publications
+		// Publications, CRUD
 		r.Route("/publications", func(r chi.Router) {
 			r.With(paginate).Get("/", h.ListPublications)
 			r.With(paginate).Get("/search", h.SearchPublications) // GET /publication/search{?format}
@@ -106,8 +106,8 @@ func (s *Server) setRoutes() *chi.Mux {
 			})
 		})
 
-		// Licenses
-		r.Route("/licenses", func(r chi.Router) {
+		// LicenseInfo, CRUD
+		r.Route("/licenseinfo", func(r chi.Router) {
 			r.With(paginate).Get("/", h.ListLicenses)
 			r.With(paginate).Get("/search", h.SearchLicenses) // GET /licenses/search{?pub,user,status,count}
 			r.Post("/", h.CreateLicense)                      // POST /licenses
