@@ -55,6 +55,7 @@ From the `lcp-server` folder, you can simply use:
 You can add a publication to the server via:
 
 POST localhost:8081/publications/ 
+
 with a payload like:
 
 ```json
@@ -71,25 +72,27 @@ with a payload like:
 
 The publication will be identified by the `uuid` value.
 
-
 You can also:
 
-Get a list of publications via:
-GET localhost:8081/publications/
+1. Get a list of publications via:
 
-Fetch, update or delete a publication (the info relative to) via:
-GET localhost:8081/publications/<PublicationID> 
-PUT localhost:8081/publications/<PublicationID> (same payload as a creation)
-DELETE localhost:8081/publications/<PublicationID> 
+- GET localhost:8081/publications/
 
-Note: because publications are submitted to a soft delete, the suppression of a publication does not impact the existing licenses associated with the publication. 
-But no new license can be generated for a deleted publication. 
+1. Fetch, update or delete a publication (the info relative to) via:
+
+- GET localhost:8081/publications/<PublicationID> 
+- PUT localhost:8081/publications/<PublicationID> (same payload as a creation)
+- DELETE localhost:8081/publications/<PublicationID> 
+
+Note: because publications are submitted to a soft delete, the suppression of a publication does not impact the existing 
+licenses associated with the publication. But no new license can be generated for a deleted publication. 
 
 ### Generate a license
 
 You can generate a license via:
 
 POST localhost:8081/licenses/ 
+
 with a payload like: 
 
 ```json
@@ -111,13 +114,12 @@ with a payload like:
 
 The publication identified by `publication_id` must be present in the server when a license is generated. 
 
-The license is immediately returned to the caller. 
-
 ### Fetch an existing license
 
 You can fetch an existing a license via:
 
 POST localhost:8081/licenses/<licenseID>
+
 with a payload like: 
 
 ```json
@@ -138,6 +140,7 @@ with a payload like:
 You can add raw license information to the server via:
 
 POST localhost:8081/licenseinfo/ 
+
 with a payload like:
 
 ```json
@@ -158,13 +161,15 @@ The license will be identified by the `uuid` value.
 
 You can also:
 
-Get a list of licenses via:
-GET localhost:8081/licenses/
+1. Get a list of licenses via:
 
-Fetch, update or delete a license (the info relative to) via 
-GET localhost:8081/licenseinfo/<LicenseID> 
-PUT localhost:8081/licenseinfo/<LicenseID> (same payload as a creation)
-DELETE localhost:8081/licenseinfo/<LicenseID> 
+- GET localhost:8081/licenses/
+
+1. Fetch, update or delete a license (the info relative to) via:
+
+- GET localhost:8081/licenseinfo/<LicenseID> 
+- PUT localhost:8081/licenseinfo/<LicenseID> (same payload as a creation)
+- DELETE localhost:8081/licenseinfo/<LicenseID> 
 
 
 ## Development choices
