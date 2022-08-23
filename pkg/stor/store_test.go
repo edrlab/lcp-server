@@ -53,6 +53,10 @@ func TestMain(m *testing.M) {
 		randomIdx = rand.Intn(len(pubUUIDs))
 		lic.PublicationID = pubUUIDs[randomIdx]
 		lic.Provider = "http://edrlab.org"
+		start := time.Now()
+		lic.Start = &start
+		end := start.AddDate(0, 0, 10)
+		lic.End = &end
 		if i == 2 || i == 3 {
 			lic.Status = STATUS_REVOKED
 		} else {
@@ -153,7 +157,6 @@ func TestPublications(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get a publication by uuid: %v", err)
 	}
-	t.Logf("Title of the publication: %s", publication.Title)
 
 	// update the publication Title
 	publication.Title = "La Peste (Camus)"
@@ -166,24 +169,6 @@ func TestPublications(t *testing.T) {
 	err = St.Publication().Delete(publication)
 	if err != nil {
 		t.Fatalf("Failed to delete a publication: %v", err)
-	}
-
-	publication = &Publications[0]
-	pubUUID = publication.UUID
-	publication.UUID = ""
-
-	// check the publication
-	err = publication.Validate()
-	if err == nil {
-		t.Fatalf("Invalid UUID validation: %v", err)
-	}
-	publication.UUID = pubUUID
-	publication.Title = ""
-
-	// check the publication
-	err = publication.Validate()
-	if err == nil {
-		t.Fatalf("Invalid UUID validation: %v", err)
 	}
 
 	// check that the creation of a new publication with the same UUID is disallowed
@@ -204,7 +189,7 @@ func TestPublications(t *testing.T) {
 
 }
 
-// TestLicenses calls gorm functionalities related to Publications
+// TestLicenses calls gorm functionalities related to License
 func TestLicenses(t *testing.T) {
 	var err error
 

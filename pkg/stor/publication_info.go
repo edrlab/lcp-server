@@ -5,33 +5,29 @@
 package stor
 
 import (
-	"errors"
-
+	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
+
+// TODO : study how to get "required" field validation  despite the empty Publication in LicenseInfo
 
 // PublicationInfo data model
 type PublicationInfo struct {
 	gorm.Model
-	UUID          string `json:"uuid" gorm:"uniqueIndex"`
+	UUID          string `json:"uuid" validate:"required,uuid" gorm:"uniqueIndex"`
 	Title         string `json:"title,omitempty"`
 	EncryptionKey []byte `json:"encryption_key"`
-	Location      string `json:"location"`
+	Location      string `json:"location" validate:"required,url"`
 	ContentType   string `json:"content_type"`
 	Size          uint32 `json:"size"`
-	Checksum      string `json:"checksum"`
+	Checksum      string `json:"checksum" validate:"required,base64"`
 }
 
 // Validate checks required fields and values
 func (p *PublicationInfo) Validate() error {
 
-	if p.UUID == "" {
-		return errors.New("required field missing: UUID")
-	}
-	if p.Title == "" {
-		return errors.New("required field missing: Title")
-	}
-	return nil
+	validate := validator.New()
+	return validate.Struct(p)
 }
 
 func (s publicationStore) ListAll() (*[]PublicationInfo, error) {

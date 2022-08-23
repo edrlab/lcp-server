@@ -77,11 +77,12 @@ func TestEmptyPublicationTable(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/publications", nil)
 	response := executeRequest(req)
 
-	checkResponseCode(t, http.StatusOK, response.Code)
-
-	if body := response.Body.String(); strings.TrimSpace(body) != "[]" {
-		t.Errorf("Expected an empty array. Got %s", body)
+	if checkResponseCode(t, http.StatusOK, response) {
+		if body := response.Body.String(); strings.TrimSpace(body) != "[]" {
+			t.Errorf("Expected an empty array. Got %s", body)
+		}
 	}
+
 }
 
 // ---
@@ -94,17 +95,19 @@ func TestCreatePublication(t *testing.T) {
 	inPub, response := createPublication(t)
 
 	// check the response
-	checkResponseCode(t, http.StatusOK, response.Code)
+	if checkResponseCode(t, http.StatusOK, response) {
+		var outPub PublicationTest
 
-	var outPub PublicationTest
+		if err := json.Unmarshal((response.Body.Bytes()), &outPub); err != nil {
+			t.Fatal(err)
+		}
 
-	if err := json.Unmarshal((response.Body.Bytes()), &outPub); err != nil {
-		t.Fatal(err)
-	}
-
-	same := comparePublications(inPub, &outPub)
-	if !same {
-		t.Error("Failed to get the same content back")
+		same := comparePublications(inPub, &outPub)
+		if !same {
+			t.Error("Failed to get the same content back")
+		}
+	} else {
+		t.Log(response.Body.String())
 	}
 
 	// delete the publication
@@ -122,17 +125,17 @@ func TestGetPublication(t *testing.T) {
 	response := executeRequest(req)
 
 	// check the response
-	checkResponseCode(t, http.StatusOK, response.Code)
+	if checkResponseCode(t, http.StatusOK, response) {
+		var outPub PublicationTest
 
-	var outPub PublicationTest
+		if err := json.Unmarshal(response.Body.Bytes(), &outPub); err != nil {
+			t.Fatal(err)
+		}
 
-	if err := json.Unmarshal(response.Body.Bytes(), &outPub); err != nil {
-		t.Fatal(err)
-	}
-
-	same := comparePublications(inPub, &outPub)
-	if !same {
-		t.Error("Failed to get the same content back")
+		same := comparePublications(inPub, &outPub)
+		if !same {
+			t.Error("Failed to get the same content back")
+		}
 	}
 
 	// delete the publication
@@ -156,21 +159,18 @@ func TestUpdatePublication(t *testing.T) {
 	req, _ := http.NewRequest("PUT", path, bytes.NewReader(data))
 	response := executeRequest(req)
 
-	checkResponseCode(t, http.StatusOK, response.Code)
+	if checkResponseCode(t, http.StatusOK, response) {
 
-	if response.Code != http.StatusOK {
-		t.Error("Updating Publication failed.")
-	}
+		var outPub PublicationTest
 
-	var outPub PublicationTest
+		if err := json.Unmarshal(response.Body.Bytes(), &outPub); err != nil {
+			t.Fatal(err)
+		}
 
-	if err := json.Unmarshal(response.Body.Bytes(), &outPub); err != nil {
-		t.Fatal(err)
-	}
-
-	same := comparePublications(inPub, &outPub)
-	if !same {
-		t.Error("Failed to get the same content back")
+		same := comparePublications(inPub, &outPub)
+		if !same {
+			t.Error("Failed to get the same content back")
+		}
 	}
 
 	// delete the publication
@@ -187,7 +187,7 @@ func TestDeletePublication(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", path, nil)
 	response := executeRequest(req)
 
-	checkResponseCode(t, http.StatusOK, response.Code)
+	checkResponseCode(t, http.StatusOK, response)
 }
 
 func TestListPublications(t *testing.T) {
@@ -204,22 +204,22 @@ func TestListPublications(t *testing.T) {
 	req, _ := http.NewRequest("GET", path, nil)
 	response := executeRequest(req)
 
-	checkResponseCode(t, http.StatusOK, response.Code)
+	if checkResponseCode(t, http.StatusOK, response) {
+		var list []PublicationTest
 
-	var list []PublicationTest
+		if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
+			t.Fatal(err)
+		}
 
-	if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
-		t.Fatal(err)
-	}
-
-	if len(list) != len(inPubs) {
-		t.Error("Failed to get the same list size")
-		return
-	}
-	for idx, outPub := range list {
-		same := comparePublications(inPubs[idx], &outPub)
-		if !same {
-			t.Error("Failed to get the same content back")
+		if len(list) != len(inPubs) {
+			t.Error("Failed to get the same list size")
+			return
+		}
+		for idx, outPub := range list {
+			same := comparePublications(inPubs[idx], &outPub)
+			if !same {
+				t.Error("Failed to get the same content back")
+			}
 		}
 	}
 
@@ -258,38 +258,40 @@ func TestSearchPublications(t *testing.T) {
 
 		switch format {
 		case "epub":
-			checkResponseCode(t, http.StatusOK, response.Code)
+			if checkResponseCode(t, http.StatusOK, response) {
+				var list []PublicationTest
 
-			var list []PublicationTest
-
-			if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
-				t.Fatal(err)
-			}
-
-			if len(list) != len(inPubs) {
-				t.Error("Failed to get the same list size")
-				return
-			}
-			for idx, outPub := range list {
-				same := comparePublications(inPubs[idx], &outPub)
-				if !same {
-					t.Error("Failed to get the same content back")
+				if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
+					t.Fatal(err)
 				}
+
+				if len(list) != len(inPubs) {
+					t.Error("Failed to get the same list size")
+					return
+				}
+				for idx, outPub := range list {
+					same := comparePublications(inPubs[idx], &outPub)
+					if !same {
+						t.Error("Failed to get the same content back")
+					}
+				}
+
 			}
 
 		case "lcpdf":
 			var list []PublicationTest
-			checkResponseCode(t, http.StatusOK, response.Code)
-			if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
-				t.Fatal(err)
-			}
-			if len(list) != 1 {
-				t.Error("Failed to get an lcpdf back")
+			if checkResponseCode(t, http.StatusOK, response) {
+				if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list) != 1 {
+					t.Error("Failed to get an lcpdf back")
+				}
 			}
 		case "lcpau", "lcpdi":
-			checkResponseCode(t, http.StatusOK, response.Code)
+			checkResponseCode(t, http.StatusOK, response)
 		case "unknown":
-			checkResponseCode(t, http.StatusNotFound, response.Code)
+			checkResponseCode(t, http.StatusNotFound, response)
 		}
 	}
 
@@ -308,7 +310,7 @@ func TestDeleteNoExistingPublication(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", path, nil)
 	response := executeRequest(req)
 
-	checkResponseCode(t, http.StatusNotFound, response.Code)
+	checkResponseCode(t, http.StatusNotFound, response)
 }
 
 func TestGetDeletedPublication(t *testing.T) {
@@ -324,5 +326,5 @@ func TestGetDeletedPublication(t *testing.T) {
 	req, _ := http.NewRequest("GET", path, nil)
 	response := executeRequest(req)
 
-	checkResponseCode(t, http.StatusNotFound, response.Code)
+	checkResponseCode(t, http.StatusNotFound, response)
 }

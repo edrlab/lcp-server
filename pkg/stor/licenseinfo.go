@@ -5,9 +5,9 @@
 package stor
 
 import (
-	"errors"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
 
@@ -17,34 +17,26 @@ import (
 // therefore we keep the Updated property.
 type LicenseInfo struct {
 	gorm.Model
-	UUID          string          `json:"uuid" gorm:"uniqueIndex"`
 	Updated       *time.Time      `json:"updated,omitempty"`
-	UserID        string          `json:"user_id" gorm:"index"`
-	Provider      string          `json:"provider"`
+	UUID          string          `json:"uuid" validate:"required,uuid" gorm:"uniqueIndex"`
+	Provider      string          `json:"provider" validate:"required,url"`
+	UserID        string          `json:"user_id,omitempty" validate:"required" gorm:"index"`
 	Start         *time.Time      `json:"start,omitempty"`
 	End           *time.Time      `json:"end,omitempty"`
-	Copy          uint32          `json:"copy,omitempty"`
-	Print         uint32          `json:"print,omitempty"`
-	Status        string          `json:"status" gorm:"index"`
+	Copy          int32           `json:"copy,omitempty"`
+	Print         int32           `json:"print,omitempty"`
+	Status        string          `json:"status" validate:"oneof=ready active expired cancelled revoked" gorm:"index"`
 	StatusUpdated *time.Time      `json:"status_updated,omitempty"`
 	DeviceCount   int             `json:"device_count"`
-	PublicationID string          `json:"publication_id"`  //  foreign key to the attached publication
-	Publication   PublicationInfo `gorm:"references:UUID"` // attached publication
+	PublicationID string          `json:"publication_id" validate:"required,uuid"` // implicit foreign key to the attached publication
+	Publication   PublicationInfo `gorm:"references:UUID" validate:"-"`            // the license belongs to the publication
 }
 
 // Validate checks required fields and values
 func (l *LicenseInfo) Validate() error {
 
-	if l.UUID == "" {
-		return errors.New("required field missing: UUID")
-	}
-	if l.UserID == "" {
-		return errors.New("required field missing: UserID")
-	}
-	if l.PublicationID == "" {
-		return errors.New("required Publication missing")
-	}
-	return nil
+	validate := validator.New()
+	return validate.Struct(l)
 }
 
 func (s licenseStore) ListAll() (*[]LicenseInfo, error) {

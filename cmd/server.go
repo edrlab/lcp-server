@@ -6,45 +6,47 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 
 	"github.com/edrlab/lcp-server/pkg/api"
+	"github.com/edrlab/lcp-server/pkg/conf"
 	"github.com/edrlab/lcp-server/pkg/stor"
 )
 
 // Server context
 type Server struct {
-	Config *Config
-	Store  stor.Store
+	*conf.Config
+	stor.Store
+	Cert   *tls.Certificate
 	Router *chi.Mux
-}
-
-// Server configuration
-type Config struct {
-	Dsn   string
-	Login struct {
-		User     string
-		Password string
-	}
 }
 
 func main() {
 
 	s := Server{}
 
-	// test config (later in a file)
-	c := Config{}
-	c.Dsn = "sqlite3://file::memory:?cache=shared"
-	c.Login.User = "user"
-	c.Login.Password = "password"
-	s.Config = &c
+	configFile := os.Getenv("EDRLAB_LCPSERVER_CONFIG")
+	if configFile == "" {
+		panic("Failed to retrieve the configuration file path.")
+	}
+
+	c, err := conf.ReadConfig(configFile)
+	if err != nil {
+		panic("Failed to read the configuration.")
+	}
+
+	s.Config = c
 
 	s.Initialize()
+
+	log.Printf("The server is ready.")
 
 	s.Run(":8081")
 }
@@ -56,8 +58,22 @@ func (s *Server) Initialize() {
 	// Setup the database
 	s.Store, err = stor.DBSetup(s.Config.Dsn)
 	if err != nil {
-		panic("database setup failed.")
+		panic("Database setup failed.")
 	}
+
+	// Setup the X509 certificate
+	var certFile, privKeyFile string
+	if certFile = s.Config.Certificate.Cert; certFile == "" {
+		panic("Must specify a certificate.")
+	}
+	if privKeyFile = s.Config.Certificate.PrivateKey; privKeyFile == "" {
+		panic("Must specify a private key.")
+	}
+	cert, err := tls.LoadX509KeyPair(certFile, privKeyFile)
+	if err != nil {
+		panic(err)
+	}
+	s.Cert = &cert
 
 	// Setup the routes
 	s.Router = s.setRoutes()
@@ -66,7 +82,7 @@ func (s *Server) Initialize() {
 func (s *Server) setRoutes() *chi.Mux {
 
 	// Set a context for handlers
-	h := api.NewHandlerCtx(s.Store)
+	h := api.NewHandlerCtx(s.Config, s.Store, s.Cert)
 
 	// Define the router
 	r := chi.NewRouter()
@@ -116,6 +132,15 @@ func (s *Server) setRoutes() *chi.Mux {
 				r.Get("/", h.GetLicense)       // GET /licenses/123
 				r.Put("/", h.UpdateLicense)    // PUT /licenses/123
 				r.Delete("/", h.DeleteLicense) // DELETE /licenses/123
+			})
+		})
+
+		// License generation
+		r.Route("/licenses/", func(r chi.Router) {
+			r.Post("/", h.GenerateLicense) // POST /licenses
+
+			r.Route("/{licenseID}", func(r chi.Router) {
+				r.Post("/", h.GetFreshLicense) // POST /licenses/123
 			})
 		})
 

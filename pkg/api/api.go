@@ -6,17 +6,24 @@
 package api
 
 import (
+	"crypto/tls"
+
+	"github.com/edrlab/lcp-server/pkg/conf"
 	"github.com/edrlab/lcp-server/pkg/stor"
 )
 
 // HandleCtx contains the context required by handlers.
 type HandlerCtx struct {
-	St stor.Store
+	*conf.Config
+	stor.Store
+	Cert *tls.Certificate
 }
 
-// NewBaseHandler returns a new HandlerCtx
-func NewHandlerCtx(st stor.Store) *HandlerCtx {
+// NewHandlerCtx returns a new handler context
+func NewHandlerCtx(cf *conf.Config, st stor.Store, cr *tls.Certificate) *HandlerCtx {
 	return &HandlerCtx{
-		St: st,
+		Config: cf,
+		Store:  st,
+		Cert:   cr,
 	}
 }

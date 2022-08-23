@@ -8,137 +8,99 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
+	"github.com/edrlab/lcp-server/pkg/lic"
 	"github.com/edrlab/lcp-server/pkg/stor"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
-// ListLicenses lists all licenses present in the database.
-func (h *HandlerCtx) ListLicenses(w http.ResponseWriter, r *http.Request) {
-	licenses, err := h.St.License().ListAll()
-	if err != nil {
-		render.Render(w, r, ErrRender(err))
-		return
-	}
-	if err := render.RenderList(w, r, NewLicenseListResponse(licenses)); err != nil {
-		render.Render(w, r, ErrRender(err))
-		return
-	}
-}
-
-// SearchLicenses searches licenses corresponding to a specific criteria.
-func (h *HandlerCtx) SearchLicenses(w http.ResponseWriter, r *http.Request) {
-	var licenses *[]stor.LicenseInfo
-	var err error
-
-	// search by user
-	if userID := r.URL.Query().Get("user"); userID != "" {
-		licenses, err = h.St.License().FindByUser(userID)
-		// by publication
-	} else if pubID := r.URL.Query().Get("pub"); pubID != "" {
-		licenses, err = h.St.License().FindByPublication(pubID)
-		// by status
-	} else if status := r.URL.Query().Get("status"); status != "" {
-		licenses, err = h.St.License().FindByStatus(status)
-		// by count
-	} else if count := r.URL.Query().Get("count"); count != "" {
-		// count is a "min:max" tuple
-		var min, max int
-		parts := strings.Split(count, ":")
-		if len(parts) != 2 {
-			render.Render(w, r, ErrInvalidRequest(fmt.Errorf("invalid count parameter: %s", count)))
-			return
-		}
-		if min, err = strconv.Atoi(parts[0]); err != nil {
-			render.Render(w, r, ErrInvalidRequest(err))
-		}
-		if max, err = strconv.Atoi(parts[1]); err != nil {
-			render.Render(w, r, ErrInvalidRequest(err))
-		}
-		licenses, err = h.St.License().FindByDeviceCount(min, max)
-	} else {
-		render.Render(w, r, ErrNotFound)
-		return
-	}
-	if err != nil {
-		render.Render(w, r, ErrRender(err))
-		return
-	}
-	if err := render.RenderList(w, r, NewLicenseListResponse(licenses)); err != nil {
-		render.Render(w, r, ErrRender(err))
-		return
-	}
-}
-
-// CreateLicense adds a new License to the database.
-func (h *HandlerCtx) CreateLicense(w http.ResponseWriter, r *http.Request) {
+// GenerateLicense creates a license in the db and returns a fresh license
+func (h *HandlerCtx) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
-	data := &LicenseRequest{}
-	if err := render.Bind(r, data); err != nil {
+	licRequest := &LicenseRequest{}
+	if err := render.Bind(r, licRequest); err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
-	license := data.LicenseInfo
 
-	// db create
-	err := h.St.License().Create(license)
-	if err != nil {
-		render.Render(w, r, ErrRender(err))
-		return
-	}
-
-	if err := render.Render(w, r, NewLicenseResponse(license)); err != nil {
-		render.Render(w, r, ErrRender(err))
-		return
-	}
-}
-
-// GetLicense returns a specific license
-func (h *HandlerCtx) GetLicense(w http.ResponseWriter, r *http.Request) {
-
-	var license *stor.LicenseInfo
+	// get the corresponding publication
+	var pubInfo *stor.PublicationInfo
 	var err error
-
-	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
-		license, err = h.St.License().Get(licenseID)
+	if licRequest.PublicationID != "" {
+		pubInfo, err = h.Store.Publication().Get(licRequest.PublicationID)
 	} else {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier in payload")))
 		return
 	}
 	if err != nil {
 		render.Render(w, r, ErrNotFound)
 		return
 	}
-	if err := render.Render(w, r, NewLicenseResponse(license)); err != nil {
+
+	// set license info
+	licInfo := newLicenseInfo(h.Config.License.Provider, licRequest)
+
+	// store license info
+	err = h.Store.License().Create(licInfo)
+	if err != nil {
+		render.Render(w, r, ErrRender(err))
+		return
+	}
+	// get back license info to retrieve gorm data
+	licInfo, err = h.Store.License().Get(licInfo.UUID)
+	if err != nil {
+		render.Render(w, r, ErrNotFound)
+		return
+	}
+
+	userInfo := lic.UserInfo{
+		ID:        licRequest.UserID,
+		Name:      licRequest.UserName,
+		Email:     licRequest.UserEmail,
+		Encrypted: licRequest.UserEncrypted,
+	}
+	encryption := lic.Encryption{
+		Profile: licRequest.Profile,
+		UserKey: lic.UserKey{
+			TextHint: licRequest.TextHint,
+		},
+	}
+
+	// generate the license
+	license, err := lic.NewLicense(h.Config.License, h.Cert, pubInfo, licInfo, &userInfo, &encryption, licRequest.PassHash)
+	if err != nil {
+		render.Render(w, r, ErrRender(err))
+		return
+	}
+
+	if err = render.Render(w, r, NewLicenseResponse(license)); err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
 	}
 }
 
-// UpdateLicense updates an existing License in the database.
-func (h *HandlerCtx) UpdateLicense(w http.ResponseWriter, r *http.Request) {
+// GetFreshLicense returns a fresh license
+func (h *HandlerCtx) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
+	var err error
 
 	// get the payload
-	data := &LicenseRequest{}
-	if err := render.Bind(r, data); err != nil {
+	licRequest := &LicenseRequest{}
+	if err = render.Bind(r, licRequest); err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
-	license := data.LicenseInfo
 
-	var currentLic *stor.LicenseInfo
-	var err error
-
-	// get the existing license
+	// get the license
+	var licInfo *stor.LicenseInfo
 	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
-		currentLic, err = h.St.License().Get(licenseID)
+		licInfo, err = h.Store.License().Get(licenseID)
 	} else {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing licenseID parameter")))
 		return
 	}
 	if err != nil {
@@ -146,55 +108,69 @@ func (h *HandlerCtx) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// set the gorm fields
-	license.ID = currentLic.ID
-	license.CreatedAt = currentLic.CreatedAt
-	license.UpdatedAt = currentLic.UpdatedAt
-	license.DeletedAt = currentLic.DeletedAt
+	// get the corresponding publication
+	var pubInfo *stor.PublicationInfo
 
-	// db update
-	err = h.St.License().Update(license)
+	if licInfo.PublicationID != "" {
+		pubInfo, err = h.Store.Publication().Get(licInfo.PublicationID)
+	} else {
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier in payload")))
+		return
+	}
+	if err != nil {
+		render.Render(w, r, ErrNotFound)
+		return
+	}
+
+	userInfo := lic.UserInfo{
+		ID:        licRequest.UserID,
+		Name:      licRequest.UserName,
+		Email:     licRequest.UserEmail,
+		Encrypted: licRequest.UserEncrypted,
+	}
+
+	encryption := lic.Encryption{
+		Profile: licRequest.Profile,
+		UserKey: lic.UserKey{
+			TextHint: licRequest.TextHint,
+		},
+	}
+
+	// generate the license
+	license, err := lic.NewLicense(h.Config.License, h.Cert, pubInfo, licInfo, &userInfo, &encryption, licRequest.PassHash)
 	if err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
 	}
-
 	if err := render.Render(w, r, NewLicenseResponse(license)); err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
 	}
 }
 
-// DeleteLicense removes an existing License from the database.
-func (h *HandlerCtx) DeleteLicense(w http.ResponseWriter, r *http.Request) {
+// newLicenseInfo sets license info from request parameters
+func newLicenseInfo(provider string, licRequest *LicenseRequest) *stor.LicenseInfo {
 
-	var license *stor.LicenseInfo
-	var err error
-
-	// get the existing license
-	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
-		license, err = h.St.License().Get(licenseID)
-	} else {
-		render.Render(w, r, ErrNotFound)
-		return
+	noLimit := int32(-1) // -1 stored for no print/copy limits
+	if licRequest.Copy == nil {
+		licRequest.Copy = &noLimit
 	}
-	if err != nil {
-		render.Render(w, r, ErrNotFound)
-		return
+	if licRequest.Print == nil {
+		licRequest.Print = &noLimit
 	}
 
-	// db delete
-	err = h.St.License().Delete(license)
-	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
-		return
+	licInfo := stor.LicenseInfo{
+		UUID:          uuid.New().String(), // generate a random UUID
+		Provider:      provider,
+		UserID:        licRequest.UserID,
+		PublicationID: licRequest.PublicationID,
+		Start:         licRequest.Start,
+		End:           licRequest.End,
+		Copy:          *licRequest.Copy,
+		Print:         *licRequest.Print,
+		Status:        stor.STATUS_READY,
 	}
-
-	// returning the deleted license to the caller allows for displaying useful info
-	if err := render.Render(w, r, NewLicenseResponse(license)); err != nil {
-		render.Render(w, r, ErrRender(err))
-		return
-	}
+	return &licInfo
 }
 
 // --
@@ -203,40 +179,36 @@ func (h *HandlerCtx) DeleteLicense(w http.ResponseWriter, r *http.Request) {
 
 // LicenseRequest is the request payload for licenses.
 type LicenseRequest struct {
-	*stor.LicenseInfo
-}
-
-// LicenseResponse is the response payload for licenses.
-type LicenseResponse struct {
-	*stor.LicenseInfo
-
-	CreatedAt time.Time `json:"issued"` // overrride the property name
-}
-
-// NewLicenseListResponse creates a rendered list of licenses
-func NewLicenseListResponse(licenses *[]stor.LicenseInfo) []render.Renderer {
-	list := []render.Renderer{}
-	for i := 0; i < len(*licenses); i++ {
-		list = append(list, NewLicenseResponse(&(*licenses)[i]))
-	}
-	return list
-}
-
-// NewLicenseResponse creates a rendered license
-func NewLicenseResponse(license *stor.LicenseInfo) *LicenseResponse {
-	return &LicenseResponse{LicenseInfo: license}
+	PublicationID string     `json:"publication_id" validate:"required,uuid"`
+	UserID        string     `json:"user_id,omitempty" validate:"required"`
+	UserName      string     `json:"user_name,omitempty"`
+	UserEmail     string     `json:"user_email,omitempty"`
+	UserEncrypted []string   `json:"user_encrypted,omitempty"`
+	Start         *time.Time `json:"start,omitempty"`
+	End           *time.Time `json:"end,omitempty"`
+	Copy          *int32     `json:"copy,omitempty"`
+	Print         *int32     `json:"print,omitempty"`
+	Profile       string     `json:"profile" validate:"required"`
+	TextHint      string     `json:"text_hint" validate:"required"`
+	PassHash      string     `json:"pass_hash" validate:"required"`
 }
 
 // Bind post-processes requests after unmarshalling.
 func (l *LicenseRequest) Bind(r *http.Request) error {
-	if l.LicenseInfo == nil {
-		return errors.New("missing required License payload")
-	}
-	// check required fields
-	if l.UUID == "" {
-		return errors.New("missing required UUID")
-	}
-	return nil
+	validate := validator.New()
+	return validate.Struct(l)
+}
+
+// LicenseResponse is the response payload for licenses.
+type LicenseResponse struct {
+	*lic.License
+}
+
+// NewLicenseResponse creates a rendered license
+func NewLicenseResponse(license *lic.License) *LicenseResponse {
+	lr := LicenseResponse{License: license}
+	fmt.Print(lr)
+	return &LicenseResponse{License: license}
 }
 
 // Render processes responses before marshalling.

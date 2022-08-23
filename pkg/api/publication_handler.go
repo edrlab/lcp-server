@@ -15,7 +15,7 @@ import (
 
 // ListPublications lists all publications present in the database.
 func (h *HandlerCtx) ListPublications(w http.ResponseWriter, r *http.Request) {
-	publications, err := h.St.Publication().ListAll()
+	publications, err := h.Store.Publication().ListAll()
 	if err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
@@ -47,7 +47,7 @@ func (h *HandlerCtx) SearchPublications(w http.ResponseWriter, r *http.Request) 
 			err = errors.New("invalid content type query string parameter")
 		}
 		if contentType != "" {
-			publications, err = h.St.Publication().FindByType(contentType)
+			publications, err = h.Store.Publication().FindByType(contentType)
 		}
 	} else {
 		render.Render(w, r, ErrNotFound)
@@ -67,7 +67,7 @@ func (h *HandlerCtx) SearchPublications(w http.ResponseWriter, r *http.Request) 
 func (h *HandlerCtx) CreatePublication(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
-	data := &PublicationPayload{}
+	data := &PublicationRequest{}
 	if err := render.Bind(r, data); err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
@@ -75,7 +75,7 @@ func (h *HandlerCtx) CreatePublication(w http.ResponseWriter, r *http.Request) {
 	publication := data.PublicationInfo
 
 	// db create
-	err := h.St.Publication().Create(publication)
+	err := h.Store.Publication().Create(publication)
 	if err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
@@ -94,9 +94,9 @@ func (h *HandlerCtx) GetPublication(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
-		publication, err = h.St.Publication().Get(publicationID)
+		publication, err = h.Store.Publication().Get(publicationID)
 	} else {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier")))
 		return
 	}
 	if err != nil {
@@ -113,7 +113,7 @@ func (h *HandlerCtx) GetPublication(w http.ResponseWriter, r *http.Request) {
 func (h *HandlerCtx) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
-	data := &PublicationPayload{}
+	data := &PublicationRequest{}
 	if err := render.Bind(r, data); err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
@@ -125,7 +125,7 @@ func (h *HandlerCtx) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 
 	// get the existing publication
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
-		currentPub, err = h.St.Publication().Get(publicationID)
+		currentPub, err = h.Store.Publication().Get(publicationID)
 	} else {
 		render.Render(w, r, ErrNotFound)
 		return
@@ -142,7 +142,7 @@ func (h *HandlerCtx) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	publication.DeletedAt = currentPub.DeletedAt
 
 	// db update
-	err = h.St.Publication().Update(publication)
+	err = h.Store.Publication().Update(publication)
 	if err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
@@ -162,7 +162,7 @@ func (h *HandlerCtx) DeletePublication(w http.ResponseWriter, r *http.Request) {
 
 	// get the existing publication
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
-		publication, err = h.St.Publication().Get(publicationID)
+		publication, err = h.Store.Publication().Get(publicationID)
 	} else {
 		render.Render(w, r, ErrNotFound)
 		return
@@ -173,7 +173,7 @@ func (h *HandlerCtx) DeletePublication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// db delete
-	err = h.St.Publication().Delete(publication)
+	err = h.Store.Publication().Delete(publication)
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
@@ -191,12 +191,18 @@ func (h *HandlerCtx) DeletePublication(w http.ResponseWriter, r *http.Request) {
 
 type omit *struct{}
 
-// PublicationPayload is the request / response publication payload.
-type PublicationPayload struct {
+// PublicationRequest is the request publication payload.
+type PublicationRequest struct {
 	*stor.PublicationInfo
 	ID        omit `json:"ID,omitempty"`
 	CreatedAt omit `json:"CreatedAt,omitempty"`
 	UpdatedAt omit `json:"UpdatedAt,omitempty"`
+	DeletedAt omit `json:"DeletedAt,omitempty"`
+}
+
+// PublicationResponse is the response publication payload.
+type PublicationResponse struct {
+	*stor.PublicationInfo
 	DeletedAt omit `json:"DeletedAt,omitempty"`
 }
 
@@ -210,26 +216,16 @@ func NewPublicationListResponse(publications *[]stor.PublicationInfo) []render.R
 }
 
 // NewPublicationResponse creates a rendered publication.
-func NewPublicationResponse(pub *stor.PublicationInfo) *PublicationPayload {
-	return &PublicationPayload{PublicationInfo: pub}
+func NewPublicationResponse(pub *stor.PublicationInfo) *PublicationResponse {
+	return &PublicationResponse{PublicationInfo: pub}
 }
 
 // Bind post-processes requests after unmarshalling.
-func (p *PublicationPayload) Bind(r *http.Request) error {
-	if p.PublicationInfo == nil {
-		return errors.New("missing required Publication payload")
-	}
-	// check required fields
-	if p.UUID == "" {
-		return errors.New("missing required UUID")
-	}
-	if p.Title == "" {
-		return errors.New("missing required Title")
-	}
-	return nil
+func (p *PublicationRequest) Bind(r *http.Request) error {
+	return p.PublicationInfo.Validate()
 }
 
 // Render processes responses before marshalling.
-func (pub *PublicationPayload) Render(w http.ResponseWriter, r *http.Request) error {
+func (pub *PublicationResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }

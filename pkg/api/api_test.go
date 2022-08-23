@@ -1,12 +1,14 @@
 package api
 
 import (
+	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/edrlab/lcp-server/pkg/conf"
 	"github.com/edrlab/lcp-server/pkg/stor"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -15,18 +17,10 @@ import (
 
 // Server context
 type Server struct {
-	Config *Config
-	Store  stor.Store
+	Config *conf.Config
+	stor.Store
+	Cert   *tls.Certificate
 	Router *chi.Mux
-}
-
-// Server configuration
-type Config struct {
-	Dsn   string
-	Login struct {
-		User     string
-		Password string
-	}
 }
 
 // s is the server variable shared by all tests
@@ -52,8 +46,8 @@ type LicenseTest struct {
 	Provider      string     `json:"provider"`
 	Start         *time.Time `json:"start,omitempty"`
 	End           *time.Time `json:"end,omitempty"`
-	Copy          uint32     `json:"copy,omitempty"`
-	Print         uint32     `json:"print,omitempty"`
+	Copy          int32      `json:"copy,omitempty"`
+	Print         int32      `json:"print,omitempty"`
 	Status        string     `json:"status"`
 	StatusUpdated *time.Time `json:"status_updated,omitempty"`
 	DeviceCount   int        `json:"device_count"`
@@ -62,6 +56,30 @@ type LicenseTest struct {
 // ---
 // Utilities
 // ---
+func setConfig() *conf.Config {
+
+	c := conf.Config{
+		Dsn: "sqlite3://file::memory:?cache=shared",
+		Login: conf.Login{
+			User:     "user",
+			Password: "password",
+		},
+		Certificate: conf.Certificate{
+			Cert:       "../test/cert/cert-edrlab-test.pem",
+			PrivateKey: "../test/cert/privkey-edrlab-test.pem",
+		},
+		License: conf.License{
+			Provider: "http://edrlab.org",
+			Profile:  "http://readium.org/lcp/basic-profile",
+			Links: map[string]string{
+				"status": "http://localhost/status/{license_id}",
+				"hint":   "https://www.edrlab.org/lcp-help/{license_id}",
+			},
+		},
+	}
+
+	return &c
+}
 
 func executeRequest(req *http.Request) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
@@ -70,10 +88,14 @@ func executeRequest(req *http.Request) *httptest.ResponseRecorder {
 	return rr
 }
 
-func checkResponseCode(t *testing.T, expected, actual int) {
-	if expected != actual {
-		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
+func checkResponseCode(t *testing.T, expected int, response *httptest.ResponseRecorder) bool {
+	ok := true
+	if expected != response.Code {
+		t.Errorf("Expected response code %d. Got %d\n", expected, response.Code)
+		t.Log(response.Body.String())
+		ok = false
 	}
+	return ok
 }
 
 // ---
@@ -81,22 +103,32 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 // ---
 
 func TestMain(m *testing.M) {
-	c := Config{}
-	c.Dsn = "sqlite3://file::memory:?cache=shared"
-	c.Login.User = "user"
-	c.Login.Password = "password"
-	s.Config = &c
+
+	s.Config = setConfig()
 
 	// Setup the database
 	var err error
-
 	s.Store, err = stor.DBSetup(s.Config.Dsn)
 	if err != nil {
-		panic("database setup failed.")
+		panic("Database setup failed")
 	}
 
+	// Setup the X509 certificate
+	var certFile, privKeyFile string
+	if certFile = s.Config.Certificate.Cert; certFile == "" {
+		panic("Must specify a certificate")
+	}
+	if privKeyFile = s.Config.Certificate.PrivateKey; privKeyFile == "" {
+		panic("Must specify a private key")
+	}
+	cert, err := tls.LoadX509KeyPair(certFile, privKeyFile)
+	if err != nil {
+		panic(err)
+	}
+	s.Cert = &cert
+
 	// Set a context for handlers
-	h := NewHandlerCtx(s.Store)
+	h := NewHandlerCtx(s.Config, s.Store, s.Cert)
 
 	// Define the router
 	r := chi.NewRouter()
@@ -130,8 +162,8 @@ func TestMain(m *testing.M) {
 			})
 		})
 
-		// Licenses
-		r.Route("/licenses", func(r chi.Router) {
+		// LicenseInfo, CRUD
+		r.Route("/licenseinfo", func(r chi.Router) {
 			r.Get("/", h.ListLicenses)
 			r.Get("/search", h.SearchLicenses) // GET /licenses/search{?pub,user,status,count}
 			r.Post("/", h.CreateLicense)       // POST /licenses
@@ -140,6 +172,15 @@ func TestMain(m *testing.M) {
 				r.Get("/", h.GetLicense)       // GET /licenses/123
 				r.Put("/", h.UpdateLicense)    // PUT /licenses/123
 				r.Delete("/", h.DeleteLicense) // DELETE /licenses/123
+			})
+		})
+
+		// License generation
+		r.Route("/licenses/", func(r chi.Router) {
+			r.Post("/", h.GenerateLicense) // POST /licenses
+
+			r.Route("/{licenseID}", func(r chi.Router) {
+				r.Post("/", h.GetFreshLicense) // POST /licenses/123
 			})
 		})
 
