@@ -82,6 +82,9 @@ GET localhost:8081/publications/<PublicationID>
 PUT localhost:8081/publications/<PublicationID> (same payload as a creation)
 DELETE localhost:8081/publications/<PublicationID> 
 
+Note: because publications are submitted to a soft delete, the suppression of a publication does not impact the existing licenses associated with the publication. 
+But no new license can be generated for a deleted publication. 
+
 ### Generate a license
 
 You can generate a license via:
