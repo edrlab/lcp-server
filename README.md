@@ -78,7 +78,7 @@ You can also:
 
 - GET localhost:8081/publications/
 
-1. Fetch, update or delete a publication (the info relative to) via:
+2. Fetch, update or delete a publication (the info relative to) via:
 
 - GET localhost:8081/publications/<PublicationID> 
 - PUT localhost:8081/publications/<PublicationID> (same payload as a creation)
@@ -165,7 +165,7 @@ You can also:
 
 - GET localhost:8081/licenses/
 
-1. Fetch, update or delete a license (the info relative to) via:
+2. Fetch, update or delete a license (the info relative to) via:
 
 - GET localhost:8081/licenseinfo/<LicenseID> 
 - PUT localhost:8081/licenseinfo/<LicenseID> (same payload as a creation)
