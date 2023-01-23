@@ -2,59 +2,17 @@ package api
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
-	"syreclabs.com/go/faker"
 )
 
 // ---
 // Publication utilities
 // ---
-
-// generates a random publication object
-func newPublication() *PublicationTest {
-	pub := &PublicationTest{}
-	pub.UUID = uuid.New().String()
-	pub.Title = faker.Company().CatchPhrase()
-	pub.EncryptionKey = make([]byte, 16)
-	rand.Read(pub.EncryptionKey)
-	pub.Location = faker.Internet().Url()
-	pub.ContentType = "application/epub+zip"
-	pub.Size = uint32(faker.Number().NumberInt(5))
-	pub.Checksum = faker.Lorem().Characters(16)
-
-	return pub
-}
-
-func createPublication(t *testing.T) (*PublicationTest, *httptest.ResponseRecorder) {
-
-	pub := newPublication()
-	data, err := json.Marshal((pub))
-	if err != nil {
-		t.Error("Marshaling Publication failed.")
-	}
-
-	// visual clue
-	//log.Printf("%s \n", string(data))
-
-	path := "/publications/"
-	req, _ := http.NewRequest("POST", path, bytes.NewReader(data))
-	return pub, executeRequest(req)
-}
-
-func deletePublication(t *testing.T, uuid string) *httptest.ResponseRecorder {
-
-	// delete the publication
-	path := "/publications/" + uuid
-	req, _ := http.NewRequest("DELETE", path, nil)
-	return executeRequest(req)
-}
 
 func comparePublications(inPub *PublicationTest, outPub *PublicationTest) bool {
 
@@ -71,6 +29,10 @@ func comparePublications(inPub *PublicationTest, outPub *PublicationTest) bool {
 	return true
 }
 
+// ---
+// Publication Tests
+// ---
+
 func TestEmptyPublicationTable(t *testing.T) {
 
 	// get a list of publications in an empty db
@@ -84,10 +46,6 @@ func TestEmptyPublicationTable(t *testing.T) {
 	}
 
 }
-
-// ---
-// Publication Tests
-// ---
 
 func TestCreatePublication(t *testing.T) {
 

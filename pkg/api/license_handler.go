@@ -19,7 +19,7 @@ import (
 )
 
 // GenerateLicense creates a license in the db and returns a fresh license
-func (h *HandlerCtx) GenerateLicense(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
 	licRequest := &LicenseRequest{}
@@ -29,7 +29,7 @@ func (h *HandlerCtx) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get the corresponding publication
-	var pubInfo *stor.PublicationInfo
+	var pubInfo *stor.Publication
 	var err error
 	if licRequest.PublicationID != "" {
 		pubInfo, err = h.Store.Publication().Get(licRequest.PublicationID)
@@ -85,7 +85,7 @@ func (h *HandlerCtx) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetFreshLicense returns a fresh license
-func (h *HandlerCtx) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	// get the payload
@@ -109,7 +109,7 @@ func (h *HandlerCtx) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get the corresponding publication
-	var pubInfo *stor.PublicationInfo
+	var pubInfo *stor.Publication
 
 	if licInfo.PublicationID != "" {
 		pubInfo, err = h.Store.Publication().Get(licInfo.PublicationID)

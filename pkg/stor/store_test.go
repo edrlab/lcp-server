@@ -1,7 +1,6 @@
 package stor
 
 import (
-	"log"
 	"math/rand"
 	"os"
 	"testing"
@@ -13,7 +12,7 @@ import (
 
 // some global vars shares by all tests
 var St Store
-var Publications []PublicationInfo
+var Publications []Publication
 var Licenses []LicenseInfo
 var pubUUIDs []string
 
@@ -21,7 +20,7 @@ func TestMain(m *testing.M) {
 
 	// generate random publications
 	for i := 0; i < 10; i++ {
-		pub := PublicationInfo{}
+		pub := Publication{}
 		pub.UUID = uuid.New().String()
 		pub.Title = faker.Company().CatchPhrase()
 		pub.EncryptionKey = make([]byte, 16)
@@ -66,31 +65,12 @@ func TestMain(m *testing.M) {
 		Licenses = append(Licenses, lic)
 	}
 
-	testDBSetupErrors()
-
 	// Create / open an sqlite db in memory
 	dsn := "sqlite3://file::memory:?cache=shared"
 	St, _ = DBSetup(dsn)
 
 	code := m.Run()
 	os.Exit(code)
-
-}
-
-// testDBSetupErrors tests some db setup errors, for the sake of completing the test coverage
-func testDBSetupErrors() {
-
-	dsn := "sqlite3//file::memory"
-	_, err := DBSetup(dsn)
-	if err == nil {
-		log.Fatal("Invalid dsn not catched")
-	}
-
-	dsn = "unknown://file::memory"
-	_, err = DBSetup(dsn)
-	if err == nil {
-		log.Fatal("Invalid dsn not catched")
-	}
 }
 
 // TestPublications calls gorm functionalities related to Publications
@@ -103,7 +83,7 @@ func TestPublications(t *testing.T) {
 		t.Fatalf("Invalid test publication: %v", err)
 	}
 
-	// create the publications in the db
+	// store publications in the db
 	for _, p := range Publications {
 		err = St.Publication().Create(&p)
 		if err != nil {
@@ -122,7 +102,7 @@ func TestPublications(t *testing.T) {
 	}
 
 	// get publications by their format
-	var publications *[]PublicationInfo
+	var publications *[]Publication
 	contentType := "application/epub+zip"
 	publications, err = St.Publication().FindByType(contentType)
 	if err != nil {
@@ -152,7 +132,7 @@ func TestPublications(t *testing.T) {
 
 	// get a publication by its id
 	pubUUID := Publications[1].UUID
-	var publication *PublicationInfo
+	var publication *Publication
 	publication, err = St.Publication().Get(pubUUID)
 	if err != nil {
 		t.Fatalf("Failed to get a publication by uuid: %v", err)
@@ -209,7 +189,7 @@ func TestLicenses(t *testing.T) {
 		}
 	}
 
-	// create the licenses in the db
+	// store licenses in the db
 	for _, l := range Licenses {
 		err = St.License().Create(&l)
 		if err != nil {

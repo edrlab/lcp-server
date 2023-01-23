@@ -17,7 +17,7 @@ import (
 )
 
 // ListLicenses lists all licenses present in the database.
-func (h *HandlerCtx) ListLicenses(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) ListLicenses(w http.ResponseWriter, r *http.Request) {
 	licenses, err := h.Store.License().ListAll()
 	if err != nil {
 		render.Render(w, r, ErrRender(err))
@@ -30,7 +30,7 @@ func (h *HandlerCtx) ListLicenses(w http.ResponseWriter, r *http.Request) {
 }
 
 // SearchLicenses searches licenses corresponding to a specific criteria.
-func (h *HandlerCtx) SearchLicenses(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 	var licenses *[]stor.LicenseInfo
 	var err error
 
@@ -74,7 +74,7 @@ func (h *HandlerCtx) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateLicense adds a new license to the database.
-func (h *HandlerCtx) CreateLicense(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) CreateLicense(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
 	data := &LicenseInfoRequest{}
@@ -101,7 +101,7 @@ func (h *HandlerCtx) CreateLicense(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetLicense returns a specific license
-func (h *HandlerCtx) GetLicense(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) GetLicense(w http.ResponseWriter, r *http.Request) {
 
 	var license *stor.LicenseInfo
 	var err error
@@ -123,7 +123,7 @@ func (h *HandlerCtx) GetLicense(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateLicense updates an existing License in the database.
-func (h *HandlerCtx) UpdateLicense(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
 	data := &LicenseInfoRequest{}
@@ -168,7 +168,7 @@ func (h *HandlerCtx) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteLicense removes an existing license from the database.
-func (h *HandlerCtx) DeleteLicense(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) DeleteLicense(w http.ResponseWriter, r *http.Request) {
 
 	var license *stor.LicenseInfo
 	var err error

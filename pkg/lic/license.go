@@ -11,12 +11,12 @@ import (
 	"errors"
 	"log"
 	"reflect"
-	"strings"
 
 	"time"
 
 	"github.com/edrlab/lcp-server/pkg/conf"
 	"github.com/edrlab/lcp-server/pkg/stor"
+	"github.com/jtacoma/uritemplates"
 	"github.com/readium/readium-lcp-server/crypto"
 	"github.com/readium/readium-lcp-server/sign"
 	"golang.org/x/text/cases"
@@ -99,7 +99,7 @@ type UserKey struct {
 const SHA256_URI string = "http://www.w3.org/2001/04/xmlenc#sha256"
 
 // NewLicense generates a license from db info, request data and config data
-func NewLicense(conf conf.License, cert *tls.Certificate, pubInfo *stor.PublicationInfo, licInfo *stor.LicenseInfo, userInfo *UserInfo, encryption *Encryption, passhash string) (*License, error) {
+func NewLicense(conf conf.License, cert *tls.Certificate, pubInfo *stor.Publication, licInfo *stor.LicenseInfo, userInfo *UserInfo, encryption *Encryption, passhash string) (*License, error) {
 
 	l := &License{
 		UUID:     licInfo.UUID,
@@ -140,7 +140,7 @@ func NewLicense(conf conf.License, cert *tls.Certificate, pubInfo *stor.Publicat
 
 // setEncryption sets the encryption structure in the license
 // returns the user key, which will be used later to encrypt user info
-func setEncryption(conf conf.License, l *License, pub *stor.PublicationInfo, encryption *Encryption, passhash string) ([]byte, error) {
+func setEncryption(conf conf.License, l *License, pub *stor.Publication, encryption *Encryption, passhash string) ([]byte, error) {
 
 	if encryption.Profile == "" {
 		encryption.Profile = conf.Profile // by default from the config
@@ -174,6 +174,7 @@ func setEncryption(conf conf.License, l *License, pub *stor.PublicationInfo, enc
 }
 
 func encryptKey(encrypter crypto.Encrypter, key []byte, kek []byte) []byte {
+
 	var out bytes.Buffer
 	in := bytes.NewReader(key)
 	encrypter.Encrypt(kek[:], in, &out)
@@ -191,7 +192,7 @@ func buildKeyCheck(licenseID string, encrypter crypto.Encrypter, key []byte) ([]
 }
 
 // setLinks sets the links structure in the license
-func setLinks(conf conf.License, l *License, pub *stor.PublicationInfo) {
+func setLinks(conf conf.License, l *License, pub *stor.Publication) {
 
 	var links []Link
 
@@ -204,16 +205,25 @@ func setLinks(conf conf.License, l *License, pub *stor.PublicationInfo) {
 
 	// customize the status and hint links
 	for i := 0; i < len(links); i++ {
-		// status
-		if links[i].Rel == "status" {
-			links[i].Href = strings.Replace(links[i].Href, "{license_id}", l.UUID, 1)
+		expand := false
+		switch links[i].Rel {
+		case "status":
 			links[i].Type = ContentType_LSD_JSON
-		}
-
-		// hint page , which may be associated with a specific license
-		if links[i].Rel == "hint" {
-			links[i].Href = strings.Replace(links[i].Href, "{license_id}", l.UUID, 1)
+			expand = true
+		case "hint":
 			links[i].Type = ContentType_TEXT_HTML
+			expand = true
+		}
+		if expand {
+			template, _ := uritemplates.Parse(links[i].Href)
+			values := make(map[string]interface{})
+			values["license_id"] = l.UUID
+			expanded, err := template.Expand(values)
+			if err != nil {
+				log.Printf("failed to expand an uri template: %s", links[i].Href)
+			} else {
+				links[i].Href = expanded
+			}
 		}
 	}
 
@@ -246,6 +256,7 @@ func setUser(conf conf.License, l *License, userInfo *UserInfo, userKey []byte) 
 }
 
 func encryptFields(encrypter crypto.Encrypter, userInfo *UserInfo, key []byte) error {
+
 	for _, toEncrypt := range userInfo.Encrypted {
 		var out bytes.Buffer
 		field := getField(userInfo, toEncrypt)
@@ -259,6 +270,7 @@ func encryptFields(encrypter crypto.Encrypter, userInfo *UserInfo, key []byte) e
 }
 
 func getField(u *UserInfo, field string) reflect.Value {
+
 	v := reflect.ValueOf(u).Elem()
 	c := cases.Title(language.Und, cases.NoLower)
 	return v.FieldByName(c.String(field))

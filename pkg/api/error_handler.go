@@ -10,6 +10,16 @@ import (
 	"github.com/go-chi/render"
 )
 
+/*
+
+Sample of problem details error message:
+{
+    "title": "Internal Server Error",
+    "status": 500,
+    "detail": "Content not found"
+}
+
+*/
 // Error response payloads & renderers
 
 // ErrResponse renderer type for handling all sorts of errors.

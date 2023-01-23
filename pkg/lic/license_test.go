@@ -7,6 +7,7 @@ package lic
 import (
 	"crypto/rand"
 	"crypto/tls"
+	"os"
 	"testing"
 	"time"
 
@@ -15,6 +16,11 @@ import (
 	"github.com/google/uuid"
 	"syreclabs.com/go/faker"
 )
+
+// some global vars shares by all tests
+var LicHandler LicenseHandler
+var Pub stor.Publication
+var LicInfo stor.LicenseInfo
 
 func setConfig() *conf.Config {
 
@@ -35,40 +41,55 @@ func setConfig() *conf.Config {
 
 	return &c
 }
+func TestMain(m *testing.M) {
 
-func TestLicense(t *testing.T) {
+	LicHandler.Config = setConfig()
 
-	conf := setConfig()
+	// Create / open an sqlite db in memory
+	dsn := "sqlite3://file::memory:?cache=shared"
+	LicHandler.Store, _ = stor.DBSetup(dsn)
 
-	// cert
-	cert, err := tls.LoadX509KeyPair(conf.Certificate.Cert, conf.Certificate.PrivateKey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// create a publication
+	Pub := stor.Publication{}
+	Pub.UUID = uuid.New().String()
+	Pub.Title = faker.Company().CatchPhrase()
+	Pub.EncryptionKey = make([]byte, 16)
+	rand.Read(Pub.EncryptionKey)
+	Pub.Location = faker.Internet().Url()
+	Pub.ContentType = "application/epub+zip"
+	Pub.Size = uint32(faker.Number().NumberInt(5))
+	Pub.Checksum = faker.Lorem().Characters(16)
 
-	// publication
-	pub := stor.PublicationInfo{}
-	pub.UUID = uuid.New().String()
-	pub.Title = faker.Company().CatchPhrase()
-	pub.EncryptionKey = make([]byte, 16)
-	rand.Read(pub.EncryptionKey)
-	pub.Location = faker.Internet().Url()
-	pub.ContentType = "application/epub+zip"
-	pub.Size = uint32(faker.Number().NumberInt(5))
-	pub.Checksum = faker.Lorem().Characters(16)
+	// store the publication in the db
+	LicHandler.Store.Publication().Create(&Pub)
 
-	// license info
+	// create a license
 	start := time.Now()
 	end := start.AddDate(0, 0, 10)
 
-	licInfo := stor.LicenseInfo{}
-	licInfo.UUID = uuid.New().String()
-	licInfo.Provider = "https://edrlab.org"
-	licInfo.CreatedAt = start
-	licInfo.Start = &start
-	licInfo.End = &end
-	licInfo.Print = int32(-1)
-	licInfo.Copy = int32(-1)
+	LicInfo := stor.LicenseInfo{}
+	LicInfo.UUID = uuid.New().String()
+	LicInfo.Provider = "https://edrlab.org"
+	LicInfo.CreatedAt = start
+	LicInfo.Start = &start
+	LicInfo.End = &end
+	LicInfo.Print = int32(-1)
+	LicInfo.Copy = int32(-1)
+
+	// store the license in the db
+	LicHandler.Store.License().Create(&LicInfo)
+
+	code := m.Run()
+	os.Exit(code)
+}
+
+func TestLicense(t *testing.T) {
+
+	// cert
+	cert, err := tls.LoadX509KeyPair(LicHandler.Config.Certificate.Cert, LicHandler.Config.Certificate.PrivateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// user info
 	userInfo := UserInfo{
@@ -88,7 +109,7 @@ func TestLicense(t *testing.T) {
 
 	passhash := "FAEB00CA518BEA7CB11A7EF31FB6183B489B1B6EADB792BEC64A03B3F6FF80A8"
 
-	license, err := NewLicense(conf.License, &cert, &pub, &licInfo, &userInfo, &encryption, passhash)
+	license, err := NewLicense(LicHandler.Config.License, &cert, &Pub, &LicInfo, &userInfo, &encryption, passhash)
 
 	if err != nil {
 		t.Log(err)

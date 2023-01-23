@@ -82,7 +82,7 @@ func (s *Server) Initialize() {
 func (s *Server) setRoutes() *chi.Mux {
 
 	// Set a context for handlers
-	h := api.NewHandlerCtx(s.Config, s.Store, s.Cert)
+	h := api.NewAPIHandler(s.Config, s.Store, s.Cert)
 
 	// Define the router
 	r := chi.NewRouter()
@@ -94,10 +94,20 @@ func (s *Server) setRoutes() *chi.Mux {
 	//r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	// Public routes
+	// Heartbeat
 	r.Group(func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("This is the LCP Server running!"))
 		})
+	})
+
+	// Status document management
+	r.Group(func(r chi.Router) {
+		r.Use(render.SetContentType(render.ContentTypeJSON))
+		r.Get("/status/{licenseID}", h.StatusDoc)   // Get /status/123
+		r.Post("/register/{licenseID}", h.Register) // POST /register/123
+		r.Put("/return/{licenseID}", h.Return)      // PUT /return/123
+		r.Put("/renew/{licenseID}", h.Renew)        // PUT /renew/123
 	})
 
 	// Private Routes

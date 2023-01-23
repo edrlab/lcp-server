@@ -1,7 +1,10 @@
 package api
 
 import (
+	"bytes"
+	"crypto/rand"
 	"crypto/tls"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +16,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
+	"github.com/google/uuid"
+	"syreclabs.com/go/faker"
 )
 
 // Server context
@@ -37,9 +42,10 @@ type PublicationTest struct {
 	Checksum      string `json:"checksum"`
 }
 
-// LicenseTest data model
+// LicenseTest data model, no gorm data, no join
 type LicenseTest struct {
-	Issued        *time.Time `json:"issued,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	Updated       *time.Time `json:"updated,omitempty"`
 	UUID          string     `json:"uuid"`
 	UserID        string     `json:"user_id"`
 	PublicationID string     `json:"publication_id"`
@@ -54,8 +60,9 @@ type LicenseTest struct {
 }
 
 // ---
-// Utilities
+// Utilities - Config
 // ---
+
 func setConfig() *conf.Config {
 
 	c := conf.Config{
@@ -80,6 +87,128 @@ func setConfig() *conf.Config {
 
 	return &c
 }
+
+// ---
+// Utilities - Publications
+// ---
+
+// generates a random publication object
+func newPublication() *PublicationTest {
+	pub := &PublicationTest{}
+	pub.UUID = uuid.New().String()
+	pub.Title = faker.Company().CatchPhrase()
+	pub.EncryptionKey = make([]byte, 16)
+	rand.Read(pub.EncryptionKey)
+	pub.Location = faker.Internet().Url()
+	pub.ContentType = "application/epub+zip"
+	pub.Size = uint32(faker.Number().NumberInt(5))
+	pub.Checksum = faker.Lorem().Characters(16)
+
+	return pub
+}
+
+func createPublication(t *testing.T) (*PublicationTest, *httptest.ResponseRecorder) {
+
+	pub := newPublication()
+	data, err := json.Marshal((pub))
+	if err != nil {
+		t.Error("Marshaling Publication failed.")
+	}
+
+	// visual clue
+	//log.Printf("%s \n", string(data))
+
+	path := "/publications/"
+	req, _ := http.NewRequest("POST", path, bytes.NewReader(data))
+	return pub, executeRequest(req)
+}
+
+func deletePublication(t *testing.T, uuid string) *httptest.ResponseRecorder {
+
+	// delete the publication
+	path := "/publications/" + uuid
+	req, _ := http.NewRequest("DELETE", path, nil)
+	return executeRequest(req)
+}
+
+// ---
+// Utilities - Licenses
+// ---
+
+// global license counter
+var LicenseCounter int
+
+// newLicense generates a random license info object
+func newLicense(pubID string) *LicenseTest {
+	lic := &LicenseTest{}
+	now := time.Now()
+	lic.CreatedAt = now
+	lic.UUID = uuid.New().String()
+	lic.UserID = uuid.New().String()
+	lic.PublicationID = pubID
+	lic.Provider = faker.Internet().Url()
+	ts := faker.Time().Backward(3600)
+	lic.Start = &ts
+	te := faker.Time().Forward(3600 * 24)
+	lic.End = &te
+	lic.Copy = 10000
+	lic.Print = 100
+	lic.Status = stor.STATUS_READY
+	if LicenseCounter%5 == 0 {
+		lic.DeviceCount = LicenseCounter
+	} else {
+		lic.DeviceCount = faker.Number().NumberInt(3)
+	}
+
+	LicenseCounter++
+
+	return lic
+}
+
+// createLicense generates a random license via the API
+func createLicense(t *testing.T) (*LicenseTest, *httptest.ResponseRecorder) {
+
+	// create a publication
+	inPub, _ := createPublication(t)
+
+	lic := newLicense(inPub.UUID)
+	data, err := json.Marshal((lic))
+	if err != nil {
+		t.Error("Marshaling Publication failed.")
+	}
+
+	// visual clue
+	//log.Printf("%s \n", string(data))
+
+	path := "/licenseinfo"
+	req, _ := http.NewRequest("POST", path, bytes.NewReader(data))
+	return lic, executeRequest(req)
+}
+
+// deleteLicense suppresses a license via the API
+func deleteLicense(t *testing.T, uuid string) {
+
+	// delete the license
+	path := "/licenseinfo/" + uuid
+	req, _ := http.NewRequest("DELETE", path, nil)
+	response := executeRequest(req)
+
+	// check the response
+	if checkResponseCode(t, http.StatusOK, response) {
+		var outLic LicenseTest
+
+		if err := json.Unmarshal(response.Body.Bytes(), &outLic); err != nil {
+			t.Fatal(err)
+		}
+		// delete the corresponding publication
+		deletePublication(t, outLic.PublicationID)
+	}
+
+}
+
+// ---
+// Utilities - Requests and Responses
+// ---
 
 func executeRequest(req *http.Request) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
@@ -128,7 +257,7 @@ func TestMain(m *testing.M) {
 	s.Cert = &cert
 
 	// Set a context for handlers
-	h := NewHandlerCtx(s.Config, s.Store, s.Cert)
+	h := NewAPIHandler(s.Config, s.Store, s.Cert)
 
 	// Define the router
 	r := chi.NewRouter()
@@ -182,6 +311,15 @@ func TestMain(m *testing.M) {
 			r.Route("/{licenseID}", func(r chi.Router) {
 				r.Post("/", h.GetFreshLicense) // POST /licenses/123
 			})
+		})
+
+		// Status document management
+		r.Group(func(r chi.Router) {
+			r.Use(render.SetContentType(render.ContentTypeJSON))
+			r.Get("/status/{licenseID}", h.StatusDoc)   // Get /status/123
+			r.Post("/register/{licenseID}", h.Register) // POST /register/123
+			r.Put("/return/{licenseID}", h.Return)      // PUT /return/123
+			r.Put("/renew/{licenseID}", h.Renew)        // PUT /renew/123
 		})
 
 	})

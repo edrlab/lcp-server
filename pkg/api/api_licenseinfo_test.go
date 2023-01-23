@@ -4,85 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
-	"syreclabs.com/go/faker"
 )
-
-// ---
-// License utilities
-// ---
-
-// global license countre
-var LicenseCounter int
-
-// generates a random license info object
-func newLicense(pubID string) *LicenseTest {
-	lic := &LicenseTest{}
-	lic.UUID = uuid.New().String()
-	lic.UserID = uuid.New().String()
-	lic.PublicationID = pubID
-	lic.Provider = faker.Internet().Url()
-	ts := faker.Time().Backward(3600)
-	lic.Start = &ts
-	te := faker.Time().Forward(3600 * 24)
-	lic.End = &te
-	lic.Copy = 10000
-	lic.Print = 100
-	tsu := faker.Time().Backward(3600)
-	lic.StatusUpdated = &tsu
-	if LicenseCounter%5 == 0 {
-		lic.DeviceCount = LicenseCounter
-	} else {
-		lic.DeviceCount = faker.Number().NumberInt(3)
-	}
-
-	LicenseCounter++
-
-	return lic
-}
-
-func createLicense(t *testing.T) (*LicenseTest, *httptest.ResponseRecorder) {
-
-	// create a publication
-	inPub, _ := createPublication(t)
-
-	lic := newLicense(inPub.UUID)
-	data, err := json.Marshal((lic))
-	if err != nil {
-		t.Error("Marshaling Publication failed.")
-	}
-
-	// visual clue
-	//log.Printf("%s \n", string(data))
-
-	path := "/licenseinfo"
-	req, _ := http.NewRequest("POST", path, bytes.NewReader(data))
-	return lic, executeRequest(req)
-}
-
-func deleteLicense(t *testing.T, uuid string) {
-
-	// delete the license
-	path := "/licenseinfo/" + uuid
-	req, _ := http.NewRequest("DELETE", path, nil)
-	response := executeRequest(req)
-
-	// check the response
-	if checkResponseCode(t, http.StatusOK, response) {
-		var outLic LicenseTest
-
-		if err := json.Unmarshal(response.Body.Bytes(), &outLic); err != nil {
-			t.Fatal(err)
-		}
-		// delete the corresponding publication
-		deletePublication(t, outLic.PublicationID)
-	}
-
-}
 
 // ---
 // License Info Tests
@@ -149,8 +76,12 @@ func TestUpdateLicenseInfo(t *testing.T) {
 	// create a license
 	inLic, _ := createLicense(t)
 
-	// update a field
+	// update some fields
 	inLic.Status = "revoked"
+	now := time.Now()
+	inLic.StatusUpdated = &now
+	inLic.Updated = &now
+	inLic.End = &now
 
 	data, err := json.Marshal((inLic))
 	if err != nil {

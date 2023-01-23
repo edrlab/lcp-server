@@ -7,6 +7,7 @@ require (
 	github.com/go-chi/render v1.0.2
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/google/uuid v1.3.0
+	github.com/jtacoma/uritemplates v1.0.0
 	github.com/readium/readium-lcp-server v0.0.0-20220202182453-bff371c5bde3
 	golang.org/x/text v0.3.7
 	gopkg.in/yaml.v2 v2.4.0

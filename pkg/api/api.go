@@ -12,16 +12,16 @@ import (
 	"github.com/edrlab/lcp-server/pkg/stor"
 )
 
-// HandleCtx contains the context required by handlers.
-type HandlerCtx struct {
-	*conf.Config
+// APIHandler contains the context required by http handlers.
+type APIHandler struct {
+	*conf.Config // TODO: change for an interface (dependency)
 	stor.Store
 	Cert *tls.Certificate
 }
 
-// NewHandlerCtx returns a new handler context
-func NewHandlerCtx(cf *conf.Config, st stor.Store, cr *tls.Certificate) *HandlerCtx {
-	return &HandlerCtx{
+// NewAPIHandler returns a new API context
+func NewAPIHandler(cf *conf.Config, st stor.Store, cr *tls.Certificate) *APIHandler {
+	return &APIHandler{
 		Config: cf,
 		Store:  st,
 		Cert:   cr,

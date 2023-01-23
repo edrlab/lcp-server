@@ -27,23 +27,25 @@ type (
 	// entity stores
 	publicationStore dbStore
 	licenseStore     dbStore
+	eventStore       dbStore
 
 	// Store interface, giving access to specialized interfaces
 	Store interface {
 		Publication() PublicationRepository
 		License() LicenseRepository
+		Event() EventRepository
 	}
 
 	// PublicationRepository interface, defining publication operations
 	PublicationRepository interface {
-		ListAll() (*[]PublicationInfo, error)
-		List(pageSize, pageNum int) (*[]PublicationInfo, error)
-		FindByType(contentType string) (*[]PublicationInfo, error)
+		ListAll() (*[]Publication, error)
+		List(pageSize, pageNum int) (*[]Publication, error)
+		FindByType(contentType string) (*[]Publication, error)
 		Count() (int64, error)
-		Get(uuid string) (*PublicationInfo, error)
-		Create(p *PublicationInfo) error
-		Update(p *PublicationInfo) error
-		Delete(p *PublicationInfo) error
+		Get(uuid string) (*Publication, error)
+		Create(p *Publication) error
+		Update(p *Publication) error
+		Delete(p *Publication) error
 	}
 
 	// LicenseRepository interface, defining license operations
@@ -60,6 +62,17 @@ type (
 		Update(p *LicenseInfo) error
 		Delete(p *LicenseInfo) error
 	}
+
+	// EventRepository interface, defining event operations
+	EventRepository interface {
+		List(licenseID string) (*[]Event, error)
+		GetByDevice(licenseID string, deviceID string) (*Event, error)
+		Count(licenseID string) (int64, error)
+		Get(id uint) (*Event, error)
+		Create(e *Event) error
+		Update(e *Event) error
+		Delete(e *Event) error
+	}
 )
 
 // implementation of the Store interface
@@ -69,6 +82,10 @@ func (s *dbStore) Publication() PublicationRepository {
 
 func (s *dbStore) License() LicenseRepository {
 	return (*licenseStore)(s)
+}
+
+func (s *dbStore) Event() EventRepository {
+	return (*eventStore)(s)
 }
 
 // List of status values as strings
@@ -125,7 +142,7 @@ func DBSetup(dsn string) (Store, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate(&PublicationInfo{}, &LicenseInfo{})
+	db.AutoMigrate(&Publication{}, &LicenseInfo{}, &Event{})
 
 	stor := &dbStore{db: db}
 

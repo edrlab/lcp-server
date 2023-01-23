@@ -14,7 +14,7 @@ import (
 )
 
 // ListPublications lists all publications present in the database.
-func (h *HandlerCtx) ListPublications(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) ListPublications(w http.ResponseWriter, r *http.Request) {
 	publications, err := h.Store.Publication().ListAll()
 	if err != nil {
 		render.Render(w, r, ErrRender(err))
@@ -27,8 +27,8 @@ func (h *HandlerCtx) ListPublications(w http.ResponseWriter, r *http.Request) {
 }
 
 // SearchPublications searches publications corresponding to a specific criteria.
-func (h *HandlerCtx) SearchPublications(w http.ResponseWriter, r *http.Request) {
-	var publications *[]stor.PublicationInfo
+func (h *APIHandler) SearchPublications(w http.ResponseWriter, r *http.Request) {
+	var publications *[]stor.Publication
 	var err error
 
 	// by format
@@ -64,7 +64,7 @@ func (h *HandlerCtx) SearchPublications(w http.ResponseWriter, r *http.Request) 
 }
 
 // CreatePublication adds a new Publication to the database.
-func (h *HandlerCtx) CreatePublication(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) CreatePublication(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
 	data := &PublicationRequest{}
@@ -72,7 +72,7 @@ func (h *HandlerCtx) CreatePublication(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
-	publication := data.PublicationInfo
+	publication := data.Publication
 
 	// db create
 	err := h.Store.Publication().Create(publication)
@@ -88,9 +88,9 @@ func (h *HandlerCtx) CreatePublication(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPublication returns a specific publication
-func (h *HandlerCtx) GetPublication(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) GetPublication(w http.ResponseWriter, r *http.Request) {
 
-	var publication *stor.PublicationInfo
+	var publication *stor.Publication
 	var err error
 
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
@@ -110,7 +110,7 @@ func (h *HandlerCtx) GetPublication(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdatePublication updates an existing Publication in the database.
-func (h *HandlerCtx) UpdatePublication(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
 	data := &PublicationRequest{}
@@ -118,9 +118,9 @@ func (h *HandlerCtx) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
-	publication := data.PublicationInfo
+	publication := data.Publication
 
-	var currentPub *stor.PublicationInfo
+	var currentPub *stor.Publication
 	var err error
 
 	// get the existing publication
@@ -155,9 +155,9 @@ func (h *HandlerCtx) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePublication removes an existing Publication from the database.
-func (h *HandlerCtx) DeletePublication(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) DeletePublication(w http.ResponseWriter, r *http.Request) {
 
-	var publication *stor.PublicationInfo
+	var publication *stor.Publication
 	var err error
 
 	// get the existing publication
@@ -193,7 +193,7 @@ type omit *struct{}
 
 // PublicationRequest is the request publication payload.
 type PublicationRequest struct {
-	*stor.PublicationInfo
+	*stor.Publication
 	ID        omit `json:"ID,omitempty"`
 	CreatedAt omit `json:"CreatedAt,omitempty"`
 	UpdatedAt omit `json:"UpdatedAt,omitempty"`
@@ -202,12 +202,12 @@ type PublicationRequest struct {
 
 // PublicationResponse is the response publication payload.
 type PublicationResponse struct {
-	*stor.PublicationInfo
+	*stor.Publication
 	DeletedAt omit `json:"DeletedAt,omitempty"`
 }
 
 // NewPublicationListResponse creates a rendered list of publications
-func NewPublicationListResponse(publications *[]stor.PublicationInfo) []render.Renderer {
+func NewPublicationListResponse(publications *[]stor.Publication) []render.Renderer {
 	list := []render.Renderer{}
 	for i := 0; i < len(*publications); i++ {
 		list = append(list, NewPublicationResponse(&(*publications)[i]))
@@ -216,13 +216,13 @@ func NewPublicationListResponse(publications *[]stor.PublicationInfo) []render.R
 }
 
 // NewPublicationResponse creates a rendered publication.
-func NewPublicationResponse(pub *stor.PublicationInfo) *PublicationResponse {
-	return &PublicationResponse{PublicationInfo: pub}
+func NewPublicationResponse(pub *stor.Publication) *PublicationResponse {
+	return &PublicationResponse{Publication: pub}
 }
 
 // Bind post-processes requests after unmarshalling.
 func (p *PublicationRequest) Bind(r *http.Request) error {
-	return p.PublicationInfo.Validate()
+	return p.Publication.Validate()
 }
 
 // Render processes responses before marshalling.
