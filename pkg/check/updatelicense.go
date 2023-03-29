@@ -4,8 +4,12 @@
 
 package check
 
+import (
+	"github.com/edrlab/lcp-server/pkg/lic"
+)
+
 // Update a license using register / renew / return features
-func UpdateLicense(license License, licenseStatus LicenseStatus) error {
+func UpdateLicense(license lic.License, licenseStatus lic.StatusDoc) error {
 
 	// check that the license is not in a final state (expired / revoked)
 
@@ -33,7 +37,7 @@ func UpdateLicense(license License, licenseStatus LicenseStatus) error {
 }
 
 // Check register features
-func checkRegister(licenseStatus LicenseStatus) error {
+func checkRegister(licenseStatus lic.StatusDoc) error {
 
 	// request registering the device
 
@@ -52,7 +56,7 @@ func checkRegister(licenseStatus LicenseStatus) error {
 }
 
 // Check renew features
-func checkRenew(license License, licenseStatus LicenseStatus) error {
+func checkRenew(license lic.License, licenseStatus lic.StatusDoc) error {
 
 	// test if the license can be extended
 
@@ -82,7 +86,7 @@ func checkRenew(license License, licenseStatus LicenseStatus) error {
 }
 
 // Check return features
-func checkReturn(license License, licenseStatus LicenseStatus) error {
+func checkReturn(license lic.License, licenseStatus lic.StatusDoc) error {
 
 	// test if the license can be returned
 

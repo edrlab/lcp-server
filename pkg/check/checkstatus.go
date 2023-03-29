@@ -4,8 +4,12 @@
 
 package check
 
+import (
+	"github.com/edrlab/lcp-server/pkg/lic"
+)
+
 // Check the license status document
-func CheckLicenseStatus(licenseStatus LicenseStatus) error {
+func CheckStatusDoc(statusDoc lic.StatusDoc) error {
 
 	// check that the status doc is valid vs the json schema
 

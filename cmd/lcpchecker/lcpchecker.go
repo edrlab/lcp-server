@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license
 // specified in the Github project LICENSE file.
 
-// lcpcheck validates LCP licenses against the specification
+// lcpchecker validates LCP licenses against the specification
 
 package main
 
@@ -25,7 +25,7 @@ func init() {
 }
 
 func usage() {
-	fmt.Println("Usage: lcptest [-passphrase] [-level] [-verbose] filepath")
+	fmt.Println("Usage: lcpchecker [-passphrase] [-level] [-verbose] filepath")
 	flag.PrintDefaults()
 }
 
@@ -44,13 +44,13 @@ func main() {
 	}
 	filepath := values[0]
 
-	// the verboase flag acts on the info level
+	// log the file name
+	fmt.Println("Checking ", filepath)
+
+	// the verbose flag acts on the info level
 	if !*verbose {
 		log.SetLevel(log.WarnLevel)
 	}
-
-	// test logs
-	log.Println("Checking ", filepath)
 
 	// open the license
 	bytes, err := os.ReadFile(filepath)

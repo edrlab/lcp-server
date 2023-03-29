@@ -1,47 +1,40 @@
 package check
 
-import "testing"
+import (
+	"testing"
 
-func TestMain(m *testing.M) {
-}
+	"github.com/edrlab/lcp-server/pkg/lic"
+)
+
+//func TestMain(m *testing.M) {
+//}
 
 func TestCheckLicense(t *testing.T) {
 
-	var license License
-	license.Encryption.Profile = "http://readium.org/lcp/basic-profile"
-	err := CheckLicense(license, "")
-	if err != nil {
-		t.Error("Checking license profile failed (1)")
+	goodProfiles := [4]string{
+		"http://readium.org/lcp/basic-profile",
+		"http://readium.org/lcp/1.0",
+		"http://readium.org/lcp/2.5",
+		"http://readium.org/lcp/2.x",
 	}
-	license.Encryption.Profile = "http://readium.org/lcp/1.0"
-	err = CheckLicense(license, "")
-	if err != nil {
-		t.Error("Checking license profile failed (1)")
+	var license lic.License
+	for _, s := range goodProfiles {
+		license.Encryption.Profile = s
+		err := checkLicenseProfile(license)
+		if err != nil {
+			t.Errorf("%v: %s", err, s)
+		}
 	}
-	license.Encryption.Profile = "http://readium.org/lcp/2.5"
-	err = CheckLicense(license, "")
-	if err != nil {
-		t.Error("Checking license profile failed (1)")
+	badProfiles := [2]string{
+		"http://readium.org/lcp/3.0",
+		"http://readium.org/lcp/2.y",
 	}
-	license.Encryption.Profile = "http://readium.org/lcp/2.x"
-	err = CheckLicense(license, "")
-	if err != nil {
-		t.Error("Checking license profile failed (1)")
-	}
-	license.Encryption.Profile = "http://readium.org/lcp/1.1"
-	err = CheckLicense(license, "")
-	if err == nil {
-		t.Error("Checking license profile failed (2)")
-	}
-	license.Encryption.Profile = "http://readium.org/lcp/3.0"
-	err = CheckLicense(license, "")
-	if err == nil {
-		t.Error("Checking license profile failed (3)")
-	}
-	license.Encryption.Profile = "http://readium.org/lcp/3.0"
-	err = CheckLicense(license, "")
-	if err == nil {
-		t.Error("Checking license profile failed (3)")
+	for _, s := range badProfiles {
+		license.Encryption.Profile = s
+		err := checkLicenseProfile(license)
+		if err == nil {
+			t.Errorf("%v: %s", err, s)
+		}
 	}
 
 }

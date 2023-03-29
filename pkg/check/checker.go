@@ -11,10 +11,18 @@ import (
 
 	"encoding/json"
 
+	"github.com/edrlab/lcp-server/pkg/lic"
 	log "github.com/sirupsen/logrus"
 	jsonschema "github.com/xeipuuv/gojsonschema"
 )
 
+// Checker verifies a license, its license status and the fresh license.
+// Parameters:
+// bytes is a set of bytes representing the license
+// passphrase is the license passphrase, which may be empty
+// level is a level of tests.
+// Access to the status document requires level 2 or upper.
+// Modifications of the license require level 3 or upper.
 func Checker(bytes []byte, passphrase string, level uint) error {
 
 	// check the validity of the license using the json schema
@@ -24,7 +32,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	}
 
 	// parse json data -> license
-	var license License
+	var license lic.License
 	err = json.Unmarshal(bytes, &license)
 	if err != nil {
 		return err
@@ -42,21 +50,21 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	}
 
 	// get the license status
-	var licenseStatus LicenseStatus
-	licenseStatus, err = GetLicenseStatus(license)
+	var statusDoc lic.StatusDoc
+	statusDoc, err = GetStatusDoc(license)
 	if err != nil {
 		return err
 	}
 
 	// check the status document
-	err = CheckLicenseStatus(licenseStatus)
+	err = CheckStatusDoc(statusDoc)
 	if err != nil {
 		return err
 	}
 
 	// get the fresh license
-	var freshLicense License
-	freshLicense, err = GetFreshLicense(licenseStatus)
+	var freshLicense lic.License
+	freshLicense, err = GetFreshLicense(statusDoc)
 	if err != nil {
 		return err
 	}
@@ -73,7 +81,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	}
 
 	// check updates to the license
-	err = UpdateLicense(freshLicense, licenseStatus)
+	err = UpdateLicense(freshLicense, statusDoc)
 	if err != nil {
 		return err
 	}
@@ -88,7 +96,7 @@ var lsf embed.FS
 // Check the validity of the license using the JSON schema
 func validateLicense(bytes []byte) error {
 
-	log.Info("Validate license")
+	log.Info("Validating the license")
 
 	schema, err := lsf.ReadFile("data/license.schema.json")
 	if err != nil {
@@ -116,19 +124,19 @@ func validateLicense(bytes []byte) error {
 }
 
 // Get a license status from the URL passed in parameter
-func GetLicenseStatus(license License) (LicenseStatus, error) {
-	var licenseStatus LicenseStatus
+func GetStatusDoc(license lic.License) (lic.StatusDoc, error) {
+	var statusDoc lic.StatusDoc
 
 	// get the url of the license status
 
 	// fetch the license status document
 
-	return licenseStatus, nil
+	return statusDoc, nil
 }
 
 // Get a fresh license from the provider system
-func GetFreshLicense(licenseStatus LicenseStatus) (License, error) {
-	var license License
+func GetFreshLicense(statusDoc lic.StatusDoc) (lic.License, error) {
+	var license lic.License
 
 	// get the url of the license
 
