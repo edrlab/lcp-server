@@ -39,17 +39,18 @@ const (
 // ====
 // LCP License
 // ====
+// note: a signature is nill when a license is canonicalized for being signed
 
 type License struct {
-	Provider   string         `json:"provider"`
-	UUID       string         `json:"id"`
-	Issued     time.Time      `json:"issued"`
-	Updated    *time.Time     `json:"updated,omitempty"`
-	Encryption Encryption     `json:"encryption"`
-	Links      *[]Link        `json:"links,omitempty"` // TODO : see if a pointer is needed here
-	User       UserInfo       `json:"user"`
-	Rights     UserRights     `json:"rights"`
-	Signature  sign.Signature `json:"signature"`
+	Provider   string          `json:"provider"`
+	UUID       string          `json:"id"`
+	Issued     time.Time       `json:"issued"`
+	Updated    *time.Time      `json:"updated,omitempty"`
+	Encryption Encryption      `json:"encryption"`
+	Links      []Link          `json:"links,omitempty"`
+	User       UserInfo        `json:"user"`
+	Rights     UserRights      `json:"rights"`
+	Signature  *sign.Signature `json:"signature"`
 }
 
 type Encryption struct { // Used for license generation
@@ -236,9 +237,7 @@ func setLinks(conf conf.License, l *License, pub *stor.Publication) {
 		Size:     int64(pub.Size),
 		Checksum: pub.Checksum,
 	}
-	links = append(links, link)
-
-	l.Links = &links
+	l.Links = append(links, link)
 }
 
 // setUser sets the user structure in the license
@@ -304,7 +303,7 @@ func setSignature(conf conf.License, l *License, cert *tls.Certificate) error {
 	if err != nil {
 		return err
 	}
-	l.Signature = res
+	l.Signature = &res
 
 	return nil
 }
