@@ -37,31 +37,25 @@ func main() {
 	verbose := flag.Bool("verbose", false, "display positive tests")
 	flag.Parse()
 
-	values := flag.Args()
-	if len(values) == 0 {
-		usage()
-		os.Exit(1)
-	}
-	filepath := values[0]
-
-	// log the file name
-	fmt.Println("Checking ", filepath)
-
 	// the verbose flag acts on the info level
 	if !*verbose {
 		log.SetLevel(log.WarnLevel)
 	}
 
 	// open the license
-	bytes, err := os.ReadFile(filepath)
-	if err != nil {
-		log.Error("Error: ", err)
+	filepath := flag.Arg(0)
+	if filepath == "" {
+		usage()
 		os.Exit(1)
 	}
 
-	// pass all checks
-	err = check.Checker(bytes, *passphrase, *level)
+	bytes, err := os.ReadFile(filepath)
 	if err != nil {
-		log.Error(err)
+		log.Fatal("Error: ", err)
 	}
+	// log the file name
+	fmt.Println("Checking ", filepath)
+
+	// pass all checks
+	check.Checker(bytes, *passphrase, *level)
 }
