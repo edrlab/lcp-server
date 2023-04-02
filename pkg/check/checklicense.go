@@ -5,9 +5,10 @@
 package check
 
 import (
-	"crypto/tls"
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/edrlab/lcp-server/pkg/lic"
+	"github.com/readium/readium-lcp-server/crypto"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,15 +28,15 @@ func CheckLicense(license lic.License, passphrase string) error {
 	// check that the provider is a URL
 	parsedURL, err := url.Parse(license.Provider)
 	if err != nil {
-		return errors.New("error parsing the provider url")
+		log.Error("The provider of a license must be expressed as a url")
 	}
 	if parsedURL.Scheme != "https" && parsedURL.Scheme != "http" {
-		return errors.New("the provider id must be an http or https url")
+		log.Error("The provider id must be an http or https url")
 	}
 
 	// check that the license id is not empty
 	if license.UUID == "" {
-		return errors.New("the id of the license is empty")
+		log.Error("A license must have an identifier")
 	}
 
 	// display uuid and the date of issue of the license
@@ -46,9 +48,9 @@ func CheckLicense(license lic.License, passphrase string) error {
 	if err != nil {
 		return err
 	}
-	log.Info("Profile ", strings.Split(license.Encryption.Profile, "http://readium.org/lcp/")[1])
 
 	// check the format of the content key (64 bytes after base64 decoding)
+	// TODO
 
 	// check the certificate chain
 	err = checkCertificateChain(license)
@@ -66,7 +68,7 @@ func CheckLicense(license lic.License, passphrase string) error {
 	}
 
 	if len(license.Links) == 0 {
-		return errors.New("this license contains no links")
+		log.Error("A license must have links")
 	}
 
 	// check access to the publication link
@@ -100,20 +102,19 @@ func CheckLicense(license lic.License, passphrase string) error {
 	}
 
 	// check the signature of the license
-	var certificate tls.Certificate
-	err = checkSignature(license, certificate)
+	err = checkSignature(license)
 	if err != nil {
 		return err
 	}
 
-	// display the text hint and the passphrase passed as parameter
-	if passphrase == "" {
-		log.Info("No passphrase was passed as a parameter")
-	}
-
 	// check the value of the key_check property
 	if passphrase != "" {
-		return nil // todo
+		err = checkPassphrase(license, passphrase)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Info("As no passphrase is provided, the key_check property is not checked")
 	}
 
 	return nil
@@ -128,13 +129,16 @@ func checkLicenseProfile(license lic.License) error {
 		return err
 	}
 	if !match {
-		return errors.New("incorrect profile value")
+		log.Errorf("The profile value %s is incorrect", license.Encryption.Profile)
 	}
+	log.Info("Profile ", strings.Split(license.Encryption.Profile, "http://readium.org/lcp/")[1])
 	return nil
 }
 
 // Verifies the certificate chain
 func checkCertificateChain(license lic.License) error {
+
+	// TODO
 	/*
 		var cacert []byte
 		var err error
@@ -163,22 +167,22 @@ func checkLastUpdate(license lic.License, endCertificate time.Time) error {
 		lastUpdated = *license.Updated
 		// verifies that the date of update is after the date of issue
 		if lastUpdated.Before(license.Issued) {
-			return fmt.Errorf("incorrect date of update %s, should be after the date of issue %s", lastUpdated.String(), license.Issued.String())
+			log.Errorf("Incorrect date of update %s, should be after the date of issue %s", lastUpdated.String(), license.Issued.String())
 		}
 	}
 	if lastUpdated.After(endCertificate) {
-		return fmt.Errorf("incorrect date of last update %s, should be before the date of expiration of the certificate %s", lastUpdated.String(), endCertificate.String())
+		log.Errorf("Incorrect date of last update %s, should be before the date of expiration of the certificate %s", lastUpdated.String(), endCertificate.String())
 	}
 	return nil
 }
 
 // Verifies the signature
-func checkSignature(license lic.License, cert tls.Certificate) error {
+func checkSignature(license lic.License) error {
 
-	// remove the current signature from the license
-
-	// verify the signature of the license
-
+	err := license.CheckSignature()
+	if err != nil {
+		log.Errorf("The signature of the license is incorrect: %v", err)
+	}
 	return nil
 }
 
@@ -193,7 +197,7 @@ func checkPublicationLink(license lic.License) error {
 		}
 	}
 	if pubHref == "" {
-		return errors.New("this license does not contain a link to a an encrypted publication")
+		log.Error("A license must link to an encrypted publication")
 	}
 
 	// check the mime-type of the link to the publication
@@ -210,16 +214,17 @@ func checkPublicationLink(license lic.License) error {
 		}
 	}
 	if !found {
-		return fmt.Errorf("unknown publication mime type %s", pubType)
+		log.Errorf("The mime type of the publication (%s) is unsupported", pubType)
 	}
 
 	// check that the publication can be fetched
-	resp, err := http.Head(pubHref)
-	if err != nil {
-		return errors.New("unreachable publication URL")
+	client := http.Client{
+		Timeout: 1 * time.Second,
 	}
-	resp.Body.Close()
-
+	_, err := client.Head(pubHref)
+	if err != nil {
+		log.Errorf("The publication at %s is unreachable", pubHref)
+	}
 	return nil
 }
 
@@ -234,27 +239,29 @@ func checkStatusDocLink(license lic.License) error {
 		}
 	}
 	if sdHref == "" {
-		return errors.New("this license does not contain a link to a status document")
+		log.Error("A license must link to a status document")
 	}
 	if sdType != "application/vnd.readium.license.status.v1.0+json" {
-		return fmt.Errorf("invalid status document mime type %s", sdType)
+		log.Errorf("The mime type of the status document (%s) is invalid", sdType)
 	}
 	// check that the status document URL is based on https
 	parsedURL, err := url.Parse(sdHref)
 	if err != nil {
-		return fmt.Errorf("error parsing the status document url : %w", err)
-	}
-	if parsedURL.Scheme != "https" {
-		log.Warning("the link to status document should be an https url")
+		log.Errorf("The status document url could not be parsed: %w", err)
+	} else {
+		if parsedURL.Scheme != "https" {
+			log.Warning("The link to status document should be an https url")
+		}
 	}
 
 	// check that the status document can be fetched
-	resp, err := http.Head(sdHref)
-	if err != nil {
-		return errors.New("unreachable status document URL")
+	client := http.Client{
+		Timeout: 1 * time.Second,
 	}
-	resp.Body.Close()
-
+	_, err = client.Head(sdHref)
+	if err != nil {
+		log.Errorf("The status document at %s is unreachable", sdHref)
+	}
 	return nil
 }
 
@@ -269,20 +276,21 @@ func checkHintPageLink(license lic.License) error {
 		}
 	}
 	if hintHref == "" {
-		return errors.New("this license does not contain a link to a an hint page")
+		log.Error("A license must link to an hint page")
 	}
 
 	if hintType != "text/html" {
-		return fmt.Errorf("invalid hint page mime type %s", hintType)
+		log.Errorf("The mime type of the hint page (%s) is invalid", hintType)
 	}
 
 	// check that the hint page can be fetched
-	resp, err := http.Head(hintHref)
-	if err != nil {
-		return errors.New("unreachable hint page URL")
+	client := http.Client{
+		Timeout: 1 * time.Second,
 	}
-	resp.Body.Close()
-
+	_, err := client.Head(hintHref)
+	if err != nil {
+		log.Errorf("The hint page at %s unreachable", hintHref)
+	}
 	return nil
 }
 
@@ -291,7 +299,7 @@ func checkUserInfo(license lic.License) error {
 
 	// warn if the user id is missing
 	if license.User.ID == "" {
-		log.Warning("please consider aadding the user id to the license")
+		log.Warning("Please consider adding a user id to the license")
 	}
 	return nil
 }
@@ -302,21 +310,63 @@ func checkLicenseRights(license lic.License) error {
 	// check that the start date is before the end date (if any)
 	if license.Rights.Start != nil && license.Rights.End != nil {
 		if license.Rights.Start.After(*license.Rights.End) {
-			return fmt.Errorf(("invalid rights: start is after end"))
+			log.Error(("Invalid rights: start is after end"))
 		}
 	}
 
 	// warn if the copy and print rights are low
 	if license.Rights.Copy != nil {
-		if *license.Rights.Copy < 1000 {
-			log.Warning("please consider allowing more than 1000 copied characters")
+		if *license.Rights.Copy < 5000 {
+			log.Warning("Please consider allowing at least 5000 characters to be copied")
 		}
 	}
 	if license.Rights.Print != nil {
 		if *license.Rights.Print < 10 {
-			log.Warning("please consider allowing more than 10 printed pages")
+			log.Warning("Please consider allowing at least 10 pages to be printed")
 		}
 	}
+	return nil
+}
 
+// Check the passphrase
+func checkPassphrase(license lic.License, passphrase string) error {
+
+	keycheck := license.Encryption.UserKey.Keycheck
+
+	//fmt.Println("keycheck:", base64.StdEncoding.EncodeToString(keycheck))
+
+	if len(keycheck) != 64 {
+		log.Errorf("Key_check is %d bytes long, should be 64", len(keycheck))
+		return nil
+	}
+
+	// calculate the hash of the passphrase, hex encore it
+	hash := sha256.Sum256([]byte(passphrase))
+	passhash := hex.EncodeToString(hash[:])
+
+	//fmt.Println("passhash: ", passhash)
+
+	// regenerate the user key
+	userKey, err := lic.GenerateUserKey(license.Encryption.Profile, passhash)
+	if err != nil {
+		return err
+	}
+
+	// decrypt the key check using the user key
+	encrypter := crypto.NewAESEncrypter_USER_KEY_CHECK()
+	decrypter, ok := encrypter.(crypto.Decrypter)
+	if !ok {
+		return errors.New("failed to create a decrypter")
+	}
+	var result bytes.Buffer
+	err = decrypter.Decrypt(crypto.ContentKey(userKey), bytes.NewBuffer(keycheck), &result)
+	if err != nil {
+		return err
+	}
+
+	// check that the decrypted key check is the license id
+	if result.String() != license.UUID {
+		log.Errorf("The passphrase passed as parameter seems incorrect (key check failed)")
+	}
 	return nil
 }
