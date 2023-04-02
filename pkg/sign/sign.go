@@ -77,6 +77,7 @@ func copyWithLeftPad(dest, src []byte) {
 
 // Sign signs any json structure
 func (signer *ecdsaSigner) Sign(in interface{}) (sig Signature, err error) {
+
 	canon, err := Canon(in)
 	if err != nil {
 		return
@@ -109,6 +110,7 @@ type rsaSigner struct {
 
 // Sign returns a signature for the provided json
 func (signer *rsaSigner) Sign(in interface{}) (sig Signature, err error) {
+
 	canon, err := Canon(in)
 	if err != nil {
 		return
@@ -172,14 +174,15 @@ type ecdsaSignChecker struct {
 
 // Check verifies the signature of any json structure
 func (checker *ecdsaSignChecker) Check(in interface{}, signature []byte) (err error) {
+
 	// make the structure canonical
-	plain, err := Canon(in)
+	canon, err := Canon(in)
 	if err != nil {
 		return
 	}
 
 	// generate a hash
-	hash := sha256.Sum256(plain)
+	hash := sha256.Sum256(canon)
 
 	// retrieve the signature vectors
 	r := new(big.Int).SetBytes(signature[:len(signature)/2])
@@ -199,11 +202,14 @@ type rsaSignChecker struct {
 
 // Check verifies the signature of any json structure
 func (checker *rsaSignChecker) Check(in interface{}, signature []byte) (err error) {
+
 	// make the structure canonical
 	canon, err := Canon(in)
 	if err != nil {
 		return
 	}
+
+	//fmt.Println(string(canon))
 
 	hash := sha256.Sum256(canon)
 
