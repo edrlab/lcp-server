@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/edrlab/lcp-server/pkg/conf"
+	"github.com/edrlab/lcp-server/pkg/sign"
 	"github.com/edrlab/lcp-server/pkg/stor"
 	"github.com/jtacoma/uritemplates"
 	"github.com/readium/readium-lcp-server/crypto"
-	"github.com/readium/readium-lcp-server/sign"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -50,7 +50,7 @@ type License struct {
 	Links      []Link          `json:"links,omitempty"`
 	User       UserInfo        `json:"user"`
 	Rights     UserRights      `json:"rights"`
-	Signature  *sign.Signature `json:"signature"`
+	Signature  *sign.Signature `json:"signature,omitempty"`
 }
 
 type Encryption struct { // Used for license generation
@@ -305,5 +305,25 @@ func setSignature(conf conf.License, l *License, cert *tls.Certificate) error {
 	}
 	l.Signature = &res
 
+	return nil
+}
+
+// CheckSignature verifies the signature of a license
+func (license *License) CheckSignature() error {
+
+	// extract the signature from the license
+	signature := license.Signature
+	// raz the embedded signature
+	license.Signature = nil
+
+	signChecker, err := sign.NewSignChecker(signature.Certificate, signature.Algorithm)
+	if err != nil {
+		return err
+	}
+
+	err = signChecker.Check(license, signature.Value)
+	if err != nil {
+		return err
+	}
 	return nil
 }
