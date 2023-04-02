@@ -6,7 +6,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -206,8 +205,8 @@ type LicenseResponse struct {
 
 // NewLicenseResponse creates a rendered license
 func NewLicenseResponse(license *lic.License) *LicenseResponse {
-	lr := LicenseResponse{License: license}
-	fmt.Print(lr)
+	//lr := LicenseResponse{License: license}
+	//fmt.Print(lr)
 	return &LicenseResponse{License: license}
 }
 
