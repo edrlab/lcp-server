@@ -26,8 +26,10 @@ import (
 func Checker(bytes []byte, passphrase string, level uint) error {
 
 	// check the validity of the license using the json schema
-	err := validateLicense(bytes)
+	var err error
+	err = validateLicense(bytes)
 	if err != nil {
+		log.Errorf("Failed to validate the license: %v", err)
 		return err
 	}
 
@@ -35,12 +37,14 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	var license lic.License
 	err = json.Unmarshal(bytes, &license)
 	if err != nil {
+		log.Errorf("Failed to unmarshal the license: %v", err)
 		return err
 	}
 
 	// check the license
 	err = CheckLicense(license, passphrase)
 	if err != nil {
+		log.Errorf("Failed to check the license: %v", err)
 		return err
 	}
 
@@ -53,12 +57,14 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	var statusDoc lic.StatusDoc
 	statusDoc, err = GetStatusDoc(license)
 	if err != nil {
+		log.Errorf("Failed to get the status document: %v", err)
 		return err
 	}
 
 	// check the status document
 	err = CheckStatusDoc(statusDoc)
 	if err != nil {
+		log.Errorf("Failed to check the status document: %v", err)
 		return err
 	}
 
@@ -66,12 +72,14 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	var freshLicense lic.License
 	freshLicense, err = GetFreshLicense(statusDoc)
 	if err != nil {
+		log.Errorf("Failed to get the fresh license: %v", err)
 		return err
 	}
 
 	// check the fresh license
 	err = CheckLicense(freshLicense, passphrase)
 	if err != nil {
+		log.Errorf("Failed to check the fresh license: %v", err)
 		return err
 	}
 
@@ -83,42 +91,56 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	// check updates to the license
 	err = UpdateLicense(freshLicense, statusDoc)
 	if err != nil {
+		log.Errorf("Failed to update the license: %v", err)
 		return err
 	}
-	//
-
 	return nil
 }
 
-//go:embed data/license.schema.json
+//go:embed data/license.schema.json data/link.schema.json
 var lsf embed.FS
 
 // Check the validity of the license using the JSON schema
 func validateLicense(bytes []byte) error {
 
-	log.Info("Validating the license")
-
-	schema, err := lsf.ReadFile("data/license.schema.json")
+	licenseSchema, err := lsf.ReadFile("data/license.schema.json")
+	if err != nil {
+		return err
+	}
+	linkSchema, err := lsf.ReadFile("data/link.schema.json")
 	if err != nil {
 		return err
 	}
 
-	schemaLoader := jsonschema.NewStringLoader(string(schema))
+	//_ = jsonschema.NewReferenceLoader("data/license.schema.json")
+
+	sl := jsonschema.NewSchemaLoader()
+	linkLoader := jsonschema.NewStringLoader(string(linkSchema))
+	err = sl.AddSchemas(linkLoader)
+	if err != nil {
+		return err
+	}
+	licenseLoader := jsonschema.NewStringLoader(string(licenseSchema))
+	schema, err := sl.Compile(licenseLoader)
+	if err != nil {
+		return err
+	}
+
 	documentLoader := jsonschema.NewStringLoader(string(bytes[:]))
 
-	result, err := jsonschema.Validate(schemaLoader, documentLoader)
+	result, err := schema.Validate(documentLoader)
 	if err != nil {
 		return err
 	}
 
 	if result.Valid() {
-		log.Info("The license is valid")
+		log.Info("The license is valid (/ json schema)")
 	} else {
-		log.Error("The license is invalid. see errors :")
+		log.Error("The license is invalid (/ json schema)")
 		for _, desc := range result.Errors() {
 			fmt.Printf("- %s\n", desc)
 		}
-		return errors.New("invalid license (/ json schema)")
+		return errors.New("invalid license") // stop checking
 	}
 	return nil
 }
