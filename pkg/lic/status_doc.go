@@ -15,13 +15,13 @@ import (
 // StatusDoc data model
 type (
 	StatusDoc struct {
-		ID              string          `json:"id"`
-		Status          string          `json:"status"`
-		Message         string          `json:"message"`
-		Updated         Updated         `json:"updated"`
-		Links           []Link          `json:"links"`
-		PotentialRights PotentialRights `json:"potential_rights"`
-		Events          []stor.Event    `json:"events,omitempty"`
+		ID              string           `json:"id"`
+		Status          string           `json:"status"`
+		Message         string           `json:"message"`
+		Updated         Updated          `json:"updated"`
+		Links           []Link           `json:"links"`
+		PotentialRights *PotentialRights `json:"potential_rights,omitempty"`
+		Events          []stor.Event     `json:"events,omitempty"`
 	}
 
 	Updated struct {
@@ -30,7 +30,7 @@ type (
 	}
 
 	PotentialRights struct {
-		End *time.Time `json:"end"`
+		End *time.Time `json:"end,omitempty"`
 	}
 
 	// License management interface
@@ -58,7 +58,6 @@ func NewLicenseHandler(cf *conf.Config, st stor.Store) *LicenseHandler {
 
 // NewStatusDoc returns a Status Document
 func NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
-	now := time.Now()
 	statusDoc := StatusDoc{
 		ID:      license.UUID,
 		Status:  license.Status,
@@ -66,9 +65,6 @@ func NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 		Updated: Updated{
 			License: license.Updated,
 			Status:  license.StatusUpdated,
-		},
-		PotentialRights: PotentialRights{
-			End: &now, // for now
 		},
 	}
 	return &statusDoc
