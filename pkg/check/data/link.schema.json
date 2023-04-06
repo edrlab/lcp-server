@@ -71,7 +71,7 @@
     "properties": {
       "href": {
         "type": "string",
-        "format": "uri-template"
+        "format": "uri"
       }
     }
   }
