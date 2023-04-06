@@ -6,30 +6,37 @@ package check
 
 import (
 	"github.com/edrlab/lcp-server/pkg/lic"
+	log "github.com/sirupsen/logrus"
 )
 
 // Update a license using register / renew / return features
-func UpdateLicense(license lic.License, licenseStatus lic.StatusDoc) error {
+func UpdateLicense(license *lic.License, statusDoc *lic.StatusDoc) error {
 
-	// check that the license is not in a final state (expired / revoked)
-
-	// check that the device cannot be registered with empty id & name params
+	// check that the license is not in a final state
+	if statusDoc.Status == "expired" {
+		log.Infof("It is not possible to update a license which has expired")
+		return nil
+	}
+	if statusDoc.Status == "revoked" || statusDoc.Status == "returned" || statusDoc.Status == "cancelled" {
+		log.Infof("It is not possible to update a license which has been %s", statusDoc.Status)
+		return nil
+	}
 
 	// check register
 	var err error
-	err = checkRegister(licenseStatus)
+	err = checkRegister(license, statusDoc)
 	if err != nil {
 		return err
 	}
 
 	// check renew
-	err = checkRenew(license, licenseStatus)
+	err = checkRenew(license, statusDoc)
 	if err != nil {
 		return err
 	}
 
 	// check return
-	err = checkReturn(license, licenseStatus)
+	err = checkReturn(license, statusDoc)
 	if err != nil {
 		return err
 	}
@@ -37,7 +44,10 @@ func UpdateLicense(license lic.License, licenseStatus lic.StatusDoc) error {
 }
 
 // Check register features
-func checkRegister(licenseStatus lic.StatusDoc) error {
+func checkRegister(license *lic.License, statusDoc *lic.StatusDoc) error {
+
+	// check that the device cannot be registered with empty id & name params
+	// TODO
 
 	// request registering the device
 
@@ -56,9 +66,13 @@ func checkRegister(licenseStatus lic.StatusDoc) error {
 }
 
 // Check renew features
-func checkRenew(license lic.License, licenseStatus lic.StatusDoc) error {
+func checkRenew(license *lic.License, statusDoc *lic.StatusDoc) error {
 
 	// test if the license can be extended
+	if license.Rights.End == nil {
+		log.Infof("It is not possible to extend a license which has no end date")
+		return nil
+	}
 
 	// check if the extension can be done via the API (http put)
 
@@ -86,9 +100,13 @@ func checkRenew(license lic.License, licenseStatus lic.StatusDoc) error {
 }
 
 // Check return features
-func checkReturn(license lic.License, licenseStatus lic.StatusDoc) error {
+func checkReturn(license *lic.License, statusDoc *lic.StatusDoc) error {
 
 	// test if the license can be returned
+	if license.Rights.End == nil {
+		log.Infof("It is not possible to return a license which has no end date")
+		return nil
+	}
 
 	// request the return of the license
 
