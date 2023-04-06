@@ -8,6 +8,8 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
 
 	"encoding/json"
 
@@ -15,6 +17,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	jsonschema "github.com/xeipuuv/gojsonschema"
 )
+
+//go:embed data/license.schema.json data/status.schema.json data/link.schema.json
+var jsfs embed.FS
 
 // Checker verifies a license, its license status and the fresh license.
 // Parameters:
@@ -25,6 +30,8 @@ import (
 // Modifications of the license require level 3 or upper.
 func Checker(bytes []byte, passphrase string, level uint) error {
 
+	log.Info("-- Check the license --")
+
 	// check the validity of the license using the json schema
 	var err error
 	err = validateLicense(bytes)
@@ -34,8 +41,8 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	}
 
 	// parse json data -> license
-	var license lic.License
-	err = json.Unmarshal(bytes, &license)
+	license := new(lic.License)
+	err = json.Unmarshal(bytes, license)
 	if err != nil {
 		log.Errorf("Failed to unmarshal the license: %v", err)
 		return err
@@ -48,14 +55,16 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 		return err
 	}
 
-	// no access to the the status document at level 0 or 1
+	// checking the status document requires level 2+
 	if level <= 1 {
 		return nil
 	}
 
+	log.Info("-- Check the status document --")
+
 	// get the license status
-	var statusDoc lic.StatusDoc
-	statusDoc, err = GetStatusDoc(license)
+	var statusDoc *lic.StatusDoc
+	statusDoc, err = getStatusDoc(license)
 	if err != nil {
 		log.Errorf("Failed to get the status document: %v", err)
 		return err
@@ -68,9 +77,14 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 		return err
 	}
 
+	// checking the fresh license requires level 3+
+	if level <= 2 {
+		return nil
+	}
+	log.Info("-- Check the fresh license --")
+
 	// get the fresh license
-	var freshLicense lic.License
-	freshLicense, err = GetFreshLicense(statusDoc)
+	freshLicense, err := getFreshLicense(statusDoc)
 	if err != nil {
 		log.Errorf("Failed to get the fresh license: %v", err)
 		return err
@@ -83,10 +97,11 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 		return err
 	}
 
-	// no modification of the license at level 2
-	if level <= 2 {
+	// updating the license requires level 4+
+	if level <= 3 {
 		return nil
 	}
+	log.Info("-- Update the license --")
 
 	// check updates to the license
 	err = UpdateLicense(freshLicense, statusDoc)
@@ -97,22 +112,17 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	return nil
 }
 
-//go:embed data/license.schema.json data/link.schema.json
-var lsf embed.FS
-
 // Check the validity of the license using the JSON schema
 func validateLicense(bytes []byte) error {
 
-	licenseSchema, err := lsf.ReadFile("data/license.schema.json")
+	licenseSchema, err := jsfs.ReadFile("data/license.schema.json")
 	if err != nil {
 		return err
 	}
-	linkSchema, err := lsf.ReadFile("data/link.schema.json")
+	linkSchema, err := jsfs.ReadFile("data/link.schema.json")
 	if err != nil {
 		return err
 	}
-
-	//_ = jsonschema.NewReferenceLoader("data/license.schema.json")
 
 	sl := jsonschema.NewSchemaLoader()
 	linkLoader := jsonschema.NewStringLoader(string(linkSchema))
@@ -134,9 +144,9 @@ func validateLicense(bytes []byte) error {
 	}
 
 	if result.Valid() {
-		log.Info("The license is valid (/ json schema)")
+		log.Info("The license is valid vs the json schema")
 	} else {
-		log.Error("The license is invalid (/ json schema)")
+		log.Error("The license is invalid vs the json schema")
 		for _, desc := range result.Errors() {
 			fmt.Printf("- %s\n", desc)
 		}
@@ -146,23 +156,61 @@ func validateLicense(bytes []byte) error {
 }
 
 // Get a license status from the URL passed in parameter
-func GetStatusDoc(license lic.License) (lic.StatusDoc, error) {
-	var statusDoc lic.StatusDoc
+func getStatusDoc(license *lic.License) (*lic.StatusDoc, error) {
 
 	// get the url of the license status
+	var sdHref string
+	for _, l := range license.Links {
+		if l.Rel == "status" {
+			sdHref = l.Href
+		}
+	}
+	if sdHref == "" {
+		return nil, errors.New("the license is missing a link to a status document: stop testing")
+	}
 
 	// fetch the license status document
-
+	statusDoc := new(lic.StatusDoc)
+	err := getJson(sdHref, statusDoc)
+	if err != nil {
+		return nil, err
+	}
 	return statusDoc, nil
 }
 
 // Get a fresh license from the provider system
-func GetFreshLicense(statusDoc lic.StatusDoc) (lic.License, error) {
-	var license lic.License
+func getFreshLicense(statusDoc *lic.StatusDoc) (*lic.License, error) {
 
 	// get the url of the license
+	var lHref string
+	for _, s := range statusDoc.Links {
+		if s.Rel == "license" {
+			lHref = s.Href
+		}
+	}
+	if lHref == "" {
+		return nil, errors.New("the status document is missing a link to a fresh license: stop testing")
+	}
 
-	// fetch the license document
-
+	// fetch the fresh license
+	license := new(lic.License)
+	err := getJson(lHref, license)
+	if err != nil {
+		return nil, err
+	}
 	return license, nil
+}
+
+func getJson(url string, target interface{}) error {
+
+	client := http.Client{
+		Timeout: 2 * time.Second,
+	}
+	r, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+	defer r.Body.Close()
+
+	return json.NewDecoder(r.Body).Decode(target)
 }
