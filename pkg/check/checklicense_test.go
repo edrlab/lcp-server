@@ -17,10 +17,13 @@ func TestCheckLicense(t *testing.T) {
 		"http://readium.org/lcp/profile-2.5",
 		"http://readium.org/lcp/profile-2.x",
 	}
-	var license lic.License
+
+	c := LicenseChecker{}
+	c.license = new(lic.License)
+
 	for _, s := range goodProfiles {
-		license.Encryption.Profile = s
-		err := checkLicenseProfile(&license)
+		c.license.Encryption.Profile = s
+		err := c.CheckLicenseProfile()
 		if err != nil {
 			t.Errorf("%v: %s", err, s)
 		}
@@ -31,8 +34,8 @@ func TestCheckLicense(t *testing.T) {
 		"http://readium.org/lcp/1.0",
 	}
 	for _, s := range badProfiles {
-		license.Encryption.Profile = s
-		err := checkLicenseProfile(&license)
+		c.license.Encryption.Profile = s
+		err := c.CheckLicenseProfile()
 		if err != nil {
 			t.Errorf("%v: %s", err, s)
 		}

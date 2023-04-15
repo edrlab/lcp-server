@@ -8,7 +8,6 @@ require (
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/google/uuid v1.3.0
 	github.com/jtacoma/uritemplates v1.0.0
-	github.com/readium/readium-lcp-server v0.0.0-20220202182453-bff371c5bde3
 	github.com/sirupsen/logrus v1.9.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/text v0.3.7

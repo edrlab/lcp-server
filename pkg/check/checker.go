@@ -18,6 +18,11 @@ import (
 	jsonschema "github.com/xeipuuv/gojsonschema"
 )
 
+type LicenseChecker struct {
+	license   *lic.License
+	statusDoc *lic.StatusDoc
+}
+
 //go:embed data/license.schema.json data/status.schema.json data/link.schema.json
 var jsfs embed.FS
 
@@ -40,16 +45,18 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 		return err
 	}
 
+	c := LicenseChecker{}
+	c.license = new(lic.License)
+
 	// parse json data -> license
-	license := new(lic.License)
-	err = json.Unmarshal(bytes, license)
+	err = json.Unmarshal(bytes, c.license)
 	if err != nil {
 		log.Errorf("Failed to unmarshal the license: %v", err)
 		return err
 	}
 
 	// check the license
-	err = CheckLicense(license, passphrase)
+	err = c.CheckLicense(passphrase)
 	if err != nil {
 		log.Errorf("Failed to check the license: %v", err)
 		return err
@@ -63,15 +70,14 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	log.Info("-- Check the status document --")
 
 	// get the license status
-	var statusDoc *lic.StatusDoc
-	statusDoc, err = getStatusDoc(license)
+	err = c.GetStatusDoc()
 	if err != nil {
 		log.Errorf("Failed to get the status document: %v", err)
 		return err
 	}
 
 	// check the status document
-	err = CheckStatusDoc(statusDoc)
+	err = c.CheckStatusDoc()
 	if err != nil {
 		log.Errorf("Failed to check the status document: %v", err)
 		return err
@@ -84,14 +90,14 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	log.Info("-- Check the fresh license --")
 
 	// get the fresh license
-	freshLicense, err := getFreshLicense(statusDoc)
+	err = c.GetFreshLicense()
 	if err != nil {
 		log.Errorf("Failed to get the fresh license: %v", err)
 		return err
 	}
 
 	// check the fresh license
-	err = CheckLicense(freshLicense, passphrase)
+	err = c.CheckLicense(passphrase)
 	if err != nil {
 		log.Errorf("Failed to check the fresh license: %v", err)
 		return err
@@ -101,10 +107,10 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	if level <= 3 {
 		return nil
 	}
-	log.Info("-- Update the license --")
+	log.Info("-- Check license updates --")
 
 	// check updates to the license
-	err = UpdateLicense(freshLicense, statusDoc)
+	err = c.UpdateLicense()
 	if err != nil {
 		log.Errorf("Failed to update the license: %v", err)
 		return err
@@ -155,50 +161,62 @@ func validateLicense(bytes []byte) error {
 	return nil
 }
 
-// Get a license status from the URL passed in parameter
-func getStatusDoc(license *lic.License) (*lic.StatusDoc, error) {
+// GetStatusDoc gets a license status from the URL passed in parameter
+func (c *LicenseChecker) GetStatusDoc() error {
 
 	// get the url of the license status
 	var sdHref string
-	for _, l := range license.Links {
+	for _, l := range c.license.Links {
 		if l.Rel == "status" {
 			sdHref = l.Href
 		}
 	}
 	if sdHref == "" {
-		return nil, errors.New("the license is missing a link to a status document: stop testing")
+		return errors.New("the license is missing a link to a status document: stop testing")
 	}
 
 	// fetch the license status document
-	statusDoc := new(lic.StatusDoc)
-	err := getJson(sdHref, statusDoc)
+	newStatusDoc := new(lic.StatusDoc)
+	err := getJson(sdHref, newStatusDoc)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return statusDoc, nil
+
+	// update the current status doc
+	c.statusDoc = newStatusDoc
+	return nil
 }
 
 // Get a fresh license from the provider system
-func getFreshLicense(statusDoc *lic.StatusDoc) (*lic.License, error) {
+func (c *LicenseChecker) GetFreshLicense() error {
 
 	// get the url of the license
 	var lHref string
-	for _, s := range statusDoc.Links {
+	for _, s := range c.statusDoc.Links {
 		if s.Rel == "license" {
 			lHref = s.Href
 		}
 	}
 	if lHref == "" {
-		return nil, errors.New("the status document is missing a link to a fresh license: stop testing")
+		return errors.New("the status document is missing a link to a fresh license: stop testing")
 	}
 
 	// fetch the fresh license
-	license := new(lic.License)
-	err := getJson(lHref, license)
+	freshLicense := new(lic.License)
+	err := getJson(lHref, freshLicense)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return license, nil
+
+	// update the current license
+	c.license = freshLicense
+	return nil
+}
+
+type ErrResponse struct {
+	Type   string `json:"type"` // url
+	Title  string `json:"title"`
+	Status int    `json:"status"` // http status code
 }
 
 func getJson(url string, target interface{}) error {
@@ -211,6 +229,20 @@ func getJson(url string, target interface{}) error {
 		return err
 	}
 	defer r.Body.Close()
+
+	if r.StatusCode != 200 {
+		log.Errorf("Error %d while fetching %s", r.StatusCode, url)
+
+		// map the response to a error structure
+		errResponse := new(ErrResponse)
+		err := json.NewDecoder(r.Body).Decode(errResponse)
+		if err != nil {
+			log.Error("Invalid structure of the error response")
+		} else {
+			log.Infof("Server message: %s", errResponse.Title)
+		}
+		return errors.New("failed to fetch the resource")
+	}
 
 	return json.NewDecoder(r.Body).Decode(target)
 }

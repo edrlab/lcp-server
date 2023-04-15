@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/edrlab/lcp-server/pkg/conf"
+	"github.com/edrlab/lcp-server/pkg/crypto"
 	"github.com/edrlab/lcp-server/pkg/sign"
 	"github.com/edrlab/lcp-server/pkg/stor"
 	"github.com/jtacoma/uritemplates"
-	"github.com/readium/readium-lcp-server/crypto"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -310,6 +310,9 @@ func setSignature(conf conf.License, l *License, cert *tls.Certificate) error {
 
 // CheckSignature verifies the signature of a license
 func (license *License) CheckSignature() error {
+	if license.Signature == nil {
+		return errors.New("missing signature")
+	}
 
 	// extract the signature from the license
 	signature := license.Signature

@@ -11,58 +11,57 @@ import (
 	"net/url"
 	"regexp"
 
-	"github.com/edrlab/lcp-server/pkg/lic"
 	log "github.com/sirupsen/logrus"
 	jsonschema "github.com/xeipuuv/gojsonschema"
 )
 
 // Check the license status document
-func CheckStatusDoc(statusDoc *lic.StatusDoc) error {
+func (c *LicenseChecker) CheckStatusDoc() error {
 
 	// check that the status doc is valid vs the json schema
-	err := validateStatusDoc(statusDoc)
+	err := c.ValidateStatusDoc()
 	if err != nil {
 		return err
 	}
 
 	// display the status of the license and the associated message
-	log.Info("The status of the license is ", statusDoc.Status)
-	if statusDoc.Message != "" {
-		log.Info("Message: ", statusDoc.Message)
+	log.Info("The status of the license is ", c.statusDoc.Status)
+	if c.statusDoc.Message != "" {
+		log.Info("Message: ", c.statusDoc.Message)
 	}
 
 	// check the link to the fresh license
-	err = checkLicenseLink(statusDoc)
+	err = c.CheckLicenseLink()
 	if err != nil {
 		return err
 	}
 
 	// check actionable links (register, renew, return)
-	err = checkActionableLinks(statusDoc)
+	err = c.CheckActionableLinks()
 	if err != nil {
 		return err
 	}
 
 	// display the max end date of the license
-	if statusDoc.PotentialRights != nil && statusDoc.PotentialRights.End != nil {
-		renewExt := *statusDoc.PotentialRights.End
+	if c.statusDoc.PotentialRights != nil && c.statusDoc.PotentialRights.End != nil {
+		renewExt := *c.statusDoc.PotentialRights.End
 		log.Infof("Potential renew extension: %s", renewExt.String())
 	}
 
 	// give info about events present in the status document
 	dict := make(map[string]int)
-	for _, ev := range statusDoc.Events {
+	for _, ev := range c.statusDoc.Events {
 		dict[ev.Type] = dict[ev.Type] + 1
 	}
-	log.Infof("%d events: %d register, %d renew, %d return", len(statusDoc.Events), dict["register"], dict["renew"], dict["return"])
+	log.Infof("%d events: %d register, %d renew, %d return", len(c.statusDoc.Events), dict["register"], dict["renew"], dict["return"])
 	return nil
 }
 
 // Check the validity of the status doc using the JSON schema
-func validateStatusDoc(statusDoc *lic.StatusDoc) error {
+func (c *LicenseChecker) ValidateStatusDoc() error {
 
-	// convert the status doc to a string
-	bytes, err := json.Marshal(statusDoc)
+	// convert the status doc to bytes
+	bytes, err := json.Marshal(c.statusDoc)
 	if err != nil {
 		return err
 	}
@@ -117,10 +116,10 @@ func validateStatusDoc(statusDoc *lic.StatusDoc) error {
 }
 
 // Verifies the link to the fresh license
-func checkLicenseLink(statusDoc *lic.StatusDoc) error {
+func (c *LicenseChecker) CheckLicenseLink() error {
 
 	var licType, licHref string
-	for _, s := range statusDoc.Links {
+	for _, s := range c.statusDoc.Links {
 		if s.Rel == "license" {
 			licType = s.Type
 			licHref = s.Href
@@ -142,7 +141,7 @@ func checkLicenseLink(statusDoc *lic.StatusDoc) error {
 }
 
 // Verifies actionable links
-func checkActionableLinks(statusDoc *lic.StatusDoc) error {
+func (c *LicenseChecker) CheckActionableLinks() error {
 
 	// compile the regexp for better perf
 	regexpId, err := regexp.Compile(`\{\?.*id.*\}`)
@@ -155,11 +154,11 @@ func checkActionableLinks(statusDoc *lic.StatusDoc) error {
 	}
 
 	hasRegister := false
-	for _, s := range statusDoc.Links {
+	for _, s := range c.statusDoc.Links {
 
 		switch s.Rel {
 		case "license":
-			return nil
+			continue
 		case "register":
 			hasRegister = true
 		case "renew":
@@ -175,12 +174,9 @@ func checkActionableLinks(statusDoc *lic.StatusDoc) error {
 		case "return":
 		default:
 			log.Warningf("Unknown link type %s", s.Rel)
-			return nil
+			continue
 		}
-		// a register link is highly recommended in our implementation
-		if !hasRegister {
-			log.Warningf("A status document should have a register link")
-		}
+		log.Infof("A %s link was found", s.Rel)
 		// check the url
 		_, err := url.Parse(s.Href)
 		if err != nil {
@@ -209,6 +205,10 @@ func checkActionableLinks(statusDoc *lic.StatusDoc) error {
 		if s.Type != "application/vnd.readium.license.status.v1.0+json" {
 			log.Errorf("The mime type of the %s link (%s) is invalid", s.Rel, s.Type)
 		}
+	}
+	// a register link is highly recommended in our implementation
+	if !hasRegister {
+		log.Warningf("A status document should have a register link")
 	}
 
 	return nil
