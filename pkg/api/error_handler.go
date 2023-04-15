@@ -14,13 +14,14 @@ import (
 
 Sample of problem details error message:
 {
-    "title": "Internal Server Error",
-    "status": 500,
-    "detail": "Content not found"
+    "type": "http://readium.org/license-status-document/error/notfound",
+    "title": "Failed to find the license ID",
+    "status": 404
 }
 
 */
 // Error response payloads & renderers
+// TODO : adapt to our error format
 
 // ErrResponse renderer type for handling all sorts of errors.
 //
