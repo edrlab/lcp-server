@@ -144,11 +144,11 @@ func (c *LicenseChecker) CheckLicenseLink() error {
 func (c *LicenseChecker) CheckActionableLinks() error {
 
 	// compile the regexp for better perf
-	regexpId, err := regexp.Compile(`\{\?.*id.*\}`)
+	regexpId, err := regexp.Compile(`\{(\?|\&).*id.*\}`)
 	if err != nil {
 		return err
 	}
-	regexpName, err := regexp.Compile(`\{\?.*name.*\}`)
+	regexpName, err := regexp.Compile(`\{(\?|\&).*name.*\}`)
 	if err != nil {
 		return err
 	}
@@ -171,12 +171,12 @@ func (c *LicenseChecker) CheckActionableLinks() error {
 				}
 				return nil
 			}
-		case "return":
+		case "return": // nop
 		default:
 			log.Warningf("Unknown link type %s", s.Rel)
 			continue
 		}
-		log.Infof("A %s link was found", s.Rel)
+		//log.Infof("A %s link was found", s.Rel)
 		// check the url
 		_, err := url.Parse(s.Href)
 		if err != nil {
@@ -192,7 +192,7 @@ func (c *LicenseChecker) CheckActionableLinks() error {
 			return err
 		}
 		if !match {
-			log.Errorf("Parameters id is missing in the register uri template")
+			log.Errorf("Parameters id is missing in the %s uri template", s.Rel)
 		}
 		match = regexpName.Match([]byte(s.Href))
 		if err != nil {
