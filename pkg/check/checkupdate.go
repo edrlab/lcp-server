@@ -113,6 +113,7 @@ func (c *LicenseChecker) CheckRenew() error {
 	// select the renew link
 	renewLink := c.GetStatusLink("renew")
 	if renewLink == nil {
+		log.Infof("The status document has no renew link; won't check renew")
 		return nil
 	}
 
@@ -248,6 +249,7 @@ func (c *LicenseChecker) CheckReturn() error {
 	// select the return link
 	returnLink := c.GetStatusLink("return")
 	if returnLink == nil {
+		log.Infof("The status document has no return link; won't check return")
 		return nil
 	}
 
@@ -309,15 +311,16 @@ func (c *LicenseChecker) CheckReturn() error {
 // get a link by its name
 func (c *LicenseChecker) GetStatusLink(linkRel string) *lic.Link {
 
-	// select the register link
+	// select the link
 	var link lic.Link
+	var found bool
 	for _, link = range c.statusDoc.Links {
 		if link.Rel == linkRel {
+			found = true
 			break
 		}
 	}
-	if link.Href == "" {
-		log.Errorf("The %s link is missing", linkRel)
+	if !found {
 		return nil
 	}
 	return &link
@@ -370,11 +373,21 @@ func (c *LicenseChecker) ProcessResponse(r *http.Response) error {
 // setLinkUrl replaces the param of a templated URL by test params
 func setLinkUrl(templatedUrl string) (url string, err error) {
 
-	rx, err := regexp.Compile(`\{\?.*\}`)
-	if err != nil {
-		return
+	// the template may use the '?' or '&' form
+	rSet := [2]string{`\{\?.*\}`, `\{\&.*\}`}
+	params := [2]string{"?id=lcp-checker&name=lcp-checker", "&id=lcp-checker&name=lcp-checker"}
+	var rx *regexp.Regexp
+	for idx, r := range rSet {
+		rx, err = regexp.Compile(r)
+		if err != nil {
+			return
+		}
+		match := rx.Match([]byte(templatedUrl))
+		if match {
+			// set id and name params
+			url = string(rx.ReplaceAll([]byte(templatedUrl), []byte(params[idx])))
+			return
+		}
 	}
-	// set id and name params
-	url = string(rx.ReplaceAll([]byte(templatedUrl), []byte("?id=lcp-checker&name=lcp-checker")))
 	return
 }
