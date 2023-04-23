@@ -30,6 +30,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"errors"
 	"io"
 )
 
@@ -94,14 +95,28 @@ func (c cbcEncrypter) Decrypt(key ContentKey, r io.Reader, w io.Writer) error {
 
 	var buffer bytes.Buffer
 	io.Copy(&buffer, r)
-
 	buf := buffer.Bytes()
+	if len(buf) < aes.BlockSize {
+		return errors.New("decrypt: ciphertext to short")
+	}
 	iv := buf[:aes.BlockSize]
+	ciphertext := buf[aes.BlockSize:]
+	if len(ciphertext)%aes.BlockSize != 0 {
+		return errors.New("ciphertext is not a multiple of the block size")
+	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
-	mode.CryptBlocks(buf[aes.BlockSize:], buf[aes.BlockSize:])
+	mode.CryptBlocks(ciphertext, ciphertext)
 
 	padding := buf[len(buf)-1] // padding length valid for both PKCS#7 and W3C schemes
+
+	// returns nil if the padding is invalid (which means that the decryption key is invalid)
+	if int(padding) == 0 {
+		return nil
+	}
+	if int(padding) >= len(buf)-aes.BlockSize {
+		return nil
+	}
 	w.Write(buf[aes.BlockSize : len(buf)-int(padding)])
 
 	return nil
