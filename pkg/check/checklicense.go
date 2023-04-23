@@ -7,9 +7,12 @@ package check
 import (
 	"bytes"
 	"crypto/sha256"
+	"crypto/x509"
+	"embed"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"net/http"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -22,6 +25,9 @@ import (
 )
 
 const LCPProfileBasic = "http://readium.org/lcp/basic-profile"
+
+//go:embed data/cacert-edrlab-test.pem data/cacert-edrlab-prod.pem
+var cafs embed.FS
 
 // CheckLicense perfoms multiple tests on a license
 func (c *LicenseChecker) CheckLicense(passphrase string) error {
@@ -40,10 +46,6 @@ func (c *LicenseChecker) CheckLicense(passphrase string) error {
 		log.Error("A license must have an identifier")
 	}
 
-	// display uuid and the date of issue of the license
-	log.Info("License id ", c.license.UUID)
-	log.Info("Issued on ", c.license.Issued.Format(time.RFC822))
-
 	// check the profile of the license
 	err = c.CheckLicenseProfile()
 	if err != nil {
@@ -54,16 +56,13 @@ func (c *LicenseChecker) CheckLicense(passphrase string) error {
 	// TODO
 
 	// check the certificate chain
-	err = c.CheckCertificateChain()
+	notAfter, err := c.CheckCertificateChain()
 	if err != nil {
 		return err
 	}
 
 	// check the date of last update of the license
-	var endCertificate time.Time
-	// TODO: get the real end date of the certificate
-	endCertificate = time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC)
-	err = c.CheckLastUpdate(endCertificate)
+	err = c.CheckLastUpdate(notAfter)
 	if err != nil {
 		return err
 	}
@@ -137,35 +136,56 @@ func (c *LicenseChecker) CheckLicenseProfile() error {
 	if !match {
 		log.Errorf("The profile value %s is incorrect", c.license.Encryption.Profile)
 	}
-	log.Info("Using ", strings.Split(c.license.Encryption.Profile, "http://readium.org/lcp/")[1])
 	return nil
 }
 
 // Verifies the certificate chain
-func (c *LicenseChecker) CheckCertificateChain() error {
+func (c *LicenseChecker) CheckCertificateChain() (*time.Time, error) {
 
-	// TODO
-	/*
-		var cacert []byte
-		var err error
-		if license.Encryption.Profile == LCPProfileBasic {
-			cacert, err = cact.ReadFile("data/cacert-edrlab-test.pem")
-		} else {
-			cacert, err = cacp.ReadFile("data/cacert-edrlab-prod.pem")
-		}
-		if err != nil {
-			return err
-		}
-	*/
+	var cacert []byte
+	var err error
+	if c.license.Encryption.Profile == LCPProfileBasic {
+		cacert, err = cafs.ReadFile("data/cacert-edrlab-test.pem")
+	} else {
+		cacert, err = cafs.ReadFile("data/cacert-edrlab-prod.pem")
+	}
+	if err != nil {
+		return nil, err
+	}
 
-	return nil
+	roots := x509.NewCertPool()
+	ok := roots.AppendCertsFromPEM(cacert)
+	if !ok {
+		return nil, errors.New("failed to parse root certificate")
+	}
+
+	if c.license.Signature.Certificate == nil {
+		return nil, errors.New("failed to check certificate chain: no signature present")
+	}
+	// parse the provider certificate (as ASN.1 DER data)
+	cert, err := x509.ParseCertificate(c.license.Signature.Certificate)
+	if err != nil {
+		return nil, errors.New("failed to parse the certificate:" + err.Error())
+	}
+
+	opts := x509.VerifyOptions{
+		Roots: roots,
+	}
+	if _, err := cert.Verify(opts); err != nil {
+		return nil, errors.New("failed to verify the certificate: " + err.Error())
+	}
+
+	return &cert.NotAfter, nil
 }
 
 // Verifies that the date of last update predates the expiration of the provider certificate
 // note: there is no issue if the creation of a certificate happens after the last update of a license;
 // this happens when the certificate is updated.
-func (c *LicenseChecker) CheckLastUpdate(endCertificate time.Time) error {
+func (c *LicenseChecker) CheckLastUpdate(endCertificate *time.Time) error {
 
+	if endCertificate == nil {
+		return errors.New("cannot check last license update with a nil certificate end date")
+	}
 	var lastUpdated time.Time
 	if c.license.Updated == nil {
 		lastUpdated = c.license.Issued
@@ -176,7 +196,7 @@ func (c *LicenseChecker) CheckLastUpdate(endCertificate time.Time) error {
 			log.Errorf("Incorrect date of update %s, should be after the date of issue %s", lastUpdated.String(), c.license.Issued.String())
 		}
 	}
-	if lastUpdated.After(endCertificate) {
+	if lastUpdated.After(*endCertificate) {
 		log.Errorf("Incorrect date of last update %s, should be before the date of expiration of the certificate %s", lastUpdated.String(), endCertificate.String())
 	}
 	return nil
@@ -360,18 +380,18 @@ func (c *LicenseChecker) CheckPassphrase(passphrase string) error {
 
 	keycheck := c.license.Encryption.UserKey.Keycheck
 
-	//fmt.Println("keycheck:", base64.StdEncoding.EncodeToString(keycheck))
+	fmt.Println("keycheck:", base64.StdEncoding.EncodeToString(keycheck))
 
 	if len(keycheck) != 64 {
 		log.Errorf("Key_check is %d bytes long, should be 64", len(keycheck))
 		return nil
 	}
 
-	// calculate the hash of the passphrase, hex encore it
+	// calculate the hash of the passphrase, hex encode it
 	hash := sha256.Sum256([]byte(passphrase))
 	passhash := hex.EncodeToString(hash[:])
 
-	//fmt.Println("passhash: ", passhash)
+	fmt.Println("passhash: ", passhash)
 
 	// regenerate the user key
 	userKey, err := lic.GenerateUserKey(c.license.Encryption.Profile, passhash)
@@ -398,23 +418,13 @@ func (c *LicenseChecker) CheckPassphrase(passphrase string) error {
 	return nil
 }
 
-func CheckResource(href string) error {
-	var expectedDuration time.Duration = 800 * time.Millisecond
+// ShowLicenseInfo displays information about the license
+func (c *LicenseChecker) ShowLicenseInfo() error {
 
-	start := time.Now()
-	// check that the resource can be fetched
-	client := http.Client{
-		Timeout: 2 * time.Second,
-	}
-	_, err := client.Head(href)
-	if err != nil {
-		return err
-	}
+	// display uuid and the date of issue of the license
+	log.Info("License id ", c.license.UUID)
+	log.Info("Issued on ", c.license.Issued.Format(time.RFC822))
+	log.Info("Using ", strings.Split(c.license.Encryption.Profile, "http://readium.org/lcp/")[1])
 
-	elapsed := time.Since(start)
-
-	if elapsed > expectedDuration {
-		log.Warningf("Access to %s took %s, which is quite long", href, elapsed)
-	}
-	return err
+	return nil
 }
