@@ -18,9 +18,17 @@ import (
 	jsonschema "github.com/xeipuuv/gojsonschema"
 )
 
+// LicenseChecker is the structure passed to every checker method
 type LicenseChecker struct {
 	license   *lic.License
 	statusDoc *lic.StatusDoc
+}
+
+// ErrResponse is the expected structure fetched from the LCP Server in cas of an error.
+type ErrResponse struct {
+	Type   string `json:"type"` // url
+	Title  string `json:"title"`
+	Status int    `json:"status"` // http status code
 }
 
 //go:embed data/license.schema.json data/status.schema.json data/link.schema.json
@@ -55,10 +63,16 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 		return err
 	}
 
+	err = c.ShowLicenseInfo()
+	if err != nil {
+		log.Errorf("Fatal error showing license info: %v", err)
+		return err
+	}
+
 	// check the license
 	err = c.CheckLicense(passphrase)
 	if err != nil {
-		log.Errorf("Failed to check the license: %v", err)
+		log.Errorf("Fatal error checking the license: %v", err)
 		return err
 	}
 
@@ -72,14 +86,14 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	// get the license status
 	err = c.GetStatusDoc()
 	if err != nil {
-		log.Errorf("Failed to get the status document: %v", err)
+		log.Errorf("Fata error getting the status document: %v", err)
 		return err
 	}
 
 	// check the status document
 	err = c.CheckStatusDoc()
 	if err != nil {
-		log.Errorf("Failed to check the status document: %v", err)
+		log.Errorf("Fatal error checking the status document: %v", err)
 		return err
 	}
 
@@ -91,16 +105,14 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 
 	// get the fresh license
 	err = c.GetFreshLicense()
+	// no fatal error
 	if err != nil {
-		log.Errorf("Failed to get the fresh license: %v", err)
-		return err
-	}
-
-	// check the fresh license
-	err = c.CheckLicense(passphrase)
-	if err != nil {
-		log.Errorf("Failed to check the fresh license: %v", err)
-		return err
+		// check the fresh license
+		err = c.CheckLicense(passphrase)
+		if err != nil {
+			log.Errorf("Fatal error checking the fresh license: %v", err)
+			return err
+		}
 	}
 
 	// updating the license requires level 4+
@@ -112,7 +124,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	// check updates to the license
 	err = c.UpdateLicense()
 	if err != nil {
-		log.Errorf("Failed to update the license: %v", err)
+		log.Errorf("Fatal error updating the license: %v", err)
 		return err
 	}
 	return nil
@@ -198,7 +210,7 @@ func (c *LicenseChecker) GetFreshLicense() error {
 		}
 	}
 	if lHref == "" {
-		return errors.New("the status document is missing a link to a fresh license: stop testing")
+		return errors.New("the status document is missing a link to a fresh license")
 	}
 
 	// fetch the fresh license
@@ -213,12 +225,29 @@ func (c *LicenseChecker) GetFreshLicense() error {
 	return nil
 }
 
-type ErrResponse struct {
-	Type   string `json:"type"` // url
-	Title  string `json:"title"`
-	Status int    `json:"status"` // http status code
+// CheckResource verifies that the target of a link can be accessed
+func CheckResource(href string) error {
+	var expectedDuration time.Duration = 800 * time.Millisecond
+
+	start := time.Now()
+	// check that the resource can be fetched
+	client := http.Client{
+		Timeout: 2 * time.Second,
+	}
+	_, err := client.Head(href)
+	if err != nil {
+		return err
+	}
+
+	elapsed := time.Since(start)
+
+	if elapsed > expectedDuration {
+		log.Warningf("Access to %s took %s, which is quite long", href, elapsed)
+	}
+	return err
 }
 
+// getJson initializes any json struct with data fetched via http
 func getJson(url string, target interface{}) error {
 
 	client := http.Client{
