@@ -328,5 +328,7 @@ func (license *License) CheckSignature() error {
 	if err != nil {
 		return err
 	}
+	// put back the signature in place
+	license.Signature = signature
 	return nil
 }
