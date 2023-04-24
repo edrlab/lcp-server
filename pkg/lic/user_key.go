@@ -13,7 +13,7 @@ import (
 func GenerateUserKey(profile, passhash string) ([]byte, error) {
 
 	if profile != "http://readium.org/lcp/basic-profile" {
-		return nil, errors.New("incorrect license profile, failed to decode the user passphrase")
+		return nil, errors.New("this version can only process LCP basic profile; failed to decode the user passphrase")
 	}
 	// compute a byte array from a string
 	value, err := hex.DecodeString(passhash)
