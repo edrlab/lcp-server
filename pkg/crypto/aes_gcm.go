@@ -21,7 +21,7 @@
 // LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package crypto
 
@@ -64,6 +64,9 @@ func (e *gcmEncrypter) Encrypt(key ContentKey, r io.Reader, w io.Writer) error {
 	binary.BigEndian.PutUint64(nonce, counter)
 
 	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
 	out := gcm.Seal(nonce, nonce, data, nil)
 
 	_, err = w.Write(out)
