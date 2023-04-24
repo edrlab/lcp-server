@@ -21,7 +21,7 @@
 // LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package crypto
 
@@ -74,12 +74,12 @@ func TestManyBlocks(t *testing.T) {
 	buf := bytes.NewBufferString("1234")
 	reader := PaddedReader(buf, 3, true)
 	var out [3]byte
-	n, err := io.ReadFull(reader, out[:])
+	_, err := io.ReadFull(reader, out[:])
 	if err != nil {
 		t.Error(err)
 	}
 
-	n, err = io.ReadFull(reader, out[:])
+	n, err := io.ReadFull(reader, out[:])
 	if err != nil {
 		t.Error(err)
 	}
@@ -138,12 +138,12 @@ func TestManyBlocks_Random(t *testing.T) {
 	buf := bytes.NewBufferString("1234")
 	reader := PaddedReader(buf, 3, false)
 	var out [3]byte
-	n, err := io.ReadFull(reader, out[:])
+	_, err := io.ReadFull(reader, out[:])
 	if err != nil {
 		t.Error(err)
 	}
 
-	n, err = io.ReadFull(reader, out[:])
+	n, err := io.ReadFull(reader, out[:])
 	if err != nil {
 		t.Error(err)
 	}
