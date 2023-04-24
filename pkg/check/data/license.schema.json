@@ -17,7 +17,7 @@
     "provider": {
       "description": "Unique identifier for the Provider",
       "type": "string",
-      "format": "uri"
+      "format": "string"
     },
     "updated": {
       "description": "Date when the license was last updated",
