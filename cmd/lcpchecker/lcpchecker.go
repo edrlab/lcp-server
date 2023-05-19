@@ -25,16 +25,16 @@ func init() {
 }
 
 func usage() {
-	fmt.Println("Usage: lcpchecker [-passphrase] [-level] [-verbose] filepath")
+	fmt.Println("Usage: lcpchecker [-level] [-passphrase] [-verbose] filepath")
 	flag.PrintDefaults()
 }
 
 func main() {
 
 	// parse the command line
-	passphrase := flag.String("passphrase", "", "user passphrase")
-	level := flag.Uint("level", 0, "checker level (1 = default, up to 3)")
-	verbose := flag.Bool("verbose", false, "display positive tests")
+	passphrase := flag.String("passphrase", "", "license passphrase. If not indicated, the passphrase is not tested.")
+	level := flag.Uint("level", 0, "checker level (1 license, 2 status, 3 fresh license, 4 update)")
+	verbose := flag.Bool("verbose", false, "if set, display info messages; if not set, display only warnings and errors.")
 	flag.Parse()
 
 	// the verbose flag acts on the info level
