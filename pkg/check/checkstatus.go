@@ -46,6 +46,20 @@ func (c *LicenseChecker) CheckStatusDoc() error {
 	if c.statusDoc.PotentialRights != nil && c.statusDoc.PotentialRights.End != nil {
 		renewExt := *c.statusDoc.PotentialRights.End
 		log.Infof("Potential renew extension: %s", renewExt.String())
+
+		// rise a warning if there is no renew link
+		hasRenew := false
+		for _, s := range c.statusDoc.Links {
+			switch s.Rel {
+			case "renew":
+				hasRenew = true
+			default:
+				continue
+			}
+		}
+		if !hasRenew {
+			log.Warning("Potential renew extension should not be present, as there is no renew link")
+		}
 	}
 
 	// give info about events present in the status document
@@ -53,7 +67,7 @@ func (c *LicenseChecker) CheckStatusDoc() error {
 	for _, ev := range c.statusDoc.Events {
 		dict[ev.Type] = dict[ev.Type] + 1
 	}
-	log.Infof("%d events: %d register, %d renew, %d return", len(c.statusDoc.Events), dict["register"], dict["renew"], dict["return"])
+	log.Infof("%d events: %d register, %d renew, %d return, %d revoke, %d cancel", len(c.statusDoc.Events), dict["register"], dict["renew"], dict["return"], dict["revoke"], dict["cancel"])
 	return nil
 }
 
@@ -206,9 +220,9 @@ func (c *LicenseChecker) CheckActionableLinks() error {
 			log.Errorf("The mime type of the %s link (%s) is invalid", s.Rel, s.Type)
 		}
 	}
-	// a register link is highly recommended in our implementation
-	if !hasRegister {
-		log.Warningf("A status document should have a register link")
+	// a register link is required in our implementation, at least for licenses in ready status
+	if c.statusDoc.Status == "ready" && !hasRegister {
+		log.Error("A status document in ready status must have a register link")
 	}
 
 	return nil
