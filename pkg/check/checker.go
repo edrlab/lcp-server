@@ -78,6 +78,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 
 	// checking the status document requires level 2+
 	if level <= 1 {
+		log.Info("-- The End --")
 		return nil
 	}
 
@@ -99,6 +100,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 
 	// checking the fresh license requires level 3+
 	if level <= 2 {
+		log.Info("-- The End --")
 		return nil
 	}
 	log.Info("-- Check the fresh license --")
@@ -106,7 +108,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	// get the fresh license
 	err = c.GetFreshLicense()
 	// no fatal error
-	if err != nil {
+	if err == nil {
 		// check the fresh license
 		err = c.CheckLicense(passphrase)
 		if err != nil {
@@ -117,6 +119,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 
 	// updating the license requires level 4+
 	if level <= 3 {
+		log.Info("-- The End --")
 		return nil
 	}
 	log.Info("-- Check license updates --")
@@ -127,6 +130,8 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 		log.Errorf("Fatal error updating the license: %v", err)
 		return err
 	}
+
+	log.Info("-- The End --")
 	return nil
 }
 
@@ -164,12 +169,12 @@ func validateLicense(bytes []byte) error {
 	if result.Valid() {
 		log.Info("The license is valid vs the json schema")
 	} else {
-		log.Error("The license is invalid vs the json schema")
 		for _, desc := range result.Errors() {
 			fmt.Printf("- %s\n", desc)
 		}
 		return errors.New("invalid license") // stop checking
 	}
+
 	return nil
 }
 
@@ -217,6 +222,19 @@ func (c *LicenseChecker) GetFreshLicense() error {
 	freshLicense := new(lic.License)
 	err := getJson(lHref, freshLicense)
 	if err != nil {
+		log.Errorf("The fresh license at %s is unreachable or not parsable", lHref)
+		return err
+	}
+
+	// check the validity of the license using the json schema
+	bytes, err := json.Marshal(freshLicense)
+	if err != nil {
+		log.Errorf("Failed to parse the license: %v", err)
+		return err
+	}
+	err = validateLicense(bytes)
+	if err != nil {
+		log.Errorf("Failed to validate the license: %v", err)
 		return err
 	}
 
@@ -262,11 +280,12 @@ func getJson(url string, target interface{}) error {
 	if r.StatusCode != 200 {
 		log.Errorf("Error %d while fetching %s", r.StatusCode, url)
 
-		// map the response to a error structure
+		// map the response to a json error structure
 		errResponse := new(ErrResponse)
 		err := json.NewDecoder(r.Body).Decode(errResponse)
 		if err != nil {
-			log.Error("Invalid structure of the error response")
+			// the license gateway usually does not respond with a proper json details structure
+			log.Warning("Invalid structure of the error response")
 		} else {
 			log.Infof("Server message: %s", errResponse.Title)
 		}
