@@ -9,10 +9,8 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"embed"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -332,13 +330,13 @@ func (c *LicenseChecker) CheckLicenseRights() error {
 	und := "undefined"
 	if c.license.Rights.Start != nil {
 		tstart = *c.license.Rights.Start
-		start = tstart.String()
+		start = tstart.Format(time.RFC822)
 	} else {
 		start = und
 	}
 	if c.license.Rights.End != nil {
 		tend = *c.license.Rights.End
-		end = tend.String()
+		end = tend.Format(time.RFC822)
 	} else {
 		end = und
 	}
@@ -361,6 +359,18 @@ func (c *LicenseChecker) CheckLicenseRights() error {
 		}
 	}
 
+	// warn if the end date is in the past or the start date in the future
+	if c.license.Rights.Start != nil {
+		if c.license.Rights.Start.After(time.Now()) {
+			log.Warning(("The start date is in the future: it is not usable yet"))
+		}
+	}
+	if c.license.Rights.End != nil {
+		if c.license.Rights.End.Before(time.Now()) {
+			log.Warning(("The end date is in the past: this license has expired"))
+		}
+	}
+
 	// warn if the copy and print rights are low
 	if c.license.Rights.Copy != nil {
 		if *c.license.Rights.Copy < 5000 {
@@ -380,7 +390,7 @@ func (c *LicenseChecker) CheckPassphrase(passphrase string) error {
 
 	keycheck := c.license.Encryption.UserKey.Keycheck
 
-	fmt.Println("keycheck:", base64.StdEncoding.EncodeToString(keycheck))
+	//fmt.Println("keycheck:", base64.StdEncoding.EncodeToString(keycheck))
 
 	if len(keycheck) != 64 {
 		log.Errorf("Key_check is %d bytes long, should be 64", len(keycheck))
@@ -391,12 +401,12 @@ func (c *LicenseChecker) CheckPassphrase(passphrase string) error {
 	hash := sha256.Sum256([]byte(passphrase))
 	passhash := hex.EncodeToString(hash[:])
 
-	fmt.Println("passhash: ", passhash)
+	//fmt.Println("passhash: ", passhash)
 
 	// regenerate the user key
 	userKey, err := lic.GenerateUserKey(c.license.Encryption.Profile, passhash)
 	if err != nil {
-		return err
+		return nil
 	}
 
 	// decrypt the key check using the user key
