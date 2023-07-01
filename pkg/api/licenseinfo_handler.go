@@ -206,17 +206,16 @@ func (h *APIHandler) DeleteLicense(w http.ResponseWriter, r *http.Request) {
 // LicenseInfoRequest is the request payload for licenses.
 type LicenseInfoRequest struct {
 	*stor.LicenseInfo
-	ID        omit `json:"ID,omitempty"`
-	CreatedAt omit `json:"CreatedAt,omitempty"`
-	UpdatedAt omit `json:"UpdatedAt,omitempty"`
-	DeletedAt omit `json:"DeletedAt,omitempty"`
 }
 
 // LicenseInfoResponse is the response payload for licenses.
 type LicenseInfoResponse struct {
 	*stor.LicenseInfo
-	DeletedAt   omit `json:"DeletedAt,omitempty"`
-	Publication omit `json:"Publication,omitempty"`
+	ID          omit `json:"id,omitempty"`
+	CreatedAt   omit `json:"created_at,omitempty"`
+	UpdatedAt   omit `json:"updated_at,omitempty"`
+	DeletedAt   omit `json:"deleted_at,omitempty"`
+	Publication omit `json:"publication,omitempty"`
 }
 
 // NewLicenseInfoListResponse creates a rendered list of licenses
