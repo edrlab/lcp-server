@@ -14,12 +14,13 @@ import (
 
 // LCP Server configuration
 type Config struct {
-	Host        string `yaml:"host"`
-	Port        string `yaml:"port"`
-	Dsn         string `yaml:"dsn"`
-	Login       `yaml:"login"`
-	Certificate `yaml:"certificate"`
-	License     `yaml:"license"`
+	PublicBaseUrl string `yaml:"public_base_url"`
+	Port          int    `yaml:"port"`
+	Dsn           string `yaml:"dsn"`
+	Login         `yaml:"login"`
+	Certificate   `yaml:"certificate"`
+	License       `yaml:"license"`
+	Status        `yaml:"status"`
 }
 
 type Login struct {
@@ -33,9 +34,15 @@ type Certificate struct {
 }
 
 type License struct {
-	Provider string            `yaml:"provider"` // URI
-	Profile  string            `yaml:"profile"`  // "http://readium.org/lcp/basic-profile" || "http://readium.org/lcp/profile-1.0" || ...
-	Links    map[string]string `yaml:"links"`
+	Provider string `yaml:"provider"` // URI
+	Profile  string `yaml:"profile"`  // "http://readium.org/lcp/basic-profile" || "http://readium.org/lcp/profile-1.0" || ...
+	HintLink string `yaml:"hint_links"`
+}
+
+type Status struct {
+	RenewDefaultDays int    `yaml:"renew_default_days"`
+	RenewMaxDays     int    `yaml:"renew_max_days"`
+	RenewLink        string `yaml:"renew_link"`
 }
 
 func ReadConfig(configFile string) (*Config, error) {
