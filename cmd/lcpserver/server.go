@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -48,7 +49,11 @@ func main() {
 
 	log.Printf("The server is ready.")
 
-	s.Run(":8081")
+	if c.Port == 0 {
+		c.Port = 8081
+	}
+
+	s.Run(":" + strconv.Itoa(c.Port))
 }
 
 // Initialize sets up the database and routes
@@ -91,7 +96,6 @@ func (s *Server) setRoutes() *chi.Mux {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	//r.Use(middleware.URLFormat)
-	//r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	// Public routes
 	// Heartbeat
@@ -106,8 +110,8 @@ func (s *Server) setRoutes() *chi.Mux {
 		r.Use(render.SetContentType(render.ContentTypeJSON))
 		r.Get("/status/{licenseID}", h.StatusDoc)   // Get /status/123
 		r.Post("/register/{licenseID}", h.Register) // POST /register/123
-		r.Put("/return/{licenseID}", h.Return)      // PUT /return/123
 		r.Put("/renew/{licenseID}", h.Renew)        // PUT /renew/123
+		r.Put("/return/{licenseID}", h.Return)      // PUT /return/123
 	})
 
 	// Private Routes
@@ -153,6 +157,9 @@ func (s *Server) setRoutes() *chi.Mux {
 				r.Post("/", h.GetFreshLicense) // POST /licenses/123
 			})
 		})
+
+		// License revocation
+		r.Put("/revoke/{licenseID}", h.Revoke) // PUT /revoke/123
 
 	})
 
