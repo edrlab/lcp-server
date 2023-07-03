@@ -36,7 +36,7 @@ func TestCreateLicenseInfo(t *testing.T) {
 	inLic, response := createLicense(t)
 
 	// check the response
-	if checkResponseCode(t, http.StatusOK, response) {
+	if checkResponseCode(t, http.StatusCreated, response) {
 		var outLic LicenseTest
 
 		if err := json.Unmarshal((response.Body.Bytes()), &outLic); err != nil {
