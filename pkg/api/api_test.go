@@ -66,7 +66,8 @@ type LicenseTest struct {
 func setConfig() *conf.Config {
 
 	c := conf.Config{
-		Dsn: "sqlite3://file::memory:?cache=shared",
+		PublicBaseUrl: "http://localhost:8081",
+		Dsn:           "sqlite3://file::memory:?cache=shared",
 		Login: conf.Login{
 			User:     "user",
 			Password: "password",
@@ -78,10 +79,7 @@ func setConfig() *conf.Config {
 		License: conf.License{
 			Provider: "http://edrlab.org",
 			Profile:  "http://readium.org/lcp/basic-profile",
-			Links: map[string]string{
-				"status": "http://localhost/status/{license_id}",
-				"hint":   "https://www.edrlab.org/lcp-help/{license_id}",
-			},
+			HintLink: "https://www.edrlab.org/lcp-help/{license_id}",
 		},
 	}
 
@@ -174,7 +172,7 @@ func createLicense(t *testing.T) (*LicenseTest, *httptest.ResponseRecorder) {
 	lic := newLicense(inPub.UUID)
 	data, err := json.Marshal((lic))
 	if err != nil {
-		t.Error("Marshaling Publication failed.")
+		t.Error("Marshaling license failed.")
 	}
 
 	// visual clue
@@ -318,8 +316,9 @@ func TestMain(m *testing.M) {
 			r.Use(render.SetContentType(render.ContentTypeJSON))
 			r.Get("/status/{licenseID}", h.StatusDoc)   // Get /status/123
 			r.Post("/register/{licenseID}", h.Register) // POST /register/123
-			r.Put("/return/{licenseID}", h.Return)      // PUT /return/123
 			r.Put("/renew/{licenseID}", h.Renew)        // PUT /renew/123
+			r.Put("/return/{licenseID}", h.Return)      // PUT /return/123
+			r.Put("/revoke/{licenseID}", h.Revoke)      // PUT /revoke/123
 		})
 
 	})
