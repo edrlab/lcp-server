@@ -100,38 +100,39 @@ type UserKey struct {
 const SHA256_URI string = "http://www.w3.org/2001/04/xmlenc#sha256"
 
 // NewLicense generates a license from db info, request data and config data
-func NewLicense(conf conf.License, cert *tls.Certificate, pubInfo *stor.Publication, licInfo *stor.LicenseInfo, userInfo *UserInfo, encryption *Encryption, passhash string) (*License, error) {
+func NewLicense(config *conf.Config, cert *tls.Certificate, pubInfo *stor.Publication, licInfo *stor.LicenseInfo, userInfo *UserInfo, encryption *Encryption, passhash string) (*License, error) {
 
 	l := &License{
 		UUID:     licInfo.UUID,
 		Provider: licInfo.Provider,
 		Issued:   licInfo.CreatedAt,
+		Updated:  licInfo.Updated,
 	}
 
 	log.Printf("License %s generated on %s", l.UUID, l.Issued.Format(time.RFC822))
 
-	userKey, err := setEncryption(conf, l, pubInfo, encryption, passhash)
+	userKey, err := setEncryption(config.Profile, l, pubInfo, encryption, passhash)
 	if err != nil {
 		return nil, err
 	}
 
 	// links
-	setLinks(conf, l, pubInfo)
+	setLinks(config.PublicBaseUrl, config.License.HintLink, l, pubInfo)
 
 	// user
-	err = setUser(conf, l, userInfo, userKey)
+	err = setUser(l, userInfo, userKey)
 	if err != nil {
 		return nil, err
 	}
 
 	//rights
-	err = setRights(conf, l, licInfo)
+	err = setRights(l, licInfo)
 	if err != nil {
 		return nil, err
 	}
 
 	// signature
-	err = setSignature(conf, l, cert)
+	err = setSignature(l, cert)
 	if err != nil {
 		return nil, err
 	}
@@ -141,10 +142,10 @@ func NewLicense(conf conf.License, cert *tls.Certificate, pubInfo *stor.Publicat
 
 // setEncryption sets the encryption structure in the license
 // returns the user key, which will be used later to encrypt user info
-func setEncryption(conf conf.License, l *License, pub *stor.Publication, encryption *Encryption, passhash string) ([]byte, error) {
+func setEncryption(profile string, l *License, pub *stor.Publication, encryption *Encryption, passhash string) ([]byte, error) {
 
 	if encryption.Profile == "" {
-		encryption.Profile = conf.Profile // by default from the config
+		encryption.Profile = profile // by default from the config
 	}
 	if encryption.Profile == "" {
 		return nil, errors.New("failed to set the license profile")
@@ -193,43 +194,10 @@ func buildKeyCheck(licenseID string, encrypter crypto.Encrypter, key []byte) ([]
 }
 
 // setLinks sets the links structure in the license
-func setLinks(conf conf.License, l *License, pub *stor.Publication) {
-
-	var links []Link
-
-	// set the links found in the config (status, hint)
-	confLinks := conf.Links
-	for key := range confLinks {
-		link := Link{Href: confLinks[key], Rel: key}
-		links = append(links, link)
-	}
-
-	// customize the status and hint links
-	for i := 0; i < len(links); i++ {
-		expand := false
-		switch links[i].Rel {
-		case "status":
-			links[i].Type = ContentType_LSD_JSON
-			expand = true
-		case "hint":
-			links[i].Type = ContentType_TEXT_HTML
-			expand = true
-		}
-		if expand {
-			template, _ := uritemplates.Parse(links[i].Href)
-			values := make(map[string]interface{})
-			values["license_id"] = l.UUID
-			expanded, err := template.Expand(values)
-			if err != nil {
-				log.Printf("failed to expand an uri template: %s", links[i].Href)
-			} else {
-				links[i].Href = expanded
-			}
-		}
-	}
+func setLinks(publicBaseUrl string, hintTemplate string, l *License, pub *stor.Publication) {
 
 	// set the publication link
-	link := Link{
+	pubLink := Link{
 		Rel:      "publication",
 		Href:     pub.Location,
 		Type:     pub.ContentType,
@@ -237,11 +205,37 @@ func setLinks(conf conf.License, l *License, pub *stor.Publication) {
 		Size:     int64(pub.Size),
 		Checksum: pub.Checksum,
 	}
-	l.Links = append(links, link)
+	l.Links = append(l.Links, pubLink)
+
+	// set the status link
+	statusLink := Link{
+		Rel:  "status",
+		Href: publicBaseUrl + "/status/" + l.UUID,
+		Type: ContentType_LSD_JSON,
+	}
+	l.Links = append(l.Links, statusLink)
+
+	// expand the link template
+	template, _ := uritemplates.Parse(hintTemplate)
+	values := make(map[string]interface{})
+	values["license_id"] = l.UUID
+	expanded, err := template.Expand(values)
+	if err != nil {
+		log.Printf("failed to expand the hint link: %s", template)
+	}
+
+	// set the hint link
+	hintLink := Link{
+		Rel:  "hint",
+		Href: expanded,
+		Type: ContentType_TEXT_HTML,
+	}
+	l.Links = append(l.Links, hintLink)
+
 }
 
 // setUser sets the user structure in the license
-func setUser(conf conf.License, l *License, userInfo *UserInfo, userKey []byte) error {
+func setUser(l *License, userInfo *UserInfo, userKey []byte) error {
 
 	// encrypt user info fields
 	fieldsEncrypter := crypto.NewAESEncrypter_FIELDS()
@@ -276,7 +270,7 @@ func getField(u *UserInfo, field string) reflect.Value {
 }
 
 // setRights sets the rights structure in the license
-func setRights(conf conf.License, l *License, licInfo *stor.LicenseInfo) error {
+func setRights(l *License, licInfo *stor.LicenseInfo) error {
 
 	l.Rights.Start = licInfo.Start
 	l.Rights.End = licInfo.End
@@ -290,7 +284,7 @@ func setRights(conf conf.License, l *License, licInfo *stor.LicenseInfo) error {
 }
 
 // setSignature sets the signature of the license
-func setSignature(conf conf.License, l *License, cert *tls.Certificate) error {
+func setSignature(l *License, cert *tls.Certificate) error {
 
 	if cert == nil {
 		return errors.New("failed to sign the license, cert not set")

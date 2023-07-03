@@ -7,29 +7,34 @@ package api
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/edrlab/lcp-server/pkg/lic"
-	"github.com/edrlab/lcp-server/pkg/stor"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 )
 
-type DeviceInfo struct {
-	ID   string
-	Name string
-}
-
 // Status returns a status document for the input license.
 func (h *APIHandler) StatusDoc(w http.ResponseWriter, r *http.Request) {
 
-	license, err := h.getLicenseInfo(w, r)
-	if err != nil {
+	// check the presence of the required params
+	var licenseID string
+	if licenseID = getLicenseID(w, r); licenseID == "" {
 		return
 	}
 
-	err = returnStatusDoc(w, r, license)
+	lh := lic.NewLicenseHandler(h.Config, h.Store)
+
+	// get license info
+	license, err := lh.Store.License().Get(licenseID)
 	if err != nil {
-		return
+		render.Render(w, r, ErrInvalidRequest(err))
+	}
+
+	// generate a status document
+	statusDoc := lh.NewStatusDoc(license)
+	if err := render.Render(w, r, NewStatusDocResponse(statusDoc)); err != nil {
+		render.Render(w, r, ErrRender(err))
 	}
 }
 
@@ -37,75 +42,110 @@ func (h *APIHandler) StatusDoc(w http.ResponseWriter, r *http.Request) {
 func (h *APIHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	// check the presence of the required params
-	var lid string
-	if lid = licenseID(w, r); lid == "" {
+	var licenseID string
+	if licenseID = getLicenseID(w, r); licenseID == "" {
 		return
 	}
-	if deviceInfo := deviceInfo(w, r); deviceInfo == nil {
+	var deviceInfo *lic.DeviceInfo
+	if deviceInfo = getDeviceInfo(w, r); deviceInfo == nil {
 		return
 	}
 
-	lm := lic.NewLicenseHandler(h.Config, h.Store)
+	lh := lic.NewLicenseHandler(h.Config, h.Store)
 
 	// register
-	license, err := lm.Register(lid)
+	statusDoc, err := lh.Register(licenseID, deviceInfo)
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
 	}
-
-	err = returnStatusDoc(w, r, license)
-	if err != nil {
-		return
-	}
-}
-
-// Return forces the expiration of a license and returns a status document.
-func (h *APIHandler) Return(w http.ResponseWriter, r *http.Request) {
-
-	license, err := h.getLicenseInfo(w, r)
-	if err != nil {
-		return
-	}
-
-	// update the license and add an event
-
-	err = returnStatusDoc(w, r, license)
-	if err != nil {
-		return
+	if err := render.Render(w, r, NewStatusDocResponse(statusDoc)); err != nil {
+		render.Render(w, r, ErrRender(err))
 	}
 }
 
 // Renew extends the lifetime of a license and returns a status document.
 func (h *APIHandler) Renew(w http.ResponseWriter, r *http.Request) {
 
-	license, err := h.getLicenseInfo(w, r)
-	if err != nil {
+	// check the presence of the required params
+	var licenseID string
+	if licenseID = getLicenseID(w, r); licenseID == "" {
+		return
+	}
+	var deviceInfo *lic.DeviceInfo
+	if deviceInfo = getDeviceInfo(w, r); deviceInfo == nil {
+		return
+	}
+	var newEnd *time.Time
+	var err error
+	if newEnd, err = getNewEnd(w, r); err != nil {
 		return
 	}
 
-	// update the license and add an event
+	lh := lic.NewLicenseHandler(h.Config, h.Store)
 
-	// if the request end date is > than potential end, extend to potential end
-
-	// if the end date is already the potential end + renew request, error message =
-	// "It is not possible to extend the end date of the license after February 3, 2020"
-	// !! support accept-language in messages
-
-	// see Thorium
-	// https://github.com/readium/readium-desktop/blob/aacfe6bbd33db5623a01cfb2939713b6015c8790/src/main/services/lcp.ts#L341-L350
-	// https://github.com/readium/readium-desktop/blob/aacfe6bbd33db5623a01cfb2939713b6015c8790/src/main/services/lcp.ts#L943-L953
-
-	err = returnStatusDoc(w, r, license)
+	// renew
+	statusDoc, err := lh.Renew(licenseID, deviceInfo, newEnd)
 	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+	}
+	if err := render.Render(w, r, NewStatusDocResponse(statusDoc)); err != nil {
+		render.Render(w, r, ErrRender(err))
+	}
+}
+
+// Return forces the expiration of a license and returns a status document.
+func (h *APIHandler) Return(w http.ResponseWriter, r *http.Request) {
+
+	// check the presence of the required params
+	var licenseID string
+	if licenseID = getLicenseID(w, r); licenseID == "" {
 		return
 	}
+	var deviceInfo *lic.DeviceInfo
+	if deviceInfo = getDeviceInfo(w, r); deviceInfo == nil {
+		return
+	}
+
+	lh := lic.NewLicenseHandler(h.Config, h.Store)
+
+	// renew
+	statusDoc, err := lh.Return(licenseID, deviceInfo)
+	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+	}
+	if err := render.Render(w, r, NewStatusDocResponse(statusDoc)); err != nil {
+		render.Render(w, r, ErrRender(err))
+	}
+
+}
+
+// Revoke forces the expiration of a license and returns a status document.
+func (h *APIHandler) Revoke(w http.ResponseWriter, r *http.Request) {
+
+	// check the presence of the required params
+	var licenseID string
+	if licenseID = getLicenseID(w, r); licenseID == "" {
+		return
+	}
+
+	lh := lic.NewLicenseHandler(h.Config, h.Store)
+
+	// revoke
+	statusDoc, err := lh.Revoke(licenseID)
+	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+	}
+	if err := render.Render(w, r, NewStatusDocResponse(statusDoc)); err != nil {
+		render.Render(w, r, ErrRender(err))
+	}
+
 }
 
 // --
 // local functions
 // --
 
-func licenseID(w http.ResponseWriter, r *http.Request) (licenseID string) {
+func getLicenseID(w http.ResponseWriter, r *http.Request) (licenseID string) {
 
 	if licenseID = chi.URLParam(r, "licenseID"); licenseID == "" {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required license identifier")))
@@ -113,12 +153,13 @@ func licenseID(w http.ResponseWriter, r *http.Request) (licenseID string) {
 	return
 }
 
-func deviceInfo(w http.ResponseWriter, r *http.Request) *DeviceInfo {
+// getDeviceInfo gets the device id and name from URL Query parameters
+func getDeviceInfo(w http.ResponseWriter, r *http.Request) *lic.DeviceInfo {
 
-	var device DeviceInfo
+	var device lic.DeviceInfo
 
-	device.ID = chi.URLParam(r, "id")
-	device.Name = chi.URLParam(r, "name")
+	device.ID = r.URL.Query().Get("id")
+	device.Name = r.URL.Query().Get("name")
 
 	dILen := len(device.ID)
 	dNLen := len(device.Name)
@@ -134,32 +175,19 @@ func deviceInfo(w http.ResponseWriter, r *http.Request) *DeviceInfo {
 	return &device
 }
 
-func (h *APIHandler) getLicenseInfo(w http.ResponseWriter, r *http.Request) (*stor.LicenseInfo, error) {
+func getNewEnd(w http.ResponseWriter, r *http.Request) (*time.Time, error) {
 
-	var license *stor.LicenseInfo
-	var err error
-
-	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
-		license, err = h.Store.License().Get(licenseID)
-	} else {
-		render.Render(w, r, ErrInvalidRequest(errors.New("missing required license identifier")))
-		return nil, err
+	endParam := r.URL.Query().Get("end")
+	if endParam == "" {
+		return nil, nil
 	}
+	newEnd, err := time.Parse(time.RFC3339, endParam)
 	if err != nil {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("invalid date end parameter")))
 		return nil, err
-	}
-	return license, nil
-}
 
-func returnStatusDoc(w http.ResponseWriter, r *http.Request, license *stor.LicenseInfo) error {
-
-	statusDoc := lic.NewStatusDoc(license)
-	if err := render.Render(w, r, NewStatusDocResponse(statusDoc)); err != nil {
-		render.Render(w, r, ErrRender(err))
-		return err
 	}
-	return nil
+	return &newEnd, nil
 }
 
 // --

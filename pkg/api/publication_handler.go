@@ -81,6 +81,7 @@ func (h *APIHandler) CreatePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	render.Status(r, http.StatusCreated)
 	if err := render.Render(w, r, NewPublicationResponse(publication)); err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
@@ -138,8 +139,8 @@ func (h *APIHandler) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	// set the gorm fields
 	publication.ID = currentPub.ID
 	publication.CreatedAt = currentPub.CreatedAt
-	publication.UpdatedAt = currentPub.UpdatedAt
-	publication.DeletedAt = currentPub.DeletedAt
+	//publication.UpdatedAt = currentPub.UpdatedAt
+	//publication.DeletedAt = currentPub.DeletedAt
 
 	// db update
 	err = h.Store.Publication().Update(publication)
@@ -194,15 +195,14 @@ type omit *struct{}
 // PublicationRequest is the request publication payload.
 type PublicationRequest struct {
 	*stor.Publication
-	ID        omit `json:"ID,omitempty"`
-	CreatedAt omit `json:"CreatedAt,omitempty"`
-	UpdatedAt omit `json:"UpdatedAt,omitempty"`
-	DeletedAt omit `json:"DeletedAt,omitempty"`
 }
 
 // PublicationResponse is the response publication payload.
 type PublicationResponse struct {
 	*stor.Publication
+	ID        omit `json:"ID,omitempty"`
+	CreatedAt omit `json:"CreatedAt,omitempty"`
+	UpdatedAt omit `json:"UpdatedAt,omitempty"`
 	DeletedAt omit `json:"DeletedAt,omitempty"`
 }
 

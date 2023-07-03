@@ -16,14 +16,14 @@ type Event struct {
 	Type       string      `json:"type"`
 	DeviceName string      `json:"name"`
 	DeviceID   string      `json:"id" gorm:"index"`
-	LicenseID  string      `json:"license_id"  gorm:"index"` // implicit foreign key to the related license
+	LicenseID  string      `json:"-"  gorm:"index"`          // implicit foreign key to the related license
 	License    LicenseInfo `json:"-" gorm:"references:UUID"` // the event belongs to the license
 }
 
 func (s eventStore) List(licenseID string) (*[]Event, error) {
 	events := []Event{}
-	// security: limited to 1000 results
-	return &events, s.db.Limit(1000).Where("license_id= ?", licenseID).Order("id ASC").Find(&events).Error
+	// security: limited to 500 results
+	return &events, s.db.Limit(500).Where("license_id= ?", licenseID).Order("id ASC").Find(&events).Error
 }
 
 func (s eventStore) GetByDevice(licenseID string, deviceID string) (*Event, error) {

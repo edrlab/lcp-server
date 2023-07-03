@@ -96,7 +96,11 @@ const (
 	STATUS_RETURNED  = "returned"
 	STATUS_CANCELLED = "cancelled"
 	STATUS_EXPIRED   = "expired"
-	EVENT_RENEWED    = "renewed"
+	EVENT_REGISTER   = "register"
+	EVENT_RENEW      = "renew"
+	EVENT_RETURN     = "return"
+	EVENT_REVOKE     = "revoke"
+	EVENT_CANCEL     = "cancel"
 )
 
 // DBSetup initializes the database
@@ -121,10 +125,10 @@ func DBSetup(dsn string) (Store, error) {
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 		logger.Config{
-			SlowThreshold:             time.Second,  // Slow SQL threshold
-			LogLevel:                  logger.Error, // Log level (Silent, Error, Warn, Info)
-			IgnoreRecordNotFoundError: true,         // Ignore ErrRecordNotFound error for logger
-			Colorful:                  true,         // Enable color
+			SlowThreshold:             time.Second, // Slow SQL threshold
+			LogLevel:                  logger.Warn, // Log level (Silent, Error, Warn, Info)
+			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
+			Colorful:                  true,        // Enable color
 		},
 	)
 

@@ -351,7 +351,7 @@ func (c *LicenseChecker) ProcessResponse(r *http.Response) error {
 	}
 
 	// check that the timestamp of the status document has been updated
-	if !newStatusDoc.Updated.Status.After(*c.statusDoc.Updated.Status) {
+	if !newStatusDoc.Updated.Status.After(c.statusDoc.Updated.Status) {
 		log.Errorf("The status doc timestamp has not been updated")
 	}
 	// test if an event has been added to the status document

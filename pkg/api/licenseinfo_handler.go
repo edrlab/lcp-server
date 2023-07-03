@@ -83,8 +83,16 @@ func (h *APIHandler) CreateLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	license := data.LicenseInfo
-	if license.Status != "ready" {
-		license.Status = "ready" // force the status
+
+	// force the status
+	if license.Status != stor.STATUS_READY {
+		license.Status = stor.STATUS_READY
+	}
+	// set the max end date if there is an end date and the max end date is not set in the input.
+	// the renew max date will be 0 if not set in the configuration
+	if license.End != nil && license.MaxEnd == nil {
+		maxEnd := license.End.AddDate(0, 0, h.Config.Status.RenewMaxDays)
+		license.MaxEnd = &maxEnd
 	}
 
 	// db create
@@ -94,6 +102,7 @@ func (h *APIHandler) CreateLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	render.Status(r, http.StatusCreated)
 	if err := render.Render(w, r, NewLicenseInfoResponse(license)); err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
@@ -151,8 +160,22 @@ func (h *APIHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 	// set the gorm fields
 	license.ID = currentLic.ID
 	license.CreatedAt = currentLic.CreatedAt
-	license.UpdatedAt = currentLic.UpdatedAt
-	license.DeletedAt = currentLic.DeletedAt
+	//license.UpdatedAt = currentLic.UpdatedAt
+	//license.DeletedAt = currentLic.DeletedAt
+
+	// set the update date only if rights are modified
+	// ** non en fait : il faut passer la bonne valeur de Updated à l'appel **
+	/*
+		if (license.Start != nil && currentLic.Start != nil && !license.Start.Equal(*currentLic.Start)) ||
+			(license.End != nil && currentLic.End != nil && !license.End.Equal(*currentLic.End)) ||
+			(license.Copy != currentLic.Copy) ||
+			(license.Print != currentLic.Print) {
+			now := time.Now()
+			license.Updated = &now
+		} else {
+			license.Updated = currentLic.Updated
+		}
+	*/
 
 	// db update
 	err = h.Store.License().Update(license)
@@ -211,10 +234,10 @@ type LicenseInfoRequest struct {
 // LicenseInfoResponse is the response payload for licenses.
 type LicenseInfoResponse struct {
 	*stor.LicenseInfo
-	ID          omit `json:"id,omitempty"`
-	CreatedAt   omit `json:"created_at,omitempty"`
-	UpdatedAt   omit `json:"updated_at,omitempty"`
-	DeletedAt   omit `json:"deleted_at,omitempty"`
+	//ID          omit `json:"id,omitempty"`
+	//CreatedAt   omit `json:"created_at,omitempty"`
+	//UpdatedAt   omit `json:"updated_at,omitempty"`
+	//DeletedAt   omit `json:"deleted_at,omitempty"`
 	Publication omit `json:"publication,omitempty"`
 }
 

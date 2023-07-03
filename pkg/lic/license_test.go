@@ -25,6 +25,7 @@ var LicInfo stor.LicenseInfo
 func setConfig() *conf.Config {
 
 	c := conf.Config{
+		PublicBaseUrl: "http://localhost:8081",
 		Certificate: conf.Certificate{
 			Cert:       "../test/cert/cert-edrlab-test.pem",
 			PrivateKey: "../test/cert/privkey-edrlab-test.pem",
@@ -32,15 +33,12 @@ func setConfig() *conf.Config {
 		License: conf.License{
 			Provider: "http://edrlab.org",
 			Profile:  "http://readium.org/lcp/basic-profile",
-			Links: map[string]string{
-				"status": "http://localhost/status/{license_id}",
-				"hint":   "https://www.edrlab.org/lcp-help/{license_id}",
-			},
+			HintLink: "https://www.edrlab.org/lcp-help/{license_id}",
 		},
 	}
-
 	return &c
 }
+
 func TestMain(m *testing.M) {
 
 	LicHandler.Config = setConfig()
@@ -50,7 +48,6 @@ func TestMain(m *testing.M) {
 	LicHandler.Store, _ = stor.DBSetup(dsn)
 
 	// create a publication
-	Pub := stor.Publication{}
 	Pub.UUID = uuid.New().String()
 	Pub.Title = faker.Company().CatchPhrase()
 	Pub.EncryptionKey = make([]byte, 16)
@@ -67,14 +64,16 @@ func TestMain(m *testing.M) {
 	start := time.Now()
 	end := start.AddDate(0, 0, 10)
 
-	LicInfo := stor.LicenseInfo{}
 	LicInfo.UUID = uuid.New().String()
 	LicInfo.Provider = "https://edrlab.org"
 	LicInfo.CreatedAt = start
+	LicInfo.Status = stor.STATUS_READY
 	LicInfo.Start = &start
 	LicInfo.End = &end
 	LicInfo.Print = int32(-1)
 	LicInfo.Copy = int32(-1)
+	// associate the license with the publication
+	LicInfo.PublicationID = Pub.UUID
 
 	// store the license in the db
 	LicHandler.Store.License().Create(&LicInfo)
@@ -109,7 +108,7 @@ func TestLicense(t *testing.T) {
 
 	passhash := "FAEB00CA518BEA7CB11A7EF31FB6183B489B1B6EADB792BEC64A03B3F6FF80A8"
 
-	license, err := NewLicense(LicHandler.Config.License, &cert, &Pub, &LicInfo, &userInfo, &encryption, passhash)
+	license, err := NewLicense(LicHandler.Config, &cert, &Pub, &LicInfo, &userInfo, &encryption, passhash)
 
 	if err != nil {
 		t.Log(err)

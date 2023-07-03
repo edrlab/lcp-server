@@ -13,16 +13,17 @@ import (
 
 // LicenseInfo data model
 // Note: the date of issue of the license is handled by the gorm model.
-// but the license is not logically updated when the device count is updated,
-// therefore we keep the Updated property.
+// but the license is not logically updated when a device registers,
+// therefore we keep the Updated property, which must be maintained "by hand".
 type LicenseInfo struct {
 	gorm.Model
-	Updated       *time.Time  `json:"updated,omitempty"`
+	Updated       *time.Time  `json:"updated,omitempty"` // see comment above
 	UUID          string      `json:"uuid" validate:"required,uuid" gorm:"uniqueIndex"`
 	Provider      string      `json:"provider" validate:"required,url"`
 	UserID        string      `json:"user_id,omitempty" validate:"required" gorm:"index"`
 	Start         *time.Time  `json:"start,omitempty"`
 	End           *time.Time  `json:"end,omitempty"`
+	MaxEnd        *time.Time  `json:"max_end,omitempty"`
 	Copy          int32       `json:"copy,omitempty"`
 	Print         int32       `json:"print,omitempty"`
 	Status        string      `json:"status" validate:"oneof=ready active expired cancelled revoked" gorm:"index"`
