@@ -37,3 +37,145 @@ func TestGetStatusDoc(t *testing.T) {
 	// delete the license
 	deleteLicense(t, inLic.UUID)
 }
+
+func TestRegister(t *testing.T) {
+
+	// create a license
+	inLic, _ := createLicense(t)
+
+	// send a register command
+	path := "/register/" + inLic.UUID + "?id=1&name=device1"
+	req, _ := http.NewRequest("POST", path, nil)
+	response := executeRequest(req)
+
+	// check the response
+	if checkResponseCode(t, http.StatusOK, response) {
+		var statusDoc lic.StatusDoc
+
+		if err := json.Unmarshal((response.Body.Bytes()), &statusDoc); err != nil {
+			t.Fatal(err)
+		}
+		// visual clue
+		log.Printf("%s\n", response.Body.String())
+	}
+
+	// delete the license
+	deleteLicense(t, inLic.UUID)
+}
+
+func TestRenew(t *testing.T) {
+
+	// create a license
+	inLic, _ := createLicense(t)
+
+	// send a register command
+	path := "/register/" + inLic.UUID + "?id=1&name=device1"
+	req, _ := http.NewRequest("POST", path, nil)
+	response := executeRequest(req)
+
+	// check the response
+	if checkResponseCode(t, http.StatusOK, response) {
+		var statusDoc lic.StatusDoc
+
+		if err := json.Unmarshal((response.Body.Bytes()), &statusDoc); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// send a renew command
+	path = "/renew/" + inLic.UUID + "?id=1&name=device1"
+	req, _ = http.NewRequest("PUT", path, nil)
+	response = executeRequest(req)
+
+	// check the response
+	if checkResponseCode(t, http.StatusOK, response) {
+		var statusDoc lic.StatusDoc
+
+		if err := json.Unmarshal((response.Body.Bytes()), &statusDoc); err != nil {
+			t.Fatal(err)
+		}
+		// visual clue
+		log.Printf("%s\n", response.Body.String())
+	}
+
+	// delete the license
+	deleteLicense(t, inLic.UUID)
+}
+
+func TestReturn(t *testing.T) {
+
+	// create a license
+	inLic, _ := createLicense(t)
+
+	// send a register command
+	path := "/register/" + inLic.UUID + "?id=1&name=device1"
+	req, _ := http.NewRequest("POST", path, nil)
+	response := executeRequest(req)
+
+	// check the response
+	if checkResponseCode(t, http.StatusOK, response) {
+		var statusDoc lic.StatusDoc
+
+		if err := json.Unmarshal((response.Body.Bytes()), &statusDoc); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// send a return command
+	path = "/return/" + inLic.UUID + "?id=1&name=device1"
+	req, _ = http.NewRequest("PUT", path, nil)
+	response = executeRequest(req)
+
+	// check the response
+	if checkResponseCode(t, http.StatusOK, response) {
+		var statusDoc lic.StatusDoc
+
+		if err := json.Unmarshal((response.Body.Bytes()), &statusDoc); err != nil {
+			t.Fatal(err)
+		}
+		// visual clue
+		log.Printf("%s\n", response.Body.String())
+	}
+
+	// delete the license
+	deleteLicense(t, inLic.UUID)
+}
+
+func TestRevoke(t *testing.T) {
+
+	// create a license
+	inLic, _ := createLicense(t)
+
+	// send a register command
+	path := "/register/" + inLic.UUID + "?id=1&name=device1"
+	req, _ := http.NewRequest("POST", path, nil)
+	response := executeRequest(req)
+
+	// check the response
+	if checkResponseCode(t, http.StatusOK, response) {
+		var statusDoc lic.StatusDoc
+
+		if err := json.Unmarshal((response.Body.Bytes()), &statusDoc); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// send a return command
+	path = "/revoke/" + inLic.UUID
+	req, _ = http.NewRequest("PUT", path, nil)
+	response = executeRequest(req)
+
+	// check the response
+	if checkResponseCode(t, http.StatusOK, response) {
+		var statusDoc lic.StatusDoc
+
+		if err := json.Unmarshal((response.Body.Bytes()), &statusDoc); err != nil {
+			t.Fatal(err)
+		}
+		// visual clue
+		log.Printf("%s\n", response.Body.String())
+	}
+
+	// delete the license
+	deleteLicense(t, inLic.UUID)
+}
