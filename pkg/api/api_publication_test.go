@@ -53,7 +53,7 @@ func TestCreatePublication(t *testing.T) {
 	inPub, response := createPublication(t)
 
 	// check the response
-	if checkResponseCode(t, http.StatusOK, response) {
+	if checkResponseCode(t, http.StatusCreated, response) {
 		var outPub PublicationTest
 
 		if err := json.Unmarshal((response.Body.Bytes()), &outPub); err != nil {
