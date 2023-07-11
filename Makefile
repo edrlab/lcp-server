@@ -5,7 +5,7 @@ BUILD_DIR=$(ROOT_DIR)/build
 UNAME_S= $(shell uname -s)
 ARCH=amd64
 
-lcpchecker=cmd/lcpchecker.go
+lcpchecker=cmd/lcpchecker/lcpchecker.go
 
 #LDFLAGS=-ldflags '-linkmode external -w -extldflags "-static"'
 LDFLAGS=

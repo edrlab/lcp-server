@@ -16,6 +16,9 @@ A lightweight content management server will also be released, named `pubstore`,
 
 Before these tools are available, the current Encryption Tool and Test Frontend Server will be usable with this new lcp-server (their API will be adapted to do so).
 
+`lcpchecker`:
+ * Simply run `make` in the root of this repository; The binary will be output to `build/bin/lcpchecker` by default.
+
 ## Configuration
 
 The configuration is similar to the v1 config, but simplified. 
