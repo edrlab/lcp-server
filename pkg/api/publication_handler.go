@@ -17,7 +17,7 @@ import (
 func (h *APIHandler) ListPublications(w http.ResponseWriter, r *http.Request) {
 	publications, err := h.Store.Publication().ListAll()
 	if err != nil {
-		render.Render(w, r, ErrRender(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 	if err := render.RenderList(w, r, NewPublicationListResponse(publications)); err != nil {
@@ -77,7 +77,7 @@ func (h *APIHandler) CreatePublication(w http.ResponseWriter, r *http.Request) {
 	// db create
 	err := h.Store.Publication().Create(publication)
 	if err != nil {
-		render.Render(w, r, ErrRender(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h *APIHandler) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
 		currentPub, err = h.Store.Publication().Get(publicationID)
 	} else {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier"))) // publicationID is nil
 		return
 	}
 	if err != nil {
@@ -145,7 +145,7 @@ func (h *APIHandler) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	// db update
 	err = h.Store.Publication().Update(publication)
 	if err != nil {
-		render.Render(w, r, ErrRender(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 
@@ -176,7 +176,7 @@ func (h *APIHandler) DeletePublication(w http.ResponseWriter, r *http.Request) {
 	// db delete
 	err = h.Store.Publication().Delete(publication)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 

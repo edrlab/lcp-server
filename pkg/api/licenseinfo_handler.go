@@ -20,7 +20,7 @@ import (
 func (h *APIHandler) ListLicenses(w http.ResponseWriter, r *http.Request) {
 	licenses, err := h.Store.License().ListAll()
 	if err != nil {
-		render.Render(w, r, ErrRender(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 	if err := render.RenderList(w, r, NewLicenseInfoListResponse(licenses)); err != nil {
@@ -64,7 +64,7 @@ func (h *APIHandler) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		render.Render(w, r, ErrRender(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 	if err := render.RenderList(w, r, NewLicenseInfoListResponse(licenses)); err != nil {
@@ -98,7 +98,7 @@ func (h *APIHandler) CreateLicense(w http.ResponseWriter, r *http.Request) {
 	// db create
 	err := h.Store.License().Create(license)
 	if err != nil {
-		render.Render(w, r, ErrRender(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 
@@ -180,7 +180,7 @@ func (h *APIHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 	// db update
 	err = h.Store.License().Update(license)
 	if err != nil {
-		render.Render(w, r, ErrRender(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 
@@ -211,7 +211,7 @@ func (h *APIHandler) DeleteLicense(w http.ResponseWriter, r *http.Request) {
 	// db delete
 	err = h.Store.License().Delete(license)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 

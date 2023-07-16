@@ -47,7 +47,7 @@ func (h *APIHandler) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	// store license info
 	err = h.Store.License().Create(licInfo)
 	if err != nil {
-		render.Render(w, r, ErrRender(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 	// get back license info to retrieve gorm data
@@ -73,7 +73,7 @@ func (h *APIHandler) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	// generate the license
 	license, err := lic.NewLicense(h.Config, h.Cert, pubInfo, licInfo, &userInfo, &encryption, licRequest.PassHash)
 	if err != nil {
-		render.Render(w, r, ErrRender(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 
@@ -138,7 +138,7 @@ func (h *APIHandler) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
 	// generate the license
 	license, err := lic.NewLicense(h.Config, h.Cert, pubInfo, licInfo, &userInfo, &encryption, licRequest.PassHash)
 	if err != nil {
-		render.Render(w, r, ErrRender(err))
+		render.Render(w, r, ErrServer(err))
 		return
 	}
 	if err := render.Render(w, r, NewLicenseResponse(license)); err != nil {

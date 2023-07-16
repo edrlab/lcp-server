@@ -14,6 +14,11 @@ import (
 	"github.com/go-chi/render"
 )
 
+var (
+	ErrMissingLicenseId  = errors.New("missing required license identifier")
+	ErrMissingDeviceInfo = errors.New("missing required device information")
+)
+
 // Status returns a status document for the input license.
 func (h *APIHandler) StatusDoc(w http.ResponseWriter, r *http.Request) {
 
@@ -28,7 +33,8 @@ func (h *APIHandler) StatusDoc(w http.ResponseWriter, r *http.Request) {
 	// get license info
 	license, err := lh.Store.License().Get(licenseID)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
+		render.Render(w, r, ErrNotFound)
+		return
 	}
 
 	// generate a status document
@@ -56,7 +62,8 @@ func (h *APIHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// register
 	statusDoc, err := lh.Register(licenseID, deviceInfo)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
+		render.Render(w, r, ErrRegister(err))
+		return
 	}
 	if err := render.Render(w, r, NewStatusDocResponse(statusDoc)); err != nil {
 		render.Render(w, r, ErrRender(err))
@@ -86,7 +93,8 @@ func (h *APIHandler) Renew(w http.ResponseWriter, r *http.Request) {
 	// renew
 	statusDoc, err := lh.Renew(licenseID, deviceInfo, newEnd)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
+		render.Render(w, r, ErrRenew(err))
+		return
 	}
 	if err := render.Render(w, r, NewStatusDocResponse(statusDoc)); err != nil {
 		render.Render(w, r, ErrRender(err))
@@ -108,10 +116,11 @@ func (h *APIHandler) Return(w http.ResponseWriter, r *http.Request) {
 
 	lh := lic.NewLicenseHandler(h.Config, h.Store)
 
-	// renew
+	// return
 	statusDoc, err := lh.Return(licenseID, deviceInfo)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
+		render.Render(w, r, ErrReturn(err))
+		return
 	}
 	if err := render.Render(w, r, NewStatusDocResponse(statusDoc)); err != nil {
 		render.Render(w, r, ErrRender(err))
@@ -133,7 +142,8 @@ func (h *APIHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	// revoke
 	statusDoc, err := lh.Revoke(licenseID)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
+		render.Render(w, r, ErrRevoke(err))
+		return
 	}
 	if err := render.Render(w, r, NewStatusDocResponse(statusDoc)); err != nil {
 		render.Render(w, r, ErrRender(err))
@@ -148,7 +158,7 @@ func (h *APIHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 func getLicenseID(w http.ResponseWriter, r *http.Request) (licenseID string) {
 
 	if licenseID = chi.URLParam(r, "licenseID"); licenseID == "" {
-		render.Render(w, r, ErrInvalidRequest(errors.New("missing required license identifier")))
+		render.Render(w, r, ErrInvalidRequest(ErrMissingLicenseId))
 	}
 	return
 }
