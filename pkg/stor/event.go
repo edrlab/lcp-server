@@ -26,9 +26,9 @@ func (s eventStore) List(licenseID string) (*[]Event, error) {
 	return &events, s.db.Limit(500).Where("license_id= ?", licenseID).Order("id ASC").Find(&events).Error
 }
 
-func (s eventStore) GetByDevice(licenseID string, deviceID string) (*Event, error) {
+func (s eventStore) GetRegisterByDevice(licenseID string, deviceID string) (*Event, error) {
 	var event Event
-	return &event, s.db.First(&event).Where("license_id= ? and device_id= ?", licenseID, deviceID).Error
+	return &event, s.db.Where("license_id= ? and type= 'register' and device_id= ?", licenseID, deviceID).First(&event).Error
 }
 
 func (s eventStore) Count(licenseID string) (int64, error) {

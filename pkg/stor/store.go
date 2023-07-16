@@ -66,7 +66,7 @@ type (
 	// EventRepository interface, defining event operations
 	EventRepository interface {
 		List(licenseID string) (*[]Event, error)
-		GetByDevice(licenseID string, deviceID string) (*Event, error)
+		GetRegisterByDevice(licenseID string, deviceID string) (*Event, error)
 		Count(licenseID string) (int64, error)
 		Get(id uint) (*Event, error)
 		Create(e *Event) error

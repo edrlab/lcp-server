@@ -13,6 +13,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	ErrLicenseNotFound = errors.New("license not found or failed to get license info")
+)
+
 // StatusDoc data model
 type (
 	StatusDoc struct {
@@ -161,7 +165,7 @@ func (lh *LicenseHandler) Register(licenseID string, device *DeviceInfo) (*Statu
 	// Get license info
 	license, err := lh.Store.License().Get(licenseID)
 	if err != nil {
-		return nil, errors.New("failed to get license info")
+		return nil, ErrLicenseNotFound
 	}
 
 	// check that the license is in ready or active status
@@ -170,9 +174,9 @@ func (lh *LicenseHandler) Register(licenseID string, device *DeviceInfo) (*Statu
 	}
 
 	// check that the device has not already been registered for this license
-	_, err = lh.Store.Event().GetByDevice(license.UUID, device.ID)
+	_, err = lh.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
 	if err == nil {
-		log.Warningf("Failed to register; the device %s is already registered", device.ID)
+		log.Warningf("Registration halted: the device %s is already registered", device.ID)
 		statusDoc := lh.NewStatusDoc(license)
 		return statusDoc, nil
 	}
@@ -205,13 +209,13 @@ func (lh *LicenseHandler) Register(licenseID string, device *DeviceInfo) (*Statu
 	return statusDoc, nil
 }
 
-// Renew extends the end date of  a license
+// Renew extends the end date of a license
 func (lh *LicenseHandler) Renew(licenseID string, device *DeviceInfo, newEnd *time.Time) (*StatusDoc, error) {
 
 	// Get license info
 	license, err := lh.Store.License().Get(licenseID)
 	if err != nil {
-		return nil, errors.New("failed to get license info")
+		return nil, ErrLicenseNotFound
 	}
 
 	// check that the license is in active status
@@ -219,19 +223,25 @@ func (lh *LicenseHandler) Renew(licenseID string, device *DeviceInfo, newEnd *ti
 		return nil, errors.New("requesting a renew on a non-active license is prohibited")
 	}
 
+	// check that the device had been registered for this license
+	_, err = lh.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
+	if err != nil {
+		return nil, errors.New("requesting a renew on a license which has not been registered by this device is prohibited")
+	}
+
 	// set the new end date
 	if newEnd != nil {
 		// consider an explicit end date
 		if license.MaxEnd != nil && newEnd.After(*license.MaxEnd) {
+			log.Println("License extension limit is ", license.MaxEnd.Format(time.RFC822))
 			license.End = license.MaxEnd
-			log.Println("License extension; it is not possible to extend the end date after ", license.End.Format(time.RFC822))
 		} else {
 			license.End = newEnd
 		}
 		// consider a default end date set in the configuration file
 	} else if lh.Config.Status.RenewDefaultDays != 0 {
 		*license.End = license.End.AddDate(0, 0, lh.Config.Status.RenewDefaultDays)
-		// the default is 7 days
+		// the ultimate default is 7 days
 	} else {
 		*license.End = license.End.AddDate(0, 0, 7)
 	}
@@ -267,7 +277,13 @@ func (lh *LicenseHandler) Return(licenseID string, device *DeviceInfo) (*StatusD
 	// Get license info
 	license, err := lh.Store.License().Get(licenseID)
 	if err != nil {
-		return nil, errors.New("failed to get license info")
+		return nil, ErrLicenseNotFound
+	}
+
+	// check that the license has not already expired
+	now := time.Now().Truncate(time.Second)
+	if license.End.Before(now) {
+		return nil, errors.New("this license expired on " + license.End.Format(time.RFC822))
 	}
 
 	// check that the license is in active status
@@ -275,8 +291,13 @@ func (lh *LicenseHandler) Return(licenseID string, device *DeviceInfo) (*StatusD
 		return nil, errors.New("requesting a return on a non-active license is prohibited")
 	}
 
+	// check that the device had been registered for this license
+	_, err = lh.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
+	if err != nil {
+		return nil, errors.New("requesting a return on a license which has not been registered by this device is prohibited")
+	}
+
 	// set the new end date
-	now := time.Now().Truncate(time.Second)
 	license.End = &now
 
 	log.Println("License returned; the new end date is ", license.End.Format(time.RFC822))
@@ -312,10 +333,16 @@ func (lh *LicenseHandler) Revoke(licenseID string) (*StatusDoc, error) {
 	// Get license info
 	license, err := lh.Store.License().Get(licenseID)
 	if err != nil {
-		return nil, errors.New("failed to get license info")
+		return nil, ErrLicenseNotFound
 	}
 
-	// check that the license is in active status
+	if license.Status == stor.STATUS_REVOKED || license.Status == stor.STATUS_CANCELLED {
+		log.Infof("The status of the license is already %s", license.Status)
+		statusDoc := lh.NewStatusDoc(license)
+		return statusDoc, nil
+	}
+
+	// check if the license is in ready status (-> cancel or revoke)
 	cancel := false
 	if license.Status == stor.STATUS_READY {
 		cancel = true

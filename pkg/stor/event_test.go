@@ -81,6 +81,16 @@ func TestEvent(t *testing.T) {
 		t.Fatalf("Failed to count, expected 2 got %d", count)
 	}
 
+	// list events
+	var events *[]Event
+	events, err = St.Event().List(l.UUID)
+	if err != nil {
+		t.Fatalf("Failed to list events: %v", err)
+	}
+	if len(*events) != 2 {
+		t.Fatalf("Failed to list, expected 2 got %d", count)
+	}
+
 	// update the first event
 	e1.Type = "revoke"
 	err = St.Event().Update(e1)
@@ -89,12 +99,19 @@ func TestEvent(t *testing.T) {
 	}
 
 	// get one of the events
-	event, err = St.Event().GetByDevice(l.UUID, e1.DeviceID)
+	event, err = St.Event().GetRegisterByDevice(l.UUID, e1.DeviceID)
 	if err != nil {
 		t.Fatalf("Failed to get event 1: %v", err)
 	}
 	if event.DeviceName != "Test Device Name 1" {
 		t.Fatalf("Failed to retrieve the expected event, got : %s", event.DeviceName)
+	}
+
+	// try to get a non existant event
+	deviceID := "Test Device ID 3"
+	_, err = St.Event().GetRegisterByDevice(l.UUID, deviceID)
+	if err == nil {
+		t.Fatal("Failed to get an error for device id 3")
 	}
 
 	// delete the events
