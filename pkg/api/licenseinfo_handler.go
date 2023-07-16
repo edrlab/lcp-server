@@ -157,25 +157,9 @@ func (h *APIHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// set the gorm fields
+	// set the gorm fields which should stay intact
 	license.ID = currentLic.ID
 	license.CreatedAt = currentLic.CreatedAt
-	//license.UpdatedAt = currentLic.UpdatedAt
-	//license.DeletedAt = currentLic.DeletedAt
-
-	// set the update date only if rights are modified
-	// ** non en fait : il faut passer la bonne valeur de Updated à l'appel **
-	/*
-		if (license.Start != nil && currentLic.Start != nil && !license.Start.Equal(*currentLic.Start)) ||
-			(license.End != nil && currentLic.End != nil && !license.End.Equal(*currentLic.End)) ||
-			(license.Copy != currentLic.Copy) ||
-			(license.Print != currentLic.Print) {
-			now := time.Now()
-			license.Updated = &now
-		} else {
-			license.Updated = currentLic.Updated
-		}
-	*/
 
 	// db update
 	err = h.Store.License().Update(license)
@@ -234,11 +218,12 @@ type LicenseInfoRequest struct {
 // LicenseInfoResponse is the response payload for licenses.
 type LicenseInfoResponse struct {
 	*stor.LicenseInfo
-	//ID          omit `json:"id,omitempty"`
-	//CreatedAt   omit `json:"created_at,omitempty"`
-	//UpdatedAt   omit `json:"updated_at,omitempty"`
-	//DeletedAt   omit `json:"deleted_at,omitempty"`
-	Publication omit `json:"publication,omitempty"`
+	// do not serialize the following properties
+	//ID omit `json:"ID,omitempty"`
+	//CreatedAt   omit `json:"CreatedAt,omitempty"`
+	//UpdatedAt   omit `json:"UpdatedAt,omitempty"`
+	//DeletedAt   omit `json:"DeletedAt,omitempty"`
+	Publication omit `json:"Publication,omitempty"`
 }
 
 // NewLicenseInfoListResponse creates a rendered list of licenses
