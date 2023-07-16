@@ -7,6 +7,7 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -92,10 +93,10 @@ func (s *Server) setRoutes() *chi.Mux {
 	// Define the router
 	r := chi.NewRouter()
 
-	//r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	//r.Use(middleware.URLFormat)
+
+	r.NotFound(notFoundProblemDetail)
 
 	// Public routes
 	// Heartbeat
@@ -181,4 +182,14 @@ func paginate(next http.Handler) http.Handler {
 		// the page number, or the limit, and send a query cursor down the chain
 		next.ServeHTTP(w, r)
 	})
+}
+
+// notFoundProblemDetail formats not found errors as problem details, not the sake of consistency.
+func notFoundProblemDetail(w http.ResponseWriter, r *http.Request) {
+	response := map[string]string{"type": "about:blank", "title": "Endpoint not found."}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotFound)
+
+	json.NewEncoder(w).Encode(response)
 }
