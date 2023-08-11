@@ -6,7 +6,7 @@ package conf
 
 import (
 	"errors"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -51,7 +51,7 @@ func ReadConfig(configFile string) (*Config, error) {
 
 	if configFile != "" {
 		f, _ := filepath.Abs(configFile)
-		yamlData, err := ioutil.ReadFile(f)
+		yamlData, err := os.ReadFile(f)
 		if err != nil {
 			return nil, err
 		}
