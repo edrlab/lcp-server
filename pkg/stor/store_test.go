@@ -67,7 +67,7 @@ func TestMain(m *testing.M) {
 
 	// Create / open an sqlite db in memory
 	dsn := "sqlite3://file::memory:?cache=shared"
-	St, _ = DBSetup(dsn)
+	St, _ = Init(dsn)
 
 	code := m.Run()
 	os.Exit(code)

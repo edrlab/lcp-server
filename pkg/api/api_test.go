@@ -235,7 +235,7 @@ func TestMain(m *testing.M) {
 
 	// Setup the database
 	var err error
-	s.Store, err = stor.DBSetup(s.Config.Dsn)
+	s.Store, err = stor.Init(s.Config.Dsn)
 	if err != nil {
 		panic("Database setup failed")
 	}

@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 
 	// Create / open an sqlite db in memory
 	dsn := "sqlite3://file::memory:?cache=shared"
-	LicCt.Store, _ = stor.DBSetup(dsn)
+	LicCt.Store, _ = stor.Init(dsn)
 
 	// create a publication
 	Pub.UUID = uuid.New().String()

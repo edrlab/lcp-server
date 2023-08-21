@@ -75,7 +75,7 @@ type (
 	}
 )
 
-// implementation of the Store interface
+// implementation of the different repository interfaces
 func (s *dbStore) Publication() PublicationRepository {
 	return (*publicationStore)(s)
 }
@@ -103,8 +103,8 @@ const (
 	EVENT_CANCEL     = "cancel"
 )
 
-// DBSetup initializes the database
-func DBSetup(dsn string) (Store, error) {
+// Init initializes the database
+func Init(dsn string) (Store, error) {
 	var err error
 
 	dialect, cnx := dbFromURI(dsn)

@@ -62,7 +62,7 @@ func (s *Server) Initialize() {
 	var err error
 
 	// Setup the database
-	s.Store, err = stor.DBSetup(s.Config.Dsn)
+	s.Store, err = stor.Init(s.Config.Dsn)
 	if err != nil {
 		panic("Database setup failed.")
 	}
