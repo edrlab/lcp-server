@@ -2,6 +2,8 @@
 
 This is a major evolution of the Readium LCP Server available on https://github.com/readium/readium-lcp-server. Because it is not an incremental evolution, we decided to create a new repository on the EDRLab Github space. When this software has been properly tested and widely used in production, we will certainly archive the codebase on the Readium Github. 
 
+V2 requires go 1.16 or higher, due to the use of new features of the `os` package.
+
 The `lcpserver`:
 
 - Receives notifications for each encryption of a publication.
@@ -32,9 +34,9 @@ port: 8081
 # data source name of access to the chosen database
 dsn: "sqlite3://file::memory:?cache=shared"
 
-# admin login for private routes
-login:
-  user: "user"
+# admin access for private routes
+access:
+  username: "login"
   password: "password"
 
 license:
