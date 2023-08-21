@@ -17,8 +17,8 @@ func TestRegister(t *testing.T) {
 		Name: "device1",
 	}
 
-	// use the globally defined LicHandler and Licinfo
-	statusDoc, err := LicHandler.Register(LicInfo.UUID, deviceInfo)
+	// use the globally defined LicCt and Licinfo
+	statusDoc, err := LicCt.Register(LicInfo.UUID, deviceInfo)
 	if err != nil {
 		t.Log(err)
 		t.Fatal("failed to register a license.")
@@ -37,7 +37,7 @@ func TestRenew(t *testing.T) {
 		Name: "device1",
 	}
 
-	statusDoc, err := LicHandler.Register(LicInfo.UUID, deviceInfo)
+	statusDoc, err := LicCt.Register(LicInfo.UUID, deviceInfo)
 	if err != nil {
 		t.Log(err)
 		t.Fatal("failed to register a license.")
@@ -47,7 +47,7 @@ func TestRenew(t *testing.T) {
 		t.Errorf("expected an active status, got %s", statusDoc.Status)
 	}
 
-	statusDoc, err = LicHandler.Renew(LicInfo.UUID, deviceInfo, nil)
+	statusDoc, err = LicCt.Renew(LicInfo.UUID, deviceInfo, nil)
 	if err != nil {
 		t.Log(err)
 		t.Fatal("failed to renew a license.")
@@ -66,7 +66,7 @@ func TestRevoke(t *testing.T) {
 		Name: "device1",
 	}
 
-	statusDoc, err := LicHandler.Register(LicInfo.UUID, deviceInfo)
+	statusDoc, err := LicCt.Register(LicInfo.UUID, deviceInfo)
 	if err != nil {
 		t.Log(err)
 		t.Fatal("failed to register a license.")
@@ -76,7 +76,7 @@ func TestRevoke(t *testing.T) {
 		t.Errorf("expected an active status, got %s", statusDoc.Status)
 	}
 
-	statusDoc, err = LicHandler.Revoke(LicInfo.UUID)
+	statusDoc, err = LicCt.Revoke(LicInfo.UUID)
 	if err != nil {
 		t.Log(err)
 		t.Fatal("failed to revoke a license.")

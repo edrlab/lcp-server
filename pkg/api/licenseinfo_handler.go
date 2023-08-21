@@ -17,8 +17,8 @@ import (
 )
 
 // ListLicenses lists all licenses present in the database.
-func (h *APIHandler) ListLicenses(w http.ResponseWriter, r *http.Request) {
-	licenses, err := h.Store.License().ListAll()
+func (a *APICtrl) ListLicenses(w http.ResponseWriter, r *http.Request) {
+	licenses, err := a.Store.License().ListAll()
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return
@@ -30,19 +30,19 @@ func (h *APIHandler) ListLicenses(w http.ResponseWriter, r *http.Request) {
 }
 
 // SearchLicenses searches licenses corresponding to a specific criteria.
-func (h *APIHandler) SearchLicenses(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 	var licenses *[]stor.LicenseInfo
 	var err error
 
 	// search by user
 	if userID := r.URL.Query().Get("user"); userID != "" {
-		licenses, err = h.Store.License().FindByUser(userID)
+		licenses, err = a.Store.License().FindByUser(userID)
 		// by publication
 	} else if pubID := r.URL.Query().Get("pub"); pubID != "" {
-		licenses, err = h.Store.License().FindByPublication(pubID)
+		licenses, err = a.Store.License().FindByPublication(pubID)
 		// by status
 	} else if status := r.URL.Query().Get("status"); status != "" {
-		licenses, err = h.Store.License().FindByStatus(status)
+		licenses, err = a.Store.License().FindByStatus(status)
 		// by count
 	} else if count := r.URL.Query().Get("count"); count != "" {
 		// count is a "min:max" tuple
@@ -58,7 +58,7 @@ func (h *APIHandler) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 		if max, err = strconv.Atoi(parts[1]); err != nil {
 			render.Render(w, r, ErrInvalidRequest(err))
 		}
-		licenses, err = h.Store.License().FindByDeviceCount(min, max)
+		licenses, err = a.Store.License().FindByDeviceCount(min, max)
 	} else {
 		render.Render(w, r, ErrNotFound)
 		return
@@ -74,7 +74,7 @@ func (h *APIHandler) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateLicense adds a new license to the database.
-func (h *APIHandler) CreateLicense(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) CreateLicense(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
 	data := &LicenseInfoRequest{}
@@ -91,12 +91,12 @@ func (h *APIHandler) CreateLicense(w http.ResponseWriter, r *http.Request) {
 	// set the max end date if there is an end date and the max end date is not set in the input.
 	// the renew max date will be 0 if not set in the configuration
 	if license.End != nil && license.MaxEnd == nil {
-		maxEnd := license.End.AddDate(0, 0, h.Config.Status.RenewMaxDays)
+		maxEnd := license.End.AddDate(0, 0, a.Config.Status.RenewMaxDays)
 		license.MaxEnd = &maxEnd
 	}
 
 	// db create
-	err := h.Store.License().Create(license)
+	err := a.Store.License().Create(license)
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return
@@ -110,13 +110,13 @@ func (h *APIHandler) CreateLicense(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetLicense returns a specific license
-func (h *APIHandler) GetLicense(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) GetLicense(w http.ResponseWriter, r *http.Request) {
 
 	var license *stor.LicenseInfo
 	var err error
 
 	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
-		license, err = h.Store.License().Get(licenseID)
+		license, err = a.Store.License().Get(licenseID)
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required license identifier")))
 		return
@@ -132,7 +132,7 @@ func (h *APIHandler) GetLicense(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateLicense updates an existing License in the database.
-func (h *APIHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
 	data := &LicenseInfoRequest{}
@@ -147,7 +147,7 @@ func (h *APIHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 
 	// get the existing license
 	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
-		currentLic, err = h.Store.License().Get(licenseID)
+		currentLic, err = a.Store.License().Get(licenseID)
 	} else {
 		render.Render(w, r, ErrNotFound)
 		return
@@ -162,7 +162,7 @@ func (h *APIHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 	license.CreatedAt = currentLic.CreatedAt
 
 	// db update
-	err = h.Store.License().Update(license)
+	err = a.Store.License().Update(license)
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return
@@ -175,14 +175,14 @@ func (h *APIHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteLicense removes an existing license from the database.
-func (h *APIHandler) DeleteLicense(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) DeleteLicense(w http.ResponseWriter, r *http.Request) {
 
 	var license *stor.LicenseInfo
 	var err error
 
 	// get the existing license
 	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
-		license, err = h.Store.License().Get(licenseID)
+		license, err = a.Store.License().Get(licenseID)
 	} else {
 		render.Render(w, r, ErrNotFound)
 		return
@@ -193,7 +193,7 @@ func (h *APIHandler) DeleteLicense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// db delete
-	err = h.Store.License().Delete(license)
+	err = a.Store.License().Delete(license)
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return

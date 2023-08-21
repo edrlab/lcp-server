@@ -14,8 +14,8 @@ import (
 )
 
 // ListPublications lists all publications present in the database.
-func (h *APIHandler) ListPublications(w http.ResponseWriter, r *http.Request) {
-	publications, err := h.Store.Publication().ListAll()
+func (a *APICtrl) ListPublications(w http.ResponseWriter, r *http.Request) {
+	publications, err := a.Store.Publication().ListAll()
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return
@@ -27,7 +27,7 @@ func (h *APIHandler) ListPublications(w http.ResponseWriter, r *http.Request) {
 }
 
 // SearchPublications searches publications corresponding to a specific criteria.
-func (h *APIHandler) SearchPublications(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) SearchPublications(w http.ResponseWriter, r *http.Request) {
 	var publications *[]stor.Publication
 	var err error
 
@@ -47,7 +47,7 @@ func (h *APIHandler) SearchPublications(w http.ResponseWriter, r *http.Request) 
 			err = errors.New("invalid content type query string parameter")
 		}
 		if contentType != "" {
-			publications, err = h.Store.Publication().FindByType(contentType)
+			publications, err = a.Store.Publication().FindByType(contentType)
 		}
 	} else {
 		render.Render(w, r, ErrNotFound)
@@ -64,7 +64,7 @@ func (h *APIHandler) SearchPublications(w http.ResponseWriter, r *http.Request) 
 }
 
 // CreatePublication adds a new Publication to the database.
-func (h *APIHandler) CreatePublication(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
 	data := &PublicationRequest{}
@@ -75,7 +75,7 @@ func (h *APIHandler) CreatePublication(w http.ResponseWriter, r *http.Request) {
 	publication := data.Publication
 
 	// db create
-	err := h.Store.Publication().Create(publication)
+	err := a.Store.Publication().Create(publication)
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return
@@ -89,13 +89,13 @@ func (h *APIHandler) CreatePublication(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPublication returns a specific publication
-func (h *APIHandler) GetPublication(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) GetPublication(w http.ResponseWriter, r *http.Request) {
 
 	var publication *stor.Publication
 	var err error
 
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
-		publication, err = h.Store.Publication().Get(publicationID)
+		publication, err = a.Store.Publication().Get(publicationID)
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier")))
 		return
@@ -111,7 +111,7 @@ func (h *APIHandler) GetPublication(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdatePublication updates an existing Publication in the database.
-func (h *APIHandler) UpdatePublication(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
 	data := &PublicationRequest{}
@@ -126,7 +126,7 @@ func (h *APIHandler) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 
 	// get the existing publication
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
-		currentPub, err = h.Store.Publication().Get(publicationID)
+		currentPub, err = a.Store.Publication().Get(publicationID)
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier"))) // publicationID is nil
 		return
@@ -143,7 +143,7 @@ func (h *APIHandler) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	//publication.DeletedAt = currentPub.DeletedAt
 
 	// db update
-	err = h.Store.Publication().Update(publication)
+	err = a.Store.Publication().Update(publication)
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return
@@ -156,14 +156,14 @@ func (h *APIHandler) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePublication removes an existing Publication from the database.
-func (h *APIHandler) DeletePublication(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) DeletePublication(w http.ResponseWriter, r *http.Request) {
 
 	var publication *stor.Publication
 	var err error
 
 	// get the existing publication
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
-		publication, err = h.Store.Publication().Get(publicationID)
+		publication, err = a.Store.Publication().Get(publicationID)
 	} else {
 		render.Render(w, r, ErrNotFound)
 		return
@@ -174,7 +174,7 @@ func (h *APIHandler) DeletePublication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// db delete
-	err = h.Store.Publication().Delete(publication)
+	err = a.Store.Publication().Delete(publication)
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return

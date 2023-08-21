@@ -46,7 +46,7 @@ type (
 		Revoke(license *stor.LicenseInfo) error
 	}
 
-	LicenseHandler struct {
+	LicenseCtrl struct {
 		*conf.Config // TODO: change for an interface (dependency)
 		stor.Store
 	}
@@ -57,8 +57,8 @@ type (
 	}
 )
 
-func NewLicenseHandler(cf *conf.Config, st stor.Store) *LicenseHandler {
-	return &LicenseHandler{
+func NewLicenseCtrl(cf *conf.Config, st stor.Store) *LicenseCtrl {
+	return &LicenseCtrl{
 		Config: cf,
 		Store:  st,
 	}
@@ -67,7 +67,7 @@ func NewLicenseHandler(cf *conf.Config, st stor.Store) *LicenseHandler {
 // ====
 
 // NewStatusDoc returns a Status Document
-func (lh *LicenseHandler) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
+func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 
 	// set license updated
 	var licUpdated, statUpdated time.Time
@@ -114,10 +114,10 @@ func (lh *LicenseHandler) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 	}
 
 	// set links
-	setStatusLinks(lh.Config.PublicBaseUrl, lh.Config.Status.RenewLink, statusDoc)
+	setStatusLinks(lc.Config.PublicBaseUrl, lc.Config.Status.RenewLink, statusDoc)
 
 	// set events
-	setEvents(lh.Store, statusDoc)
+	setEvents(lc.Store, statusDoc)
 
 	return statusDoc
 }
@@ -160,10 +160,10 @@ func setEvents(store stor.Store, statusDoc *StatusDoc) error {
 }
 
 // Register records that a new device is using a license
-func (lh *LicenseHandler) Register(licenseID string, device *DeviceInfo) (*StatusDoc, error) {
+func (lc *LicenseCtrl) Register(licenseID string, device *DeviceInfo) (*StatusDoc, error) {
 
 	// Get license info
-	license, err := lh.Store.License().Get(licenseID)
+	license, err := lc.Store.License().Get(licenseID)
 	if err != nil {
 		return nil, ErrLicenseNotFound
 	}
@@ -174,10 +174,10 @@ func (lh *LicenseHandler) Register(licenseID string, device *DeviceInfo) (*Statu
 	}
 
 	// check that the device has not already been registered for this license
-	_, err = lh.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
+	_, err = lc.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
 	if err == nil {
 		log.Warningf("Registration halted: the device %s is already registered", device.ID)
-		statusDoc := lh.NewStatusDoc(license)
+		statusDoc := lc.NewStatusDoc(license)
 		return statusDoc, nil
 	}
 
@@ -188,7 +188,7 @@ func (lh *LicenseHandler) Register(licenseID string, device *DeviceInfo) (*Statu
 	license.DeviceCount++
 	now := time.Now().Truncate(time.Second)
 	license.StatusUpdated = &now
-	lh.Store.License().Update(license)
+	lc.Store.License().Update(license)
 
 	// create an event
 	event := &stor.Event{
@@ -199,21 +199,21 @@ func (lh *LicenseHandler) Register(licenseID string, device *DeviceInfo) (*Statu
 		LicenseID:  licenseID,
 	}
 
-	err = lh.Store.Event().Create(event)
+	err = lc.Store.Event().Create(event)
 	if err != nil {
 		log.Errorf("Failed to create an event: %v", err)
 		return nil, err
 	}
 
-	statusDoc := lh.NewStatusDoc(license)
+	statusDoc := lc.NewStatusDoc(license)
 	return statusDoc, nil
 }
 
 // Renew extends the end date of a license
-func (lh *LicenseHandler) Renew(licenseID string, device *DeviceInfo, newEnd *time.Time) (*StatusDoc, error) {
+func (lc *LicenseCtrl) Renew(licenseID string, device *DeviceInfo, newEnd *time.Time) (*StatusDoc, error) {
 
 	// Get license info
-	license, err := lh.Store.License().Get(licenseID)
+	license, err := lc.Store.License().Get(licenseID)
 	if err != nil {
 		return nil, ErrLicenseNotFound
 	}
@@ -224,7 +224,7 @@ func (lh *LicenseHandler) Renew(licenseID string, device *DeviceInfo, newEnd *ti
 	}
 
 	// check that the device had been registered for this license
-	_, err = lh.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
+	_, err = lc.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
 	if err != nil {
 		return nil, errors.New("requesting a renew on a license which has not been registered by this device is prohibited")
 	}
@@ -239,8 +239,8 @@ func (lh *LicenseHandler) Renew(licenseID string, device *DeviceInfo, newEnd *ti
 			license.End = newEnd
 		}
 		// consider a default end date set in the configuration file
-	} else if lh.Config.Status.RenewDefaultDays != 0 {
-		*license.End = license.End.AddDate(0, 0, lh.Config.Status.RenewDefaultDays)
+	} else if lc.Config.Status.RenewDefaultDays != 0 {
+		*license.End = license.End.AddDate(0, 0, lc.Config.Status.RenewDefaultDays)
 		// the ultimate default is 7 days
 	} else {
 		*license.End = license.End.AddDate(0, 0, 7)
@@ -250,7 +250,7 @@ func (lh *LicenseHandler) Renew(licenseID string, device *DeviceInfo, newEnd *ti
 	// update the license in the db
 	now := time.Now().Truncate(time.Second)
 	license.Updated = &now
-	lh.Store.License().Update(license)
+	lc.Store.License().Update(license)
 
 	// create an event
 	event := &stor.Event{
@@ -261,21 +261,21 @@ func (lh *LicenseHandler) Renew(licenseID string, device *DeviceInfo, newEnd *ti
 		LicenseID:  licenseID,
 	}
 
-	err = lh.Store.Event().Create(event)
+	err = lc.Store.Event().Create(event)
 	if err != nil {
 		log.Errorf("Failed to create an event: %v", err)
 		return nil, err
 	}
 
-	statusDoc := lh.NewStatusDoc(license)
+	statusDoc := lc.NewStatusDoc(license)
 	return statusDoc, nil
 }
 
 // Return forces the expiration of a license and returns a status document.
-func (lh *LicenseHandler) Return(licenseID string, device *DeviceInfo) (*StatusDoc, error) {
+func (lc *LicenseCtrl) Return(licenseID string, device *DeviceInfo) (*StatusDoc, error) {
 
 	// Get license info
-	license, err := lh.Store.License().Get(licenseID)
+	license, err := lc.Store.License().Get(licenseID)
 	if err != nil {
 		return nil, ErrLicenseNotFound
 	}
@@ -292,7 +292,7 @@ func (lh *LicenseHandler) Return(licenseID string, device *DeviceInfo) (*StatusD
 	}
 
 	// check that the device had been registered for this license
-	_, err = lh.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
+	_, err = lc.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
 	if err != nil {
 		return nil, errors.New("requesting a return on a license which has not been registered by this device is prohibited")
 	}
@@ -306,7 +306,7 @@ func (lh *LicenseHandler) Return(licenseID string, device *DeviceInfo) (*StatusD
 	license.Updated = &now
 	license.Status = stor.STATUS_RETURNED
 	license.StatusUpdated = &now
-	lh.Store.License().Update(license)
+	lc.Store.License().Update(license)
 
 	// create an event
 	event := &stor.Event{
@@ -317,28 +317,28 @@ func (lh *LicenseHandler) Return(licenseID string, device *DeviceInfo) (*StatusD
 		LicenseID:  licenseID,
 	}
 
-	err = lh.Store.Event().Create(event)
+	err = lc.Store.Event().Create(event)
 	if err != nil {
 		log.Errorf("Failed to create an event: %v", err)
 		return nil, err
 	}
 
-	statusDoc := lh.NewStatusDoc(license)
+	statusDoc := lc.NewStatusDoc(license)
 	return statusDoc, nil
 }
 
 // Revoke forces the expiration of a license and returns a status document.
-func (lh *LicenseHandler) Revoke(licenseID string) (*StatusDoc, error) {
+func (lc *LicenseCtrl) Revoke(licenseID string) (*StatusDoc, error) {
 
 	// Get license info
-	license, err := lh.Store.License().Get(licenseID)
+	license, err := lc.Store.License().Get(licenseID)
 	if err != nil {
 		return nil, ErrLicenseNotFound
 	}
 
 	if license.Status == stor.STATUS_REVOKED || license.Status == stor.STATUS_CANCELLED {
 		log.Infof("The status of the license is already %s", license.Status)
-		statusDoc := lh.NewStatusDoc(license)
+		statusDoc := lc.NewStatusDoc(license)
 		return statusDoc, nil
 	}
 
@@ -362,7 +362,7 @@ func (lh *LicenseHandler) Revoke(licenseID string) (*StatusDoc, error) {
 		license.Status = stor.STATUS_REVOKED
 	}
 	license.StatusUpdated = &now
-	lh.Store.License().Update(license)
+	lc.Store.License().Update(license)
 
 	// create an event
 	event := &stor.Event{
@@ -378,12 +378,12 @@ func (lh *LicenseHandler) Revoke(licenseID string) (*StatusDoc, error) {
 		event.Type = stor.EVENT_REVOKE
 	}
 
-	err = lh.Store.Event().Create(event)
+	err = lc.Store.Event().Create(event)
 	if err != nil {
 		log.Errorf("Failed to create an event: %v", err)
 		return nil, err
 	}
 
-	statusDoc := lh.NewStatusDoc(license)
+	statusDoc := lc.NewStatusDoc(license)
 	return statusDoc, nil
 }

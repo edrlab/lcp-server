@@ -18,7 +18,7 @@ import (
 )
 
 // GenerateLicense creates a license in the db and returns a fresh license
-func (h *APIHandler) GenerateLicense(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 
 	// get the payload
 	licRequest := &LicenseRequest{}
@@ -31,7 +31,7 @@ func (h *APIHandler) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	var pubInfo *stor.Publication
 	var err error
 	if licRequest.PublicationID != "" {
-		pubInfo, err = h.Store.Publication().Get(licRequest.PublicationID)
+		pubInfo, err = a.Store.Publication().Get(licRequest.PublicationID)
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier in payload")))
 		return
@@ -42,16 +42,16 @@ func (h *APIHandler) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// set license info
-	licInfo := newLicenseInfo(h.Config.License.Provider, licRequest)
+	licInfo := newLicenseInfo(a.Config.License.Provider, licRequest)
 
 	// store license info
-	err = h.Store.License().Create(licInfo)
+	err = a.Store.License().Create(licInfo)
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return
 	}
 	// get back license info to retrieve gorm data
-	licInfo, err = h.Store.License().Get(licInfo.UUID)
+	licInfo, err = a.Store.License().Get(licInfo.UUID)
 	if err != nil {
 		render.Render(w, r, ErrNotFound)
 		return
@@ -71,7 +71,7 @@ func (h *APIHandler) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// generate the license
-	license, err := lic.NewLicense(h.Config, h.Cert, pubInfo, licInfo, &userInfo, &encryption, licRequest.PassHash)
+	license, err := lic.NewLicense(a.Config, a.Cert, pubInfo, licInfo, &userInfo, &encryption, licRequest.PassHash)
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return
@@ -84,7 +84,7 @@ func (h *APIHandler) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetFreshLicense returns a fresh license
-func (h *APIHandler) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	// get the payload
@@ -97,7 +97,7 @@ func (h *APIHandler) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
 	// get the license
 	var licInfo *stor.LicenseInfo
 	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
-		licInfo, err = h.Store.License().Get(licenseID)
+		licInfo, err = a.Store.License().Get(licenseID)
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing licenseID parameter")))
 		return
@@ -111,7 +111,7 @@ func (h *APIHandler) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
 	var pubInfo *stor.Publication
 
 	if licInfo.PublicationID != "" {
-		pubInfo, err = h.Store.Publication().Get(licInfo.PublicationID)
+		pubInfo, err = a.Store.Publication().Get(licInfo.PublicationID)
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier in payload")))
 		return
@@ -136,7 +136,7 @@ func (h *APIHandler) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// generate the license
-	license, err := lic.NewLicense(h.Config, h.Cert, pubInfo, licInfo, &userInfo, &encryption, licRequest.PassHash)
+	license, err := lic.NewLicense(a.Config, a.Cert, pubInfo, licInfo, &userInfo, &encryption, licRequest.PassHash)
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return

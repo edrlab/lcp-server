@@ -254,8 +254,8 @@ func TestMain(m *testing.M) {
 	}
 	s.Cert = &cert
 
-	// Set a context for handlers
-	h := NewAPIHandler(s.Config, s.Store, s.Cert)
+	// Set a context for controllers
+	h := NewAPICtrl(s.Config, s.Store, s.Cert)
 
 	// Define the router
 	r := chi.NewRouter()

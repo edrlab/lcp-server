@@ -87,8 +87,8 @@ func (s *Server) Initialize() {
 
 func (s *Server) setRoutes() *chi.Mux {
 
-	// Set a context for handlers
-	h := api.NewAPIHandler(s.Config, s.Store, s.Cert)
+	// Set a context for controllers
+	h := api.NewAPICtrl(s.Config, s.Store, s.Cert)
 
 	// Define the router
 	r := chi.NewRouter()

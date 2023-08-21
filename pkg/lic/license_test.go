@@ -18,7 +18,7 @@ import (
 )
 
 // some global vars shares by all tests
-var LicHandler LicenseHandler
+var LicCt LicenseCtrl
 var Pub stor.Publication
 var LicInfo stor.LicenseInfo
 
@@ -41,11 +41,11 @@ func setConfig() *conf.Config {
 
 func TestMain(m *testing.M) {
 
-	LicHandler.Config = setConfig()
+	LicCt.Config = setConfig()
 
 	// Create / open an sqlite db in memory
 	dsn := "sqlite3://file::memory:?cache=shared"
-	LicHandler.Store, _ = stor.DBSetup(dsn)
+	LicCt.Store, _ = stor.DBSetup(dsn)
 
 	// create a publication
 	Pub.UUID = uuid.New().String()
@@ -58,7 +58,7 @@ func TestMain(m *testing.M) {
 	Pub.Checksum = faker.Lorem().Characters(16)
 
 	// store the publication in the db
-	LicHandler.Store.Publication().Create(&Pub)
+	LicCt.Store.Publication().Create(&Pub)
 
 	// create a license
 	start := time.Now()
@@ -76,7 +76,7 @@ func TestMain(m *testing.M) {
 	LicInfo.PublicationID = Pub.UUID
 
 	// store the license in the db
-	LicHandler.Store.License().Create(&LicInfo)
+	LicCt.Store.License().Create(&LicInfo)
 
 	code := m.Run()
 	os.Exit(code)
@@ -85,7 +85,7 @@ func TestMain(m *testing.M) {
 func TestLicense(t *testing.T) {
 
 	// cert
-	cert, err := tls.LoadX509KeyPair(LicHandler.Config.Certificate.Cert, LicHandler.Config.Certificate.PrivateKey)
+	cert, err := tls.LoadX509KeyPair(LicCt.Config.Certificate.Cert, LicCt.Config.Certificate.PrivateKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestLicense(t *testing.T) {
 
 	passhash := "FAEB00CA518BEA7CB11A7EF31FB6183B489B1B6EADB792BEC64A03B3F6FF80A8"
 
-	license, err := NewLicense(LicHandler.Config, &cert, &Pub, &LicInfo, &userInfo, &encryption, passhash)
+	license, err := NewLicense(LicCt.Config, &cert, &Pub, &LicInfo, &userInfo, &encryption, passhash)
 
 	if err != nil {
 		t.Log(err)

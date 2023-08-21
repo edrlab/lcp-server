@@ -20,7 +20,7 @@ var (
 )
 
 // Status returns a status document for the input license.
-func (h *APIHandler) StatusDoc(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) StatusDoc(w http.ResponseWriter, r *http.Request) {
 
 	// check the presence of the required params
 	var licenseID string
@@ -28,10 +28,10 @@ func (h *APIHandler) StatusDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lh := lic.NewLicenseHandler(h.Config, h.Store)
+	lh := lic.NewLicenseCtrl(a.Config, a.Store)
 
 	// get license info
-	license, err := lh.Store.License().Get(licenseID)
+	license, err := a.Store.License().Get(licenseID)
 	if err != nil {
 		render.Render(w, r, ErrNotFound)
 		return
@@ -45,7 +45,7 @@ func (h *APIHandler) StatusDoc(w http.ResponseWriter, r *http.Request) {
 }
 
 // Register records a new device using the license and returns a status document.
-func (h *APIHandler) Register(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) Register(w http.ResponseWriter, r *http.Request) {
 
 	// check the presence of the required params
 	var licenseID string
@@ -57,7 +57,7 @@ func (h *APIHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lh := lic.NewLicenseHandler(h.Config, h.Store)
+	lh := lic.NewLicenseCtrl(a.Config, a.Store)
 
 	// register
 	statusDoc, err := lh.Register(licenseID, deviceInfo)
@@ -71,7 +71,7 @@ func (h *APIHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 // Renew extends the lifetime of a license and returns a status document.
-func (h *APIHandler) Renew(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) Renew(w http.ResponseWriter, r *http.Request) {
 
 	// check the presence of the required params
 	var licenseID string
@@ -88,7 +88,7 @@ func (h *APIHandler) Renew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lh := lic.NewLicenseHandler(h.Config, h.Store)
+	lh := lic.NewLicenseCtrl(a.Config, a.Store)
 
 	// renew
 	statusDoc, err := lh.Renew(licenseID, deviceInfo, newEnd)
@@ -102,7 +102,7 @@ func (h *APIHandler) Renew(w http.ResponseWriter, r *http.Request) {
 }
 
 // Return forces the expiration of a license and returns a status document.
-func (h *APIHandler) Return(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) Return(w http.ResponseWriter, r *http.Request) {
 
 	// check the presence of the required params
 	var licenseID string
@@ -114,7 +114,7 @@ func (h *APIHandler) Return(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lh := lic.NewLicenseHandler(h.Config, h.Store)
+	lh := lic.NewLicenseCtrl(a.Config, a.Store)
 
 	// return
 	statusDoc, err := lh.Return(licenseID, deviceInfo)
@@ -129,7 +129,7 @@ func (h *APIHandler) Return(w http.ResponseWriter, r *http.Request) {
 }
 
 // Revoke forces the expiration of a license and returns a status document.
-func (h *APIHandler) Revoke(w http.ResponseWriter, r *http.Request) {
+func (a *APICtrl) Revoke(w http.ResponseWriter, r *http.Request) {
 
 	// check the presence of the required params
 	var licenseID string
@@ -137,7 +137,7 @@ func (h *APIHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lh := lic.NewLicenseHandler(h.Config, h.Store)
+	lh := lic.NewLicenseCtrl(a.Config, a.Store)
 
 	// revoke
 	statusDoc, err := lh.Revoke(licenseID)
