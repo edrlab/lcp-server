@@ -118,7 +118,7 @@ func (s *Server) setRoutes() *chi.Mux {
 	// Private Routes
 	// Require Authentication
 	credentials := make(map[string]string)
-	credentials[s.Config.Login.User] = s.Config.Login.Password
+	credentials[s.Config.Access.Username] = s.Config.Access.Password
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.BasicAuth("restricted", credentials))
@@ -184,7 +184,7 @@ func paginate(next http.Handler) http.Handler {
 	})
 }
 
-// notFoundProblemDetail formats not found errors as problem details, not the sake of consistency.
+// notFoundProblemDetail formats not found errors as problem details, for the sake of consistency.
 func notFoundProblemDetail(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{"type": "about:blank", "title": "Endpoint not found."}
 

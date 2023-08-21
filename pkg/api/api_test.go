@@ -68,8 +68,8 @@ func setConfig() *conf.Config {
 	c := conf.Config{
 		PublicBaseUrl: "http://localhost:8081",
 		Dsn:           "sqlite3://file::memory:?cache=shared",
-		Login: conf.Login{
-			User:     "user",
+		Access: conf.Access{
+			Username: "user",
 			Password: "password",
 		},
 		Certificate: conf.Certificate{

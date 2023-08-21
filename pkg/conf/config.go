@@ -17,14 +17,14 @@ type Config struct {
 	PublicBaseUrl string `yaml:"public_base_url"`
 	Port          int    `yaml:"port"`
 	Dsn           string `yaml:"dsn"`
-	Login         `yaml:"login"`
+	Access        `yaml:"access"`
 	Certificate   `yaml:"certificate"`
 	License       `yaml:"license"`
 	Status        `yaml:"status"`
 }
 
-type Login struct {
-	User     string `yaml:"user"`
+type Access struct {
+	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 }
 
