@@ -36,7 +36,6 @@ Samples of problem details error message:
     "title": "Not Found",
     "status": 404,
     "detail": "Index:Content not found",
-    "instance": "http://myserver/contents/bac06a4-31d9-459b-a52a-728bc22d854b"
 }
 */
 
