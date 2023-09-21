@@ -14,7 +14,7 @@ import (
 // Publication data model
 type Publication struct {
 	gorm.Model
-	UUID          string `json:"uuid" validate:"required,uuid" gorm:"uniqueIndex"`
+	UUID          string `json:"uuid" validate:"required,uuid4_rfc4122" gorm:"uniqueIndex"`
 	Title         string `json:"title,omitempty"`
 	EncryptionKey []byte `json:"encryption_key"`
 	Location      string `json:"location" validate:"required,url"`
@@ -36,7 +36,7 @@ func (s publicationStore) ListAll() (*[]Publication, error) {
 	return &publications, s.db.Limit(1000).Order("id ASC").Find(&publications).Error
 }
 
-func (s publicationStore) List(pageSize, pageNum int) (*[]Publication, error) {
+func (s publicationStore) List(pageNum, pageSize int) (*[]Publication, error) {
 	publications := []Publication{}
 	// pageNum starts at 1
 	// result sorted to assure the same order for each request
