@@ -406,7 +406,7 @@ func (c *LicenseChecker) CheckPassphrase(passphrase string) error {
 	// regenerate the user key
 	userKey, err := lic.GenerateUserKey(c.license.Encryption.Profile, passhash)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// decrypt the key check using the user key
@@ -423,7 +423,9 @@ func (c *LicenseChecker) CheckPassphrase(passphrase string) error {
 
 	// check that the decrypted key check is the license id
 	if result.String() != c.license.UUID {
-		log.Errorf("The passphrase passed as parameter seems incorrect (key check failed)")
+		log.Error("The passphrase passed as parameter seems incorrect (key check failed)")
+	} else {
+		log.Info("The passphrase passed as parameter is correct (key check passed)")
 	}
 	return nil
 }
