@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license
 // specified in the Github project LICENSE file.
 
-// Package stor manages entity storage.
+// The stor package manages the storage of our entities.
 package stor
 
 import (
@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -39,7 +38,7 @@ type (
 	// PublicationRepository interface, defining publication operations
 	PublicationRepository interface {
 		ListAll() (*[]Publication, error)
-		List(pageSize, pageNum int) (*[]Publication, error)
+		List(pageNum, pageSize int) (*[]Publication, error)
 		FindByType(contentType string) (*[]Publication, error)
 		Count() (int64, error)
 		Get(uuid string) (*Publication, error)
@@ -51,7 +50,7 @@ type (
 	// LicenseRepository interface, defining license operations
 	LicenseRepository interface {
 		ListAll() (*[]LicenseInfo, error)
-		List(pageSize, pageNum int) (*[]LicenseInfo, error)
+		List(pageNum, pageSize int) (*[]LicenseInfo, error)
 		FindByUser(userID string) (*[]LicenseInfo, error)
 		FindByPublication(publicationID string) (*[]LicenseInfo, error)
 		FindByStatus(status string) (*[]LicenseInfo, error)
@@ -112,12 +111,9 @@ func Init(dsn string) (Store, error) {
 		return nil, fmt.Errorf("incorrect database source name: %q", dsn)
 	}
 
-	var dialector gorm.Dialector
 	// the use of time.Time fields for mysql requires parseTime
 	if dialect == "mysql" && !strings.Contains(cnx, "parseTime") {
 		return nil, fmt.Errorf("incomplete mysql database source name, parseTime required: %q", dsn)
-	} else if dialect == "sqlite3" {
-		dialector = sqlite.Open(cnx)
 	}
 	// Any constraint for other databases?
 
@@ -132,7 +128,7 @@ func Init(dsn string) (Store, error) {
 		},
 	)
 
-	db, err := gorm.Open(dialector, &gorm.Config{
+	db, err := gorm.Open(GormDialector(cnx), &gorm.Config{
 		Logger: newLogger,
 	})
 	if err != nil {
