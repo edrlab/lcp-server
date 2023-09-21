@@ -46,7 +46,7 @@ func (s licenseStore) ListAll() (*[]LicenseInfo, error) {
 	return &licenses, s.db.Limit(1000).Order("id ASC").Find(&licenses).Error
 }
 
-func (s licenseStore) List(pageSize, pageNum int) (*[]LicenseInfo, error) {
+func (s licenseStore) List(pageNum, pageSize int) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
 	// pageNum starts at 1
 	// result sorted to assure the same order for each request
