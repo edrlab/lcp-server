@@ -87,8 +87,8 @@ func (s *Server) Initialize() {
 
 func (s *Server) setRoutes() *chi.Mux {
 
-	// Set a context for controllers
-	h := api.NewAPICtrl(s.Config, s.Store, s.Cert)
+	// Set api controller dependencies
+	a := api.NewAPICtrl(s.Config, s.Store, s.Cert)
 
 	// Define the router
 	r := chi.NewRouter()
@@ -109,10 +109,10 @@ func (s *Server) setRoutes() *chi.Mux {
 	// Status document management
 	r.Group(func(r chi.Router) {
 		r.Use(render.SetContentType(render.ContentTypeJSON))
-		r.Get("/status/{licenseID}", h.StatusDoc)   // Get /status/123
-		r.Post("/register/{licenseID}", h.Register) // POST /register/123
-		r.Put("/renew/{licenseID}", h.Renew)        // PUT /renew/123
-		r.Put("/return/{licenseID}", h.Return)      // PUT /return/123
+		r.Get("/status/{licenseID}", a.StatusDoc)   // Get /status/123
+		r.Post("/register/{licenseID}", a.Register) // POST /register/123
+		r.Put("/renew/{licenseID}", a.Renew)        // PUT /renew/123
+		r.Put("/return/{licenseID}", a.Return)      // PUT /return/123
 	})
 
 	// Private Routes
@@ -126,41 +126,41 @@ func (s *Server) setRoutes() *chi.Mux {
 
 		// Publications, CRUD
 		r.Route("/publications", func(r chi.Router) {
-			r.With(paginate).Get("/", h.ListPublications)
-			r.With(paginate).Get("/search", h.SearchPublications) // GET /publication/search{?format}
-			r.Post("/", h.CreatePublication)                      // POST /publications
+			r.With(paginate).Get("/", a.ListPublications)
+			r.With(paginate).Get("/search", a.SearchPublications) // GET /publication/search{?format}
+			r.Post("/", a.CreatePublication)                      // POST /publications
 
 			r.Route("/{publicationID}", func(r chi.Router) {
-				r.Get("/", h.GetPublication)       // GET /publications/123
-				r.Put("/", h.UpdatePublication)    // PUT /publications/123
-				r.Delete("/", h.DeletePublication) // DELETE /publications/123
+				r.Get("/", a.GetPublication)       // GET /publications/123
+				r.Put("/", a.UpdatePublication)    // PUT /publications/123
+				r.Delete("/", a.DeletePublication) // DELETE /publications/123
 			})
 		})
 
 		// LicenseInfo, CRUD
 		r.Route("/licenseinfo", func(r chi.Router) {
-			r.With(paginate).Get("/", h.ListLicenses)
-			r.With(paginate).Get("/search", h.SearchLicenses) // GET /licenses/search{?pub,user,status,count}
-			r.Post("/", h.CreateLicense)                      // POST /licenses
+			r.With(paginate).Get("/", a.ListLicenses)
+			r.With(paginate).Get("/search", a.SearchLicenses) // GET /licenses/search{?pub,user,status,count}
+			r.Post("/", a.CreateLicense)                      // POST /licenses
 
 			r.Route("/{licenseID}", func(r chi.Router) {
-				r.Get("/", h.GetLicense)       // GET /licenses/123
-				r.Put("/", h.UpdateLicense)    // PUT /licenses/123
-				r.Delete("/", h.DeleteLicense) // DELETE /licenses/123
+				r.Get("/", a.GetLicense)       // GET /licenses/123
+				r.Put("/", a.UpdateLicense)    // PUT /licenses/123
+				r.Delete("/", a.DeleteLicense) // DELETE /licenses/123
 			})
 		})
 
 		// License generation
 		r.Route("/licenses/", func(r chi.Router) {
-			r.Post("/", h.GenerateLicense) // POST /licenses
+			r.Post("/", a.GenerateLicense) // POST /licenses
 
 			r.Route("/{licenseID}", func(r chi.Router) {
-				r.Post("/", h.GetFreshLicense) // POST /licenses/123
+				r.Post("/", a.GetFreshLicense) // POST /licenses/123
 			})
 		})
 
 		// License revocation
-		r.Put("/revoke/{licenseID}", h.Revoke) // PUT /revoke/123
+		r.Put("/revoke/{licenseID}", a.Revoke) // PUT /revoke/123
 
 	})
 
