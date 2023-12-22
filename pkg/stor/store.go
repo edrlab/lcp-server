@@ -142,7 +142,11 @@ func Init(dsn string) (Store, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate(&Publication{}, &LicenseInfo{}, &Event{})
+	err = db.AutoMigrate(&Publication{}, &LicenseInfo{}, &Event{})
+	if err != nil {
+		log.Printf("Failed performing database automigrate: %v", err)
+		return nil, err
+	}
 
 	stor := &dbStore{db: db}
 
