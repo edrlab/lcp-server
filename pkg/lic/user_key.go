@@ -9,6 +9,8 @@ import (
 	"errors"
 )
 
+var LCP_PRODUCTION_LIB = false
+
 // GenerateUserKey function prepares the user key
 func GenerateUserKey(profile, passhash string) ([]byte, error) {
 
