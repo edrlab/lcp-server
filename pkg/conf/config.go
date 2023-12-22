@@ -45,7 +45,7 @@ type Status struct {
 	RenewLink        string `yaml:"renew_link"`
 }
 
-func ReadConfig(configFile string) (*Config, error) {
+func Init(configFile string) (*Config, error) {
 
 	var c Config
 

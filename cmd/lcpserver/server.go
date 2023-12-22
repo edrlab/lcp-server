@@ -39,7 +39,7 @@ func main() {
 		panic("Failed to retrieve the configuration file path.")
 	}
 
-	c, err := conf.ReadConfig(configFile)
+	c, err := conf.Init(configFile)
 	if err != nil {
 		panic("Failed to read the configuration.")
 	}
