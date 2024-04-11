@@ -7,6 +7,8 @@ package check
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -15,6 +17,10 @@ import (
 	"github.com/edrlab/lcp-server/pkg/lic"
 	log "github.com/sirupsen/logrus"
 )
+
+// This device ID is used for register, renew and return.
+// It is generated each time the checker runs.
+var testDeviceId string
 
 // Update a license using register / renew / return features
 func (c *LicenseChecker) UpdateLicense() error {
@@ -36,7 +42,7 @@ func (c *LicenseChecker) UpdateLicense() error {
 		return err
 	}
 
-	// tiny pause
+	// 1sc pause
 	time.Sleep(time.Second)
 
 	// check renew
@@ -45,7 +51,7 @@ func (c *LicenseChecker) UpdateLicense() error {
 		return err
 	}
 
-	// tiny pause
+	// 1sc pause
 	time.Sleep(time.Second)
 
 	// check return
@@ -61,15 +67,13 @@ func (c *LicenseChecker) CheckRegister() error {
 
 	log.Info("Checking license registration ...")
 
-	// TODO we should first check if the device has not been already registered by looking at the events
-
 	// select the register link
 	registerLink := c.GetStatusLink("register")
 	if registerLink == nil {
 		return errors.New("missing register link")
 	}
 
-	// set the link with a test id and name
+	// set the link with a random device id and name
 	url, err := setLinkUrl(registerLink.Href)
 	if err != nil {
 		return err
@@ -92,6 +96,7 @@ func (c *LicenseChecker) CheckRegister() error {
 	if c.statusDoc.Status != "active" {
 		log.Errorf("The new status should be active, not %s", c.statusDoc.Status)
 	}
+	log.Info("License registration successful")
 	return nil
 }
 
@@ -148,36 +153,35 @@ func (c *LicenseChecker) CheckRenew() error {
 	defer r.Body.Close()
 
 	// process the response
-	err = c.ProcessResponse(r)
-	if err != nil {
-		log.Info("Renew with an empty end date didn't succeed: ", err)
-		// let's continue the tests
-	}
+	_ = c.ProcessResponse(r) // let's continue the tests
 
 	// check the new status of the license
 	if c.statusDoc.Status != "active" {
 		log.Error("The new status should be active, not ", c.statusDoc.Status)
+	} else {
+		log.Info("License extension successful")
 	}
 
 	// fetch the fresh license and check that it has been correctly updated
-	/* TODO bug to be found here
 	err = c.GetFreshLicense()
 	if err != nil {
 		log.Error("Failed to get the fresh license: ", err)
 		return nil
 	} else {
-		freshUpdate := time.Now().Add(-1 * time.Minute)
+		freshUpdate := time.Now().Add(-1 * time.Second)
 		if c.license.Updated.Before(freshUpdate) {
 			log.Error("The fresh license update timestamp was not properly updated")
 		}
 		log.Info("The license end timestamp is now ", c.license.Rights.End.Truncate(time.Second).Format(time.RFC822))
 	}
-	*/
+
+	// 1sc pause
+	time.Sleep(time.Second)
 
 	// request an extension of the license, again
 	// this time with an explicit end date to the license, one day before the max end date
 	end := c.statusDoc.PotentialRights.End.Add(-24 * time.Hour).Truncate(time.Second).Format(time.RFC3339)
-	log.Info("Requesting extension with an explicit end date: ", c.statusDoc.PotentialRights.End.Add(-24*time.Hour).Truncate(time.Second).Format(time.RFC822))
+	log.Info("Requesting extension with an explicit end date: ", end)
 
 	url2 := url + "&end=" + end
 	req, err = http.NewRequest("PUT", url2, nil)
@@ -189,8 +193,8 @@ func (c *LicenseChecker) CheckRenew() error {
 		return nil
 	}
 	err = c.ProcessResponse(r)
-	if err != nil {
-		log.Info("Renew with an explicit end date didn't succeed: ", err)
+	if err == nil {
+		log.Info("License extension successful")
 	}
 
 	// request an extension with an incorrect timestamp
@@ -207,14 +211,14 @@ func (c *LicenseChecker) CheckRenew() error {
 		return nil
 	}
 	err = c.ProcessResponse(r)
-	if err != nil {
-		log.Info("Renew with a wrong end date didn't succeed: ", err)
+	if err == nil {
+		log.Error("License extension with a wrong end date should fail")
 	}
 
 	// request an extension of the license after the max end date
 	// and check that the server responds with an error
-	end = c.statusDoc.PotentialRights.End.Add(48 * time.Hour).Truncate(time.Second).Format("2006-01-02T15:04:05")
-	log.Info("Requesting extension with an overlong end date:")
+	end = c.statusDoc.PotentialRights.End.Add(48 * time.Hour).Truncate(time.Second).Format("2006-01-02T15:04:05Z")
+	log.Info("Requesting extension beyond the max datetime limit:", end)
 
 	url4 := url + "&end=" + end
 	req, err = http.NewRequest("PUT", url4, nil)
@@ -226,8 +230,8 @@ func (c *LicenseChecker) CheckRenew() error {
 		return nil
 	}
 	err = c.ProcessResponse(r)
-	if err != nil {
-		log.Info("Renew with an end date after the allowed max didn't succeed: ", err)
+	if err == nil {
+		log.Info("License extension with an end date after the allowed max should fail")
 	}
 
 	return nil
@@ -285,6 +289,8 @@ func (c *LicenseChecker) CheckReturn() error {
 	// check the new status of the license
 	if c.statusDoc.Status != "returned" {
 		log.Error("The new status should be returned, not ", c.statusDoc.Status)
+	} else {
+		log.Info("License return was successful")
 	}
 
 	// fetch the fresh license and check that it has been correctly updated
@@ -294,7 +300,7 @@ func (c *LicenseChecker) CheckReturn() error {
 		return nil
 	} else {
 		log.Info("The license end timestamp is now ", c.license.Rights.End.Format(time.RFC822))
-		freshUpdate := time.Now().Add(-1 * time.Minute)
+		freshUpdate := time.Now().Add(-1 * time.Second)
 		if c.license.Updated.Before(freshUpdate) {
 			log.Error("The fresh license update timestamp was not properly updated")
 		}
@@ -334,12 +340,13 @@ func (c *LicenseChecker) ProcessResponse(r *http.Response) error {
 		errResponse := new(ErrResponse)
 		err := json.NewDecoder(r.Body).Decode(errResponse)
 		if err != nil {
-			log.Error("Invalid error structure")
+			log.Error("Invalid structure of the error response")
+		} else if errResponse.Detail != "" {
+			log.Infof("Server message: %s", errResponse.Detail)
 		} else {
-			log.Warningf("Server message: %s", errResponse.Title)
-			err = errors.New("Server error " + strconv.Itoa(r.StatusCode))
+			log.Infof("Server message, title: %s", errResponse.Title)
 		}
-		return err
+		return errors.New("command failed")
 	}
 
 	// get the new status document
@@ -359,7 +366,7 @@ func (c *LicenseChecker) ProcessResponse(r *http.Response) error {
 		log.Errorf("A new event should have been created")
 	} else {
 		lastIndex := len(newStatusDoc.Events) - 1
-		log.Infof("The last event is of type %s", newStatusDoc.Events[lastIndex].Type)
+		log.Infof("A new event was created, of type %s", newStatusDoc.Events[lastIndex].Type)
 	}
 
 	// update the current status doc
@@ -373,7 +380,15 @@ func setLinkUrl(templatedUrl string) (url string, err error) {
 
 	// the template may use the '?' or '&' form
 	rSet := [2]string{`\{\?.*\}`, `\{\&.*\}`}
-	params := [2]string{"?id=lcp-checker&name=lcp-checker", "&id=lcp-checker&name=lcp-checker"}
+	// init the global test device id
+	if testDeviceId == "" {
+		testDeviceId = "lcp-checker-" + strconv.Itoa(rand.Intn(100))
+		log.Infof("The test device ID is %s", testDeviceId)
+
+	}
+	param1 := fmt.Sprintf("?id=%s&name=%s", testDeviceId, testDeviceId)
+	param2 := fmt.Sprintf("&id=%s&name=%s", testDeviceId, testDeviceId)
+	params := [2]string{param1, param2}
 	var rx *regexp.Regexp
 	for idx, r := range rSet {
 		rx, err = regexp.Compile(r)
