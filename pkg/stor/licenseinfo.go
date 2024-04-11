@@ -14,7 +14,7 @@ import (
 // LicenseInfo data model
 // Note: the date of issue of the license is handled by the gorm model.
 // but the license is not logically updated when a device registers,
-// therefore we keep the Updated property, which must be maintained "by hand".
+// therefore we keep the Updated property, which must be maintained manually.
 type LicenseInfo struct {
 	gorm.Model
 	Updated       *time.Time  `json:"updated,omitempty"` // see comment above
