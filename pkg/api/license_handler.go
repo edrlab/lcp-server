@@ -83,8 +83,8 @@ func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetFreshLicense returns a fresh license
-func (a *APICtrl) GetFreshLicense(w http.ResponseWriter, r *http.Request) {
+// FreshLicense returns a fresh license
+func (a *APICtrl) FreshLicense(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	// get the payload
@@ -177,6 +177,8 @@ func newLicenseInfo(provider string, licRequest *LicenseRequest) *stor.LicenseIn
 // --
 
 // LicenseRequest is the request payload for licenses.
+// TODO: add an extension point for custom user properties, that have to
+// be returned in the license, optionally encrypted.
 type LicenseRequest struct {
 	PublicationID string     `json:"publication_id" validate:"required,uuid"`
 	UserID        string     `json:"user_id,omitempty" validate:"required"`
@@ -187,7 +189,7 @@ type LicenseRequest struct {
 	End           *time.Time `json:"end,omitempty"`
 	Copy          *int32     `json:"copy,omitempty"`
 	Print         *int32     `json:"print,omitempty"`
-	Profile       string     `json:"profile" validate:"required"`
+	Profile       string     `json:"profile,omitempty"`
 	TextHint      string     `json:"text_hint" validate:"required"`
 	PassHash      string     `json:"pass_hash" validate:"required"`
 }
