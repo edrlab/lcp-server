@@ -24,11 +24,14 @@ type LicenseChecker struct {
 	statusDoc *lic.StatusDoc
 }
 
-// ErrResponse is the expected structure fetched from the LCP Server in cas of an error.
+// ErrResponse is the expected structure fetched from the LCP Server in case of an error.
 type ErrResponse struct {
-	Type   string `json:"type"` // url
-	Title  string `json:"title"`
-	Status int    `json:"status"` // http status code
+	//mandatory
+	Type  string `json:"type"` // url
+	Title string `json:"title"`
+	//optional
+	Detail   string `json:"detail,omitempty"` // application-level error message
+	Instance string `json:"instance,omitempty"`
 }
 
 //go:embed data/license.schema.json data/status.schema.json data/link.schema.json
@@ -286,8 +289,10 @@ func getJson(url string, target interface{}) error {
 		if err != nil {
 			// the license gateway usually does not respond with a proper json details structure
 			log.Warning("Invalid structure of the error response")
+		} else if errResponse.Detail != "" {
+			log.Infof("Server message: %s", errResponse.Detail)
 		} else {
-			log.Infof("Server message: %s", errResponse.Title)
+			log.Infof("Server message, title: %s", errResponse.Title)
 		}
 		return errors.New("failed to fetch the resource")
 	}
