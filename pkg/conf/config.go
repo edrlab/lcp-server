@@ -1,4 +1,4 @@
-// Copyright 2022 European Digital Reading Lab. All rights reserved.
+// Copyright 2024 European Digital Reading Lab. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // specified in the Github project LICENSE file.
 
@@ -21,6 +21,7 @@ type Config struct {
 	Certificate   `yaml:"certificate"`
 	License       `yaml:"license"`
 	Status        `yaml:"status"`
+	Resources     string `yaml:"resources"`
 }
 
 type Access struct {
@@ -36,7 +37,7 @@ type Certificate struct {
 type License struct {
 	Provider string `yaml:"provider"` // URI
 	Profile  string `yaml:"profile"`  // "http://readium.org/lcp/basic-profile" || "http://readium.org/lcp/profile-1.0" || ...
-	HintLink string `yaml:"hint_links"`
+	HintLink string `yaml:"hint_link"`
 }
 
 type Status struct {
@@ -62,6 +63,10 @@ func Init(configFile string) (*Config, error) {
 
 	} else {
 		return nil, errors.New("failed to find the configuration file")
+	}
+
+	if c.Port == 0 {
+		c.Port = 8081
 	}
 
 	return &c, nil
