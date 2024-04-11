@@ -209,9 +209,6 @@ func (c *LicenseChecker) CheckActionableLinks() error {
 			log.Errorf("Parameters id is missing in the %s uri template", s.Rel)
 		}
 		match = regexpName.Match([]byte(s.Href))
-		if err != nil {
-			return err
-		}
 		if !match {
 			log.Errorf("Parameters name is missing in the %s uri template", s.Rel)
 		}
