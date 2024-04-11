@@ -34,8 +34,7 @@ func (c *LicenseChecker) CheckLicense(passphrase string) error {
 	parsedURL, err := url.Parse(c.license.Provider)
 	if err != nil {
 		log.Error("The provider of a license must be expressed as a url")
-	}
-	if parsedURL.Scheme != "https" && parsedURL.Scheme != "http" {
+	} else if parsedURL.Scheme != "https" && parsedURL.Scheme != "http" {
 		log.Error("The provider id must be an http or https url")
 	}
 
@@ -359,15 +358,23 @@ func (c *LicenseChecker) CheckLicenseRights() error {
 		}
 	}
 
-	// warn if the end date is in the past or the start date in the future
+	// advise if the end date is in the past or the start date in the future
 	if c.license.Rights.Start != nil {
 		if c.license.Rights.Start.After(time.Now()) {
-			log.Warning(("The start date is in the future: it is not usable yet"))
+			log.Info(("The start date is in the future: it is not usable yet"))
 		}
 	}
-	if c.license.Rights.End != nil {
-		if c.license.Rights.End.Before(time.Now()) {
-			log.Warning(("The end date is in the past: this license has expired"))
+	if c.license.Rights.End != nil && c.license.Rights.End.Before(time.Now()) {
+		log.Info(("The end date is in the past: it is not usable anymore"))
+	}
+
+	// if the status doc has already been fetched
+	// check that the end date of the license is compatible with the status of the license
+	if c.statusDoc != nil {
+		if c.statusDoc.Status == "revoked" || c.statusDoc.Status == "returned" || c.statusDoc.Status == "cancelled" || c.statusDoc.Status == "expired" {
+			if c.license.Rights.End != nil && c.license.Rights.End.After(time.Now()) {
+				log.Errorf("The license is in %s state, its end date should be passed", c.statusDoc.Status)
+			}
 		}
 	}
 
