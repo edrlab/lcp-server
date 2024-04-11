@@ -125,7 +125,10 @@ func deletePublication(t *testing.T, uuid string) *httptest.ResponseRecorder {
 
 	// delete the publication
 	path := "/publications/" + uuid
-	req, _ := http.NewRequest("DELETE", path, nil)
+	req, err := http.NewRequest("DELETE", path, nil)
+	if err != nil {
+		t.Error("Delete request failed.")
+	}
 	return executeRequest(req)
 }
 
@@ -303,11 +306,11 @@ func TestMain(m *testing.M) {
 		})
 
 		// License generation
-		r.Route("/licenses/", func(r chi.Router) {
+		r.Route("/licenses", func(r chi.Router) {
 			r.Post("/", h.GenerateLicense) // POST /licenses
 
 			r.Route("/{licenseID}", func(r chi.Router) {
-				r.Post("/", h.GetFreshLicense) // POST /licenses/123
+				r.Post("/", h.FreshLicense) // POST /licenses/123
 			})
 		})
 
