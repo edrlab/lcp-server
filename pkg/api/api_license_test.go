@@ -63,7 +63,7 @@ func TestGenerateLicense(t *testing.T) {
 	//log.Printf("%s \n", string(data))
 
 	// generate a license
-	path := "/licenses/"
+	path := "/licenses"
 	req, _ := http.NewRequest("POST", path, bytes.NewReader(data))
 	response := executeRequest(req)
 
