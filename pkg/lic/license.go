@@ -6,11 +6,14 @@ package lic
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"log"
+	"math/big"
 	"reflect"
+	"strconv"
 
 	"time"
 
@@ -140,15 +143,33 @@ func NewLicense(config *conf.Config, cert *tls.Certificate, pubInfo *stor.Public
 	return l, nil
 }
 
+// generateRandomDigit generates a random number between 1 and 9
+func generateRandomDigit() (int, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(10))
+	if err != nil {
+		return 0, err
+	}
+	return int(n.Int64()), nil
+}
+
 // setEncryption sets the encryption structure in the license
 // returns the user key, which will be used later to encrypt user info
 func setEncryption(profile string, l *License, pub *stor.Publication, encryption *Encryption, passhash string) ([]byte, error) {
 
 	if encryption.Profile == "" {
+		if profile == "" {
+			return nil, errors.New("missing profile value")
+		}
 		encryption.Profile = profile // by default from the config
 	}
-	if encryption.Profile == "" {
-		return nil, errors.New("failed to set the license profile")
+
+	// if the profile contains a jocker, generate a random number between 0 and 9
+	if encryption.Profile == "2.x" {
+		randomDigit, err := generateRandomDigit()
+		if err != nil {
+			return nil, errors.New("unable to generate a random digit")
+		}
+		encryption.Profile = "2." + strconv.Itoa(randomDigit)
 	}
 
 	// generate the user key
