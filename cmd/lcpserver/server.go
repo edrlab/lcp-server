@@ -1,25 +1,29 @@
-// Copyright 2022 European Digital Reading Lab. All rights reserved.
+// Copyright 2024 European Digital Reading Lab. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // specified in the Github project LICENSE file.
 
-// LCP Server generates LCP licenses.
+// The LCP Server generates LCP licenses.
 package main
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/edrlab/lcp-server/pkg/conf"
+	"github.com/edrlab/lcp-server/pkg/stor"
+
+	"encoding/json"
+	"strings"
+
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 
 	"github.com/edrlab/lcp-server/pkg/api"
-	"github.com/edrlab/lcp-server/pkg/conf"
-	"github.com/edrlab/lcp-server/pkg/stor"
 )
 
 // Server context
@@ -34,54 +38,53 @@ func main() {
 
 	s := Server{}
 
-	configFile := os.Getenv("EDRLAB_LCPSERVER_CONFIG")
-	if configFile == "" {
-		panic("Failed to retrieve the configuration file path.")
-	}
-
-	c, err := conf.Init(configFile)
+	// Initialize the configuration from a config file or/and environment variables
+	c, err := conf.Init(os.Getenv("LCPSERVER_CONFIG"))
 	if err != nil {
-		panic("Failed to read the configuration.")
+		log.Println("Configuration failed: " + err.Error())
+		os.Exit(1)
 	}
-
 	s.Config = c
 
-	s.Initialize()
+	s.initialize()
 
-	log.Printf("The server is ready.")
+	// TODO: add a graceful shutdown like in PubStore
 
-	if c.Port == 0 {
-		c.Port = 8081
-	}
-
-	s.Run(":" + strconv.Itoa(c.Port))
+	log.Println("Server starting on port " + strconv.Itoa(c.Port))
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(c.Port), s.Router))
 }
 
-// Initialize sets up the database and routes
-func (s *Server) Initialize() {
+// Initialize sets the database, X509 certificate and routes
+func (s *Server) initialize() {
 	var err error
 
-	// Setup the database
+	// Init database
 	s.Store, err = stor.Init(s.Config.Dsn)
 	if err != nil {
-		panic("Database setup failed.")
+		log.Println("Database setup failed: " + err.Error())
+		os.Exit(1)
 	}
 
-	// Setup the X509 certificate
+	// Init X509 certificate
 	var certFile, privKeyFile string
 	if certFile = s.Config.Certificate.Cert; certFile == "" {
-		panic("Must specify a certificate.")
+		log.Println("Provider certificate missing")
+		os.Exit(1)
+
 	}
 	if privKeyFile = s.Config.Certificate.PrivateKey; privKeyFile == "" {
-		panic("Must specify a private key.")
+		log.Println("Private key missing")
+		os.Exit(1)
 	}
 	cert, err := tls.LoadX509KeyPair(certFile, privKeyFile)
 	if err != nil {
-		panic(err)
+		log.Println("Loading X509 key pair failed: " + err.Error())
+		os.Exit(1)
+
 	}
 	s.Cert = &cert
 
-	// Setup the routes
+	// Init routes
 	s.Router = s.setRoutes()
 }
 
@@ -102,14 +105,29 @@ func (s *Server) setRoutes() *chi.Mux {
 	// Heartbeat
 	r.Group(func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("This is the LCP Server running!"))
+			w.Write([]byte("The LCP Server is running!"))
 		})
 	})
+
+	// Static resources management (optional)
+	if s.Config.Resources != "" {
+		r.Group(func(r chi.Router) {
+			resourceDir := s.Config.Resources
+			path := "/resources/*"
+
+			r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+				rctx := chi.RouteContext(r.Context())
+				pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
+				fs := http.StripPrefix(pathPrefix, http.FileServer(http.Dir(resourceDir)))
+				fs.ServeHTTP(w, r)
+			})
+		})
+	}
 
 	// Status document management
 	r.Group(func(r chi.Router) {
 		r.Use(render.SetContentType(render.ContentTypeJSON))
-		r.Get("/status/{licenseID}", a.StatusDoc)   // Get /status/123
+		r.Get("/status/{licenseID}", a.StatusDoc)   // GET /status/123
 		r.Post("/register/{licenseID}", a.Register) // POST /register/123
 		r.Put("/renew/{licenseID}", a.Renew)        // PUT /renew/123
 		r.Put("/return/{licenseID}", a.Return)      // PUT /return/123
@@ -151,11 +169,11 @@ func (s *Server) setRoutes() *chi.Mux {
 		})
 
 		// License generation
-		r.Route("/licenses/", func(r chi.Router) {
+		r.Route("/licenses", func(r chi.Router) {
 			r.Post("/", a.GenerateLicense) // POST /licenses
 
 			r.Route("/{licenseID}", func(r chi.Router) {
-				r.Post("/", a.GetFreshLicense) // POST /licenses/123
+				r.Post("/", a.FreshLicense) // POST /licenses/123
 			})
 		})
 
@@ -167,13 +185,7 @@ func (s *Server) setRoutes() *chi.Mux {
 	return r
 }
 
-// Run starts the server
-func (s *Server) Run(port string) {
-	log.Fatal(http.ListenAndServe(port, s.Router))
-
-	//  TODO sort of db.Close()
-}
-
+// TODO: add pagination
 // paginate is a stub, but very possible to implement middleware logic
 // to handle the request params for handling a paginated request.
 func paginate(next http.Handler) http.Handler {
