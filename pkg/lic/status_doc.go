@@ -69,6 +69,10 @@ func NewLicenseCtrl(cf *conf.Config, st stor.Store) *LicenseCtrl {
 // NewStatusDoc returns a Status Document
 func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 
+	// TODO: if the date of update of the publication is more recent than the date of creation of the license,
+	// the content has been updated: the date of update of the license must therefore be set to the date of update
+	// of the publication
+
 	// set license updated
 	var licUpdated, statUpdated time.Time
 	if license.Updated != nil {
