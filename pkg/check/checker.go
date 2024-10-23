@@ -225,7 +225,6 @@ func (c *LicenseChecker) GetFreshLicense() error {
 	freshLicense := new(lic.License)
 	err := getJson(lHref, freshLicense)
 	if err != nil {
-		log.Errorf("The fresh license at %s is unreachable or not parsable", lHref)
 		return err
 	}
 
@@ -274,7 +273,13 @@ func getJson(url string, target interface{}) error {
 	client := http.Client{
 		Timeout: 2 * time.Second,
 	}
-	r, err := client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	// Some reverse-proxies respond with a 403 error if the User-Agent is empty.
+	req.Header.Set("User-Agent", "LCPChecker/1.0")
+	r, err := client.Do(req)
 	if err != nil {
 		return err
 	}
