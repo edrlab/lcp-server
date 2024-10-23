@@ -363,7 +363,7 @@ func (c *LicenseChecker) CheckLicenseRights() error {
 		}
 	}
 	if c.license.Rights.End != nil && c.license.Rights.End.Before(time.Now()) {
-		log.Info(("The end date is in the past: it is not usable anymore"))
+		log.Info(("The end date is in the past: this license has expired"))
 	}
 
 	// if the status doc has already been fetched
