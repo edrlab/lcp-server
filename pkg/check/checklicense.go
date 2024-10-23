@@ -58,8 +58,8 @@ func (c *LicenseChecker) CheckLicense(passphrase string) error {
 		return err
 	}
 
-	// check the date of last update of the license
-	err = c.CheckLastUpdate(notAfter)
+	// check the date of issue of the license
+	err = c.CheckIssueDate(notAfter)
 	if err != nil {
 		return err
 	}
@@ -168,33 +168,31 @@ func (c *LicenseChecker) CheckCertificateChain() (*time.Time, error) {
 	opts := x509.VerifyOptions{
 		Roots: roots,
 	}
-	if _, err := cert.Verify(opts); err != nil {
+
+	// Verify the certificate validity
+	// An expired certificate is not an issue
+	if _, err := cert.Verify(opts); err != nil && cert.NotAfter.After(time.Now()) {
 		return nil, errors.New("failed to verify the certificate: " + err.Error())
+	}
+
+	if cert.NotAfter.Before(time.Now()) {
+		log.Infof("This certificate has expired on %s", cert.NotAfter.Format(time.RFC822))
 	}
 
 	return &cert.NotAfter, nil
 }
 
-// Verifies that the date of last update predates the expiration of the provider certificate
-// note: there is no issue if the creation of a certificate happens after the last update of a license;
-// this happens when the certificate is updated.
-func (c *LicenseChecker) CheckLastUpdate(endCertificate *time.Time) error {
+// Verifies that the license was issued before the expiration of the provider certificate.
+// Note: there is no issue if the license was issued before the certificate was created:
+// this happens when a new provider certificate is installed and a fresh license is generated.
+func (c *LicenseChecker) CheckIssueDate(endCertificate *time.Time) error {
 
 	if endCertificate == nil {
 		return errors.New("cannot check last license update with a nil certificate end date")
 	}
-	var lastUpdated time.Time
-	if c.license.Updated == nil {
-		lastUpdated = c.license.Issued
-	} else {
-		lastUpdated = *c.license.Updated
-		// verifies that the date of update is after the date of issue
-		if lastUpdated.Before(c.license.Issued) {
-			log.Errorf("Incorrect date of update %s, should be after the date of issue %s", lastUpdated.String(), c.license.Issued.String())
-		}
-	}
-	if lastUpdated.After(*endCertificate) {
-		log.Errorf("Incorrect date of last update %s, should be before the date of expiration of the certificate %s", lastUpdated.String(), endCertificate.String())
+
+	if c.license.Issued.After(*endCertificate) {
+		log.Errorf("Incorrect license issue date %s, the certificate had already expired on %s", c.license.Issued.Format(time.RFC822), endCertificate.Format(time.RFC822))
 	}
 	return nil
 }
