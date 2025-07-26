@@ -30,11 +30,11 @@ func (c *LicenseChecker) CheckStatusDoc() error {
 		log.Info("Message: ", c.statusDoc.Message)
 	}
 
+	// check the link to self
+	c.CheckSelfLink()
+
 	// check the link to the fresh license
-	err = c.CheckLicenseLink()
-	if err != nil {
-		return err
-	}
+	c.CheckLicenseLink()
 
 	// check actionable links (register, renew, return)
 	err = c.CheckActionableLinks()
@@ -129,8 +129,38 @@ func (c *LicenseChecker) ValidateStatusDoc() error {
 	return nil
 }
 
+// Verifies the link to self
+func (c *LicenseChecker) CheckSelfLink() {
+
+	var selfType, selfHref string
+	hasSelf := false
+	for _, s := range c.statusDoc.Links {
+		if s.Rel == "self" {
+
+			selfType = s.Type
+			selfHref = s.Href
+		}
+	}
+	if hasSelf {
+		if selfHref == "" {
+			log.Error("The self link is empty")
+		}
+		if selfType != "application/vnd.readium.license.status.v1.0+json" {
+			log.Errorf("The mime type of the self link (%s) is invalid", selfType)
+		}
+
+		// check that the status document can be fetched
+		err := CheckResource(selfHref)
+		if err != nil {
+			log.Errorf("The status document %s is unreachable via the self link", selfHref)
+		}
+	} else {
+		log.Info("No self link is present")
+	}
+}
+
 // Verifies the link to the fresh license
-func (c *LicenseChecker) CheckLicenseLink() error {
+func (c *LicenseChecker) CheckLicenseLink() {
 
 	var licType, licHref string
 	for _, s := range c.statusDoc.Links {
@@ -151,7 +181,6 @@ func (c *LicenseChecker) CheckLicenseLink() error {
 	if err != nil {
 		log.Errorf("The fresh license at %s is unreachable", licHref)
 	}
-	return nil
 }
 
 // Verifies actionable links
@@ -171,6 +200,8 @@ func (c *LicenseChecker) CheckActionableLinks() error {
 	for _, s := range c.statusDoc.Links {
 
 		switch s.Rel {
+		case "self":
+			continue
 		case "license":
 			continue
 		case "register":

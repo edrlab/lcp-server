@@ -172,6 +172,7 @@ func (c *LicenseChecker) CheckCertificateChain() (*time.Time, error) {
 	// Verify the certificate validity
 	// An expired certificate is not an issue
 	if _, err := cert.Verify(opts); err != nil && cert.NotAfter.After(time.Now()) {
+		log.Warning("It appears that a test certificate is used but a production profile declared, or vice versa.")
 		return nil, errors.New("failed to verify the certificate: " + err.Error())
 	}
 

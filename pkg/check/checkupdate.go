@@ -171,6 +171,11 @@ func (c *LicenseChecker) CheckRenew() error {
 		log.Error("Failed to get the fresh license: ", err)
 		return nil
 	} else {
+		// the fresh license must have an update timestamp
+		if c.license.Updated == nil {
+			log.Error("The fresh license update timestamp is absent")
+			return nil
+		}
 		// if the license time has been updated, it was necessarily during the last 2 seconds
 		freshUpdate := time.Now().Add(-2 * time.Second)
 		if c.license.Updated.Before(freshUpdate) {
