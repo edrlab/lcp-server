@@ -82,6 +82,7 @@ func (a *APICtrl) Renew(w http.ResponseWriter, r *http.Request) {
 	if deviceInfo = getDeviceInfo(w, r); deviceInfo == nil {
 		return
 	}
+	// check the presence of the new end date (optional)
 	var newEnd *time.Time
 	var err error
 	if newEnd, err = getNewEnd(w, r); err != nil {

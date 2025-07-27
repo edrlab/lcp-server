@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"testing"
+	"time"
 
 	"github.com/edrlab/lcp-server/pkg/lic"
 )
@@ -82,8 +84,12 @@ func TestRenew(t *testing.T) {
 		}
 	}
 
+	// calculate now + 13 days
+	newEnd := time.Now().Add(13 * 24 * time.Hour).Format(time.RFC3339)
+
 	// send a renew command
-	path = "/renew/" + inLic.UUID + "?id=1&name=device1"
+	path = "/renew/" + inLic.UUID + "?id=1&name=device1&end=" + url.QueryEscape(newEnd)
+
 	req, _ = http.NewRequest("PUT", path, nil)
 	response = executeRequest(req)
 

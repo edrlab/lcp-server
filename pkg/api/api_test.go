@@ -52,6 +52,7 @@ type LicenseTest struct {
 	Provider      string     `json:"provider"`
 	Start         *time.Time `json:"start,omitempty"`
 	End           *time.Time `json:"end,omitempty"`
+	MaxEnd        *time.Time `json:"max_end,omitempty"`
 	Copy          int32      `json:"copy,omitempty"`
 	Print         int32      `json:"print,omitempty"`
 	Status        string     `json:"status"`
@@ -148,10 +149,12 @@ func newLicense(pubID string) *LicenseTest {
 	lic.UserID = uuid.New().String()
 	lic.PublicationID = pubID
 	lic.Provider = faker.Internet().Url()
-	ts := faker.Time().Backward(3600)
+	ts := time.Now()
 	lic.Start = &ts
-	te := faker.Time().Forward(3600 * 24)
+	te := ts.AddDate(0, 0, 30) // 30 days
 	lic.End = &te
+	tm := te.AddDate(0, 0, 10) // 10 days after end
+	lic.MaxEnd = &tm
 	lic.Copy = 10000
 	lic.Print = 100
 	lic.Status = stor.STATUS_READY
