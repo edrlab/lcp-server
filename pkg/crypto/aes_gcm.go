@@ -30,7 +30,6 @@ import (
 	"crypto/cipher"
 	"encoding/binary"
 	"io"
-	"io/ioutil"
 )
 
 type gcmEncrypter struct {
@@ -63,7 +62,7 @@ func (e *gcmEncrypter) Encrypt(key ContentKey, r io.Reader, w io.Writer) error {
 	nonce := make([]byte, gcm.NonceSize())
 	binary.BigEndian.PutUint64(nonce, counter)
 
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}

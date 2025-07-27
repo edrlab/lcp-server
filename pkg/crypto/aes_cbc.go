@@ -80,7 +80,7 @@ func (e cbcEncrypter) Encrypt(key ContentKey, r io.Reader, w io.Writer) error {
 		}
 	}
 
-	if err == nil || err == io.EOF {
+	if err == io.EOF {
 		return nil
 	}
 
