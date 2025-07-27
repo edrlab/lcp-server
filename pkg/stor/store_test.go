@@ -1,6 +1,7 @@
 package stor
 
 import (
+	"log"
 	"math/rand"
 	"os"
 	"testing"
@@ -10,7 +11,7 @@ import (
 	"syreclabs.com/go/faker"
 )
 
-// some global vars shares by all tests
+// some global vars shared by all tests
 var St Store
 var Publications []Publication
 var Licenses []LicenseInfo
@@ -65,9 +66,25 @@ func TestMain(m *testing.M) {
 		Licenses = append(Licenses, lic)
 	}
 
-	// Create / open an sqlite db in memory
+	// create / open an sqlite db in memory
 	dsn := "sqlite3://file::memory:?cache=shared"
 	St, _ = Init(dsn)
+
+	// store the publications in the db
+	var err error
+	for _, p := range Publications {
+		err = St.Publication().Create(&p)
+		if err != nil {
+			log.Fatalf("Failed to create a publication: %v", err)
+		}
+	}
+	// store the licenses in the db
+	for _, l := range Licenses {
+		err = St.License().Create(&l)
+		if err != nil {
+			log.Fatalf("Failed to create a license: %v", err)
+		}
+	}
 
 	code := m.Run()
 	os.Exit(code)
@@ -81,14 +98,6 @@ func TestPublications(t *testing.T) {
 	err = Publications[0].Validate()
 	if err != nil {
 		t.Fatalf("Invalid test publication: %v", err)
-	}
-
-	// store publications in the db
-	for _, p := range Publications {
-		err = St.Publication().Create(&p)
-		if err != nil {
-			t.Fatalf("Failed to create a publication: %v", err)
-		}
 	}
 
 	// count publications
@@ -151,6 +160,12 @@ func TestPublications(t *testing.T) {
 		t.Fatalf("Failed to delete a publication: %v", err)
 	}
 
+	// check that the publication has been (soft) deleted
+	_, err = St.Publication().Get(publication.UUID)
+	if err == nil {
+		t.Fatalf("Expected publication to be deleted")
+	}
+
 	// check that the creation of a new publication with the same UUID is disallowed
 	publication = &Publications[1]
 	publication.UUID = uuid.New().String()
@@ -164,9 +179,8 @@ func TestPublications(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Failed to disallow the creation of 2 publications with the same UUID: %v", err)
 	} else {
-		t.Logf("Note: the second insertion failed with error: %v", err)
+		t.Logf("Test positive, it is not possible to create a publication with a already existing UUID: %v", err)
 	}
-
 }
 
 // TestLicenses calls gorm functionalities related to License
@@ -177,24 +191,6 @@ func TestLicenses(t *testing.T) {
 	err = Licenses[0].Validate()
 	if err != nil {
 		t.Fatalf("Invalid test license: %v", err)
-	}
-
-	// if the previous test was not passed, create the publications in the db
-	if cnt, _ := St.Publication().Count(); cnt == 0 {
-		for _, p := range Publications {
-			err = St.Publication().Create(&p)
-			if err != nil {
-				t.Fatalf("Failed to create a publication: %v", err)
-			}
-		}
-	}
-
-	// store licenses in the db
-	for _, l := range Licenses {
-		err = St.License().Create(&l)
-		if err != nil {
-			t.Fatalf("Failed to create a license: %v", err)
-		}
 	}
 
 	// count licenses
@@ -281,10 +277,16 @@ func TestLicenses(t *testing.T) {
 		t.Fatalf("Failed to update a license property: %v", err)
 	}
 
-	// (soft) delete a publication
+	// (soft) delete the license
 	err = St.License().Delete(license)
 	if err != nil {
 		t.Fatalf("Failed to delete a license: %v", err)
+	}
+
+	// check that the license has been (soft) deleted
+	_, err = St.License().Get(license.UUID)
+	if err == nil {
+		t.Fatalf("Expected license to be deleted")
 	}
 
 	license = &Licenses[0]
@@ -324,7 +326,7 @@ func TestLicenses(t *testing.T) {
 	if err == nil {
 		t.Fatal("Failed to disallow the creation of a license with a wrong publication id")
 	} else {
-		t.Logf("Note: the  insertion failed with error: %v", err)
+		t.Logf("Test positive, it is not possible to create a license for a non-existent publication: %v", err)
 	}
 
 }

@@ -8,7 +8,7 @@ import (
 func TestEvent(t *testing.T) {
 	var err error
 
-	// store a publication and a license
+	// select a publication and a license
 	l := Licenses[0]
 	pid := l.PublicationID
 	var p Publication
@@ -21,14 +21,6 @@ func TestEvent(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("Failed to get the publication associated with a license: %v", err)
-	}
-	err = St.Publication().Create(&p)
-	if err != nil {
-		t.Fatalf("Failed to store a publication: %v", err)
-	}
-	err = St.License().Create(&l)
-	if err != nil {
-		t.Fatalf("Failed to store a license: %v", err)
 	}
 
 	// create an event
@@ -91,14 +83,7 @@ func TestEvent(t *testing.T) {
 		t.Fatalf("Failed to list, expected 2 got %d", count)
 	}
 
-	// update the first event
-	e1.Type = "revoke"
-	err = St.Event().Update(e1)
-	if err != nil {
-		t.Fatalf("Failed to update an event: %v", err)
-	}
-
-	// get one of the events
+	// get the register event associated with the first device
 	event, err = St.Event().GetRegisterByDevice(l.UUID, e1.DeviceID)
 	if err != nil {
 		t.Fatalf("Failed to get event 1: %v", err)
@@ -112,6 +97,13 @@ func TestEvent(t *testing.T) {
 	_, err = St.Event().GetRegisterByDevice(l.UUID, deviceID)
 	if err == nil {
 		t.Fatal("Failed to get an error for device id 3")
+	}
+
+	// update the first event
+	e1.Type = "revoke"
+	err = St.Event().Update(e1)
+	if err != nil {
+		t.Fatalf("Failed to update an event: %v", err)
 	}
 
 	// delete the events
@@ -132,15 +124,4 @@ func TestEvent(t *testing.T) {
 	if count != 0 {
 		t.Fatalf("Failed to count, expected 0 got %d", count)
 	}
-
-	// delete the license and publication
-	err = St.License().Delete(&l)
-	if err != nil {
-		t.Fatalf("Failed to delete the license: %v", err)
-	}
-	err = St.Publication().Delete(&p)
-	if err != nil {
-		t.Fatalf("Failed to delete the publication: %v", err)
-	}
-
 }
