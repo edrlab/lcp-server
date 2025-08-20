@@ -10,10 +10,11 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"errors"
-	"log"
 	"math/big"
 	"reflect"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 
 	"time"
 
@@ -111,8 +112,6 @@ func NewLicense(config *conf.Config, cert *tls.Certificate, pubInfo *stor.Public
 		Issued:   licInfo.CreatedAt,
 		Updated:  licInfo.Updated,
 	}
-
-	log.Printf("License %s generated on %s", l.UUID, l.Issued.Format(time.RFC822))
 
 	userKey, err := setEncryption(config.Profile, l, pubInfo, encryption, passhash)
 	if err != nil {
@@ -243,6 +242,7 @@ func setLinks(publicBaseUrl string, hintTemplate string, l *License, pub *stor.P
 	expanded, err := template.Expand(values)
 	if err != nil {
 		log.Printf("failed to expand the hint link: %s", template)
+		expanded = hintTemplate // fallback
 	}
 
 	// set the hint link

@@ -8,6 +8,8 @@ import (
 	"errors"
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/edrlab/lcp-server/pkg/stor"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -15,6 +17,8 @@ import (
 
 // ListPublications lists all publications present in the database.
 func (a *APICtrl) ListPublications(w http.ResponseWriter, r *http.Request) {
+	log.Debug("List Publications")
+
 	publications, err := a.Store.Publication().ListAll()
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
@@ -28,6 +32,8 @@ func (a *APICtrl) ListPublications(w http.ResponseWriter, r *http.Request) {
 
 // SearchPublications searches publications corresponding to a specific criteria.
 func (a *APICtrl) SearchPublications(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Search Publications ")
+
 	var publications *[]stor.Publication
 	var err error
 
@@ -65,6 +71,7 @@ func (a *APICtrl) SearchPublications(w http.ResponseWriter, r *http.Request) {
 
 // CreatePublication adds a new Publication to the database.
 func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Create Publication")
 
 	// get the payload
 	data := &PublicationRequest{}
@@ -73,6 +80,7 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	publication := data.Publication
+	log.Debugf("Create Publication: %+v", publication)
 
 	// db create
 	err := a.Store.Publication().Create(publication)
@@ -90,11 +98,13 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 
 // GetPublication returns a specific publication
 func (a *APICtrl) GetPublication(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Get Publication")
 
 	var publication *stor.Publication
 	var err error
 
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
+		log.Debugf("Get Publication: %s", publicationID)
 		publication, err = a.Store.Publication().Get(publicationID)
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier")))
@@ -112,6 +122,7 @@ func (a *APICtrl) GetPublication(w http.ResponseWriter, r *http.Request) {
 
 // UpdatePublication updates an existing Publication in the database.
 func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Update Publication")
 
 	// get the payload
 	data := &PublicationRequest{}
@@ -120,6 +131,7 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	publication := data.Publication
+	log.Debugf("Update Publication: %+v", publication)
 
 	var currentPub *stor.Publication
 	var err error
@@ -157,12 +169,14 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 
 // DeletePublication removes an existing Publication from the database.
 func (a *APICtrl) DeletePublication(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Delete Publication")
 
 	var publication *stor.Publication
 	var err error
 
 	// get the existing publication
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
+		log.Debugf("Delete Publication: %s", publicationID)
 		publication, err = a.Store.Publication().Get(publicationID)
 	} else {
 		render.Render(w, r, ErrNotFound)

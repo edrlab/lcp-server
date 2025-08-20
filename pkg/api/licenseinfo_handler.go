@@ -84,10 +84,9 @@ func (a *APICtrl) CreateLicense(w http.ResponseWriter, r *http.Request) {
 	}
 	license := data.LicenseInfo
 
-	// force the status
-	if license.Status != stor.STATUS_READY {
-		license.Status = stor.STATUS_READY
-	}
+	// force the status to ready (the caller does not has to set it)
+	license.Status = stor.STATUS_READY
+
 	// set the max end date if there is an end date and the max end date is not set in the input.
 	// the renew max date will be 0 if not set in the configuration
 	if license.End != nil && license.MaxEnd == nil {

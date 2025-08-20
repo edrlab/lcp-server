@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 // GenerateLicense creates a license in the db and returns a fresh license
@@ -23,6 +24,7 @@ func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	// get the payload
 	licRequest := &LicenseRequest{}
 	if err := render.Bind(r, licRequest); err != nil {
+		log.Errorf("error binding a Generate License request: %v", err)
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
@@ -77,6 +79,9 @@ func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("New license %s generated on %s", license.UUID, license.Issued.Format(time.RFC822))
+
+	render.Status(r, http.StatusCreated)
 	if err = render.Render(w, r, NewLicenseResponse(license)); err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
@@ -90,6 +95,7 @@ func (a *APICtrl) FreshLicense(w http.ResponseWriter, r *http.Request) {
 	// get the payload
 	licRequest := &LicenseRequest{}
 	if err = render.Bind(r, licRequest); err != nil {
+		log.Errorf("error binding a Fresh License request: %v", err)
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
@@ -141,6 +147,8 @@ func (a *APICtrl) FreshLicense(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrServer(err))
 		return
 	}
+	log.Printf("Fresh license %s generated", license.UUID)
+
 	if err := render.Render(w, r, NewLicenseResponse(license)); err != nil {
 		render.Render(w, r, ErrRender(err))
 		return

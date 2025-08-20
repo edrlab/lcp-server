@@ -1,11 +1,12 @@
 package stor
 
 import (
-	"log"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
 	"syreclabs.com/go/faker"
