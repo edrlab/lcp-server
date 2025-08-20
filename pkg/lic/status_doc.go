@@ -10,6 +10,7 @@ import (
 
 	"github.com/edrlab/lcp-server/pkg/conf"
 	"github.com/edrlab/lcp-server/pkg/stor"
+	"github.com/jtacoma/uritemplates"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -90,7 +91,7 @@ func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 	statusDoc := &StatusDoc{
 		ID:      license.UUID,
 		Status:  license.Status,
-		Message: "The license is in " + license.Status + " state", // TODO: flexible, localize
+		Message: "The license is in " + license.Status + " state", // TODO: make flexible, localize
 		Updated: Updated{
 			License: licUpdated,
 			Status:  statUpdated,
@@ -99,12 +100,12 @@ func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 
 	// check if the license has expired
 	now := time.Now().Truncate(time.Second)
-	if (license.Status == stor.STATUS_READY || license.Status == stor.STATUS_ACTIVE) && now.After(*license.End) {
+	if (license.Status == stor.STATUS_READY || license.Status == stor.STATUS_ACTIVE) && license.End != nil && now.After(*license.End) {
 		statusDoc.Status = stor.STATUS_EXPIRED
 		statusDoc.Message = "The license has expired on " + license.End.Format(time.RFC822)
 	}
 
-	// not need to return a max end date if the license is not ready or active
+	// we don't need to return a max end date if the license is not ready or active
 	if license.Status != stor.STATUS_READY && license.Status != stor.STATUS_ACTIVE {
 		license.MaxEnd = nil
 	}
@@ -118,7 +119,7 @@ func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 	}
 
 	// set links
-	setStatusLinks(lc.Config.PublicBaseUrl, lc.Config.Status.RenewLink, statusDoc)
+	setStatusLinks(statusDoc, lc.Config.PublicBaseUrl, lc.Config.Status.FreshLicenseLink, lc.Config.Status.RenewLink)
 
 	// set events
 	setEvents(lc.Store, statusDoc)
@@ -127,23 +128,51 @@ func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 }
 
 // Set status links
-func setStatusLinks(publicBaseUrl string, renewLink string, statusDoc *StatusDoc) error {
+func setStatusLinks(statusDoc *StatusDoc, publicBaseUrl string, freshLicenseLink string, renewLink string) error {
 	var links []Link
-	actions := [3]string{"register", "renew", "return"}
+	actions := [4]string{"license", "register", "renew", "return"}
+	var mimetype string
 
 	for _, action := range actions {
 		var href string
-		//the provider can manage his own renew URL and take care of calling the license status server
-		if action == "renew" {
-			if renewLink != "" {
-				href = renewLink + "{?end,id,name}"
-			} else {
-				href = publicBaseUrl + "/" + action + "/" + statusDoc.ID + "{?end,id,name}"
+		switch action {
+		case "license":
+			// expand the link template
+			template, _ := uritemplates.Parse(freshLicenseLink)
+			values := make(map[string]interface{})
+			values["license_id"] = statusDoc.ID
+			expanded, err := template.Expand(values)
+			if err != nil {
+				log.Printf("failed to expand the fresh license link: %s", template)
+				expanded = freshLicenseLink // fallback
 			}
-		} else {
-			href = publicBaseUrl + "/" + action + "/" + statusDoc.ID + "{?id,name}"
+			href = expanded
+			mimetype = ContentType_LCP_JSON
+		case "register":
+			href = publicBaseUrl + "/register/" + statusDoc.ID + "{?id,name}"
+			mimetype = ContentType_LSD_JSON
+		case "renew":
+			//the provider can manage his own renew URL and take care of calling the license status server
+			if renewLink != "" {
+				// expand the link template
+				template, _ := uritemplates.Parse(renewLink)
+				values := make(map[string]interface{})
+				values["license_id"] = statusDoc.ID
+				expanded, err := template.Expand(values)
+				if err != nil {
+					log.Printf("failed to expand the renew link: %s", template)
+					expanded = renewLink // fallback
+				}
+				href = expanded + "{?end,id,name}"
+			} else {
+				href = publicBaseUrl + "/renew/" + statusDoc.ID + "{?end,id,name}"
+			}
+			mimetype = ContentType_LSD_JSON
+		case "return":
+			href = publicBaseUrl + "/return/" + statusDoc.ID + "{?id,name}"
+			mimetype = ContentType_LSD_JSON
 		}
-		link := Link{Href: href, Rel: action, Type: ContentType_LSD_JSON, Templated: true}
+		link := Link{Href: href, Rel: action, Type: mimetype, Templated: true}
 		links = append(links, link)
 	}
 
@@ -222,7 +251,11 @@ func (lc *LicenseCtrl) Renew(licenseID string, device *DeviceInfo, newEnd *time.
 		return nil, ErrLicenseNotFound
 	}
 
-	// check that the license is in active status
+	// if the provider has explicitly allowed it, expired licenses are reactivated and extended
+	if license.Status == stor.STATUS_EXPIRED && lc.Config.Status.AllowRenewOnExpiredLicenses {
+		license.Status = stor.STATUS_ACTIVE
+	}
+	// check that the license is in active state
 	if license.Status != stor.STATUS_ACTIVE {
 		return nil, errors.New("requesting a renew on a non-active license is prohibited")
 	}
@@ -242,12 +275,13 @@ func (lc *LicenseCtrl) Renew(licenseID string, device *DeviceInfo, newEnd *time.
 		} else {
 			license.End = newEnd
 		}
-		// consider a default end date set in the configuration file
+		// no explicit new end date; consider a default end date set in the configuration file
 	} else if lc.Config.Status.RenewDefaultDays != 0 {
-		*license.End = license.End.AddDate(0, 0, lc.Config.Status.RenewDefaultDays)
+		// the number of days of the extension is based on the current timestamp, not the current end date
+		*license.End = time.Now().AddDate(0, 0, lc.Config.Status.RenewDefaultDays)
 		// the ultimate default is 7 days
 	} else {
-		*license.End = license.End.AddDate(0, 0, 7)
+		*license.End = time.Now().AddDate(0, 0, 7)
 	}
 	log.Println("License extension; the new end date is ", license.End.Format(time.RFC822))
 
