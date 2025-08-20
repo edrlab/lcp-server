@@ -9,8 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// TODO : study how to get "required" field validation  despite the empty Publication in LicenseInfo
-
 // Publication data model
 type Publication struct {
 	gorm.Model
