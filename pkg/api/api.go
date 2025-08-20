@@ -14,7 +14,7 @@ import (
 
 // APICtrl contains the context required by http handlers.
 type APICtrl struct {
-	*conf.Config // TODO: change for an interface (dependency)
+	*conf.Config
 	stor.Store
 	Cert *tls.Certificate
 }
