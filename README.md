@@ -48,6 +48,11 @@ license:
   hint_link: "https://www.edrlab.org/lcp-help/{license_id}"
 
 status:
+  # url of a fresh license, served via a License Gateway 
+  # must be templated using {license_id} as parameter
+  fresh_license_link: "https://license_gateway.io/licenses/{license_id}"
+  # allow renew on expired licenses
+  allow_renew_on_expired_licenses: true
   # default number of days of extension of a license, see renew; can be overridden in the renew command
   renew_default_days: 7
   # max number of days of extension of a license, see the specification of the status document

@@ -14,6 +14,7 @@ import (
 
 // LCP Server configuration
 type Config struct {
+	LogLevel      string `yaml:"log_level"` // "debug", "info", "warn", "error"
 	PublicBaseUrl string `yaml:"public_base_url"`
 	Port          int    `yaml:"port"`
 	Dsn           string `yaml:"dsn"`
@@ -41,9 +42,11 @@ type License struct {
 }
 
 type Status struct {
-	RenewDefaultDays int    `yaml:"renew_default_days"`
-	RenewMaxDays     int    `yaml:"renew_max_days"`
-	RenewLink        string `yaml:"renew_link"`
+	FreshLicenseLink            string `yaml:"fresh_license_link"`
+	AllowRenewOnExpiredLicenses bool   `yaml:"allow_renew_on_expired_licenses"`
+	RenewDefaultDays            int    `yaml:"renew_default_days"`
+	RenewMaxDays                int    `yaml:"renew_max_days"`
+	RenewLink                   string `yaml:"renew_link"`
 }
 
 func Init(configFile string) (*Config, error) {
