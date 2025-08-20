@@ -74,12 +74,6 @@ func Init(configFile string) (*Config, error) {
 		return &c, err
 	}
 
-	//test
-	log.Println("Access Username:", c.Access.Username)
-	log.Println("Access Password:", c.Access.Password)
-	log.Println("Port:", c.Port)
-	log.Println("License Provider:", c.License.Provider)
-
 	// Set some defaults
 	if c.Port == 0 {
 		c.Port = 8081
