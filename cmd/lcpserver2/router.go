@@ -5,8 +5,10 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -73,8 +75,8 @@ func (s *Server) setRoutes() *chi.Mux {
 
 		// Publications, CRUD
 		r.Route("/publications", func(r chi.Router) {
-			r.With(paginate).Get("/", a.ListPublications)
-			r.With(paginate).Get("/search", a.SearchPublications) // GET /publication/search{?format}
+			r.With(paginate).Get("/", a.ListPublications)         // GET /publications/
+			r.With(paginate).Get("/search", a.SearchPublications) // GET /publications/search{?format}
 			r.Post("/", a.CreatePublication)                      // POST /publications
 
 			r.Route("/{publicationID}", func(r chi.Router) {
@@ -86,14 +88,14 @@ func (s *Server) setRoutes() *chi.Mux {
 
 		// LicenseInfo, CRUD
 		r.Route("/licenseinfo", func(r chi.Router) {
-			r.With(paginate).Get("/", a.ListLicenses)
-			r.With(paginate).Get("/search", a.SearchLicenses) // GET /licenses/search{?pub,user,status,count}
-			r.Post("/", a.CreateLicense)                      // POST /licenses
+			r.With(paginate).Get("/", a.ListLicenses)         // GET /licenseinfo/
+			r.With(paginate).Get("/search", a.SearchLicenses) // GET /licenseinfo/search{?pub,user,status,count}
+			r.Post("/", a.CreateLicense)                      // POST /licenseinfo
 
 			r.Route("/{licenseID}", func(r chi.Router) {
-				r.Get("/", a.GetLicense)       // GET /licenses/123
-				r.Put("/", a.UpdateLicense)    // PUT /licenses/123
-				r.Delete("/", a.DeleteLicense) // DELETE /licenses/123
+				r.Get("/", a.GetLicense)       // GET /licenseinfo/123
+				r.Put("/", a.UpdateLicense)    // PUT /licenseinfo/123
+				r.Delete("/", a.DeleteLicense) // DELETE /licenseinfo	/123
 			})
 		})
 
@@ -114,14 +116,30 @@ func (s *Server) setRoutes() *chi.Mux {
 	return r
 }
 
-// TODO: add pagination
-// paginate is a stub, but very possible to implement middleware logic
-// to handle the request params for handling a paginated request.
+// paginate middleware
 func paginate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// just a stub.. some ideas are to look at URL query params for something like
-		// the page number, or the limit, and send a query cursor down the chain
-		next.ServeHTTP(w, r)
+		// pefault values
+		page := 1
+		perPage := 20
+
+		// read query parameters
+		q := r.URL.Query()
+		if p := q.Get("page"); p != "" {
+			if val, err := strconv.Atoi(p); err == nil && val > 0 {
+				page = val
+			}
+		}
+		if pp := q.Get("per_page"); pp != "" {
+			if val, err := strconv.Atoi(pp); err == nil && val > 0 {
+				perPage = val
+			}
+		}
+
+		// add to context
+		ctx := context.WithValue(r.Context(), api.PageKey, page)
+		ctx = context.WithValue(ctx, api.PerPageKey, perPage)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
