@@ -49,8 +49,11 @@ func (c *LicenseChecker) CheckLicense(passphrase string) error {
 		return err
 	}
 
-	// check the format of the content key (64 bytes after base64 decoding)
-	// TODO
+	// check the format of the content key
+	err = c.CheckContentKeyFormat()
+	if err != nil {
+		return err
+	}
 
 	// check the certificate chain
 	notAfter, err := c.CheckCertificateChain()
@@ -133,6 +136,18 @@ func (c *LicenseChecker) CheckLicenseProfile() error {
 	if !match {
 		log.Errorf("The profile value %s is incorrect", c.license.Encryption.Profile)
 	}
+	return nil
+}
+
+// Verifies the format of the content key
+func (c *LicenseChecker) CheckContentKeyFormat() error {
+
+	// the content key must be 64 bytes long (after base64 decoding)
+	if len(c.license.Encryption.ContentKey.Value) != 64 {
+		log.Errorf("Invalid content key length: %d", len(c.license.Encryption.ContentKey.Value))
+		return errors.New("invalid content key length")
+	}
+
 	return nil
 }
 
