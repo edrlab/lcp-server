@@ -2,7 +2,9 @@
 
 This is a major evolution of the Readium LCP Server available on https://github.com/readium/readium-lcp-server. Because it is not an incremental evolution, and because this codebase is entirely maintained by EDRLab, we decided to create a new repository on the EDRLab Github space. 
 
-V2 requires go 1.16 or higher, due to the use of new features of the `os` package.
+**Note: This project is still not ready for production. We are currently testing it on a demo plateform before release.**
+
+V2 requires go 1.16 or higher, due to the use of new features of the `os` package. It is currently developed using go 1.24. 
 
 The `lcpserver`:
 
@@ -10,13 +12,13 @@ The `lcpserver`:
 - Serves LCP licenses for these publications. 
 - Supports the License Status Document protocol for these licenses.
 
-Licenses can be verified using a separate commande line executable, developed in the same repository and named `lcpchecker`. 
+Licenses can be verified using a separate command line executable, developed in the same repository and named `lcpchecker`. 
 
 An additional executable will soon be added to this set, named `lcpencrypt`. This tool will be able to encrypt a publication, publish the encrypted publication at a location given as a parameter, and notify the lcpserver of the availability of this new asset. `lcpencrypt` will be both available as a command line utility and a web service. 
 
 A lightweight content management server will also be released, named `pubstore`, which will be connected to the lcp-server and will be useful for testing  `lcpserver` in a live environment.
 
-Before these tools are available, the current Encryption Tool and Test Frontend Server will be usable with this new lcp-server (their API will be adapted to do so).
+Before these tools are available, the current Encryption Tool is usable with this new lcp-server.
 
 ## Configuration
 
@@ -75,11 +77,15 @@ From the `lcp-server` folder ...
 
 For testing the lcpserver application you can simply use:
 
-> go run cmd/lcpserver/server.go
+> go run cmd/lcpserver2/server.go
 
 For compiling and installing the application in the bin folder, use: 
 
-> go install cmd/lcpserver/server.go
+> go install cmd/lcpserver2/server.go
+
+or, if your forked the codebase:
+
+> go build -o $GOPATH/bin  ./cmd/lcpserver2
 
 ## API calls
 
@@ -103,13 +109,14 @@ with a payload like:
 }
 ```
 
-The publication will be identified by the `uuid` value.
+The publication will be identified by its `uuid` value.
 
 You can also:
 
 1. Get a list of publications via:
 
-- GET localhost:8081/publications/
+- GET localhost:8081/publications/, with `page` and `per_page` pagination parameters.
+- GET localhost:8081/publications/search/ with a `format` parameter taking as a value: `epub`, `pdf`, `lcpdf`, `lcpaiu` or `lcpdi`. 
 
 2. Fetch, update or delete (the info relative to) a publication via:
 
@@ -155,7 +162,7 @@ with a payload like:
 `copy`, `print`, `start`, `end` are optional constraints. No value set implies no constraint. 
 `profile`is optional. A default value should be set in the configuration.  
 
-All other paramaters are mandatory. 
+All other parameters are mandatory. 
 The publication identified by `publication_id` must be present in the server when a license is generated. 
 
 In case of success the server returns a 201 code. 
@@ -184,7 +191,7 @@ with a payload like:
 }
 ```
 
-The License Server does not store user information, as it would be the your entire user database is replicated in the License Server at some point, which is not desirable. This is why user information, including the personal text hint and passphrase, must be repeated each time a fresh license is requested. 
+The License Server does not store user information, as the entire user database would then replicated in the License Server at some point, which is not desirable. This is why user information, including the personal text hint and passphrase, must be repeated each time a fresh license is requested. 
 
 ### Get a status document
 
@@ -255,13 +262,14 @@ with a payload like:
 }
 ```
 
-The license will be identified by the `uuid` value.
+The license will be identified by its `uuid` value.
 
 You can also:
 
 1. Get a list of licenses via:
 
-- GET localhost:8081/licenses/
+- GET localhost:8081/licenses/, with `page` and `per_page` pagination parameters.
+- GET localhost:8081/licenses/search/, with `user` (id), `pub` (id), `status` ("ready" etc.) or `count` query parameter. `count`takes a min:max tuple as value.
 
 2. Fetch, update or delete a license (the info relative to) via:
 
