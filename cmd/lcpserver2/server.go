@@ -6,10 +6,14 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -52,10 +56,31 @@ func main() {
 		log.SetFormatter(&log.TextFormatter{})
 	}
 
-	// TODO: add a graceful shutdown like in PubStore
+	// Graceful shutdown
+	server := &http.Server{
+		Addr:    ":" + strconv.Itoa(c.Port),
+		Handler: s.Router,
+	}
 
-	log.Println("Server starting on port " + strconv.Itoa(c.Port))
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(c.Port), s.Router))
+	// System signals
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		log.Println("Server starting on port " + strconv.Itoa(c.Port))
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("ListenAndServe error: %v", err)
+		}
+	}()
+
+	<-stop
+	log.Println("Shutdown requested, initiating graceful shutdown...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Error during shutdown: %v", err)
+	}
+	log.Println("Server halted.")
 }
 
 // Initialize sets the database, X509 certificate and routes
