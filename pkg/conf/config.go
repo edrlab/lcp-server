@@ -1,14 +1,15 @@
-// Copyright 2024 European Digital Reading Lab. All rights reserved.
+// Copyright 2025 European Digital Reading Lab. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // specified in the Github project LICENSE file.
 
 package conf
 
 import (
-	"errors"
+	"log"
 	"os"
 	"path/filepath"
 
+	"github.com/kelseyhightower/envconfig"
 	"gopkg.in/yaml.v2"
 )
 
@@ -26,27 +27,27 @@ type Config struct {
 }
 
 type Access struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
+	Username string `yaml:"username" envconfig:"access_username"`
+	Password string `yaml:"password" envconfig:"access_password"`
 }
 
 type Certificate struct {
-	Cert       string `yaml:"cert"`
-	PrivateKey string `yaml:"private_key"`
+	Cert       string `yaml:"cert" envconfig:"certificate_cert"`              // Path
+	PrivateKey string `yaml:"private_key" envconfig:"certificate_privatekey"` // Path
 }
 
 type License struct {
-	Provider string `yaml:"provider"` // URI
-	Profile  string `yaml:"profile"`  // "http://readium.org/lcp/basic-profile" || "http://readium.org/lcp/profile-1.0" || ...
-	HintLink string `yaml:"hint_link"`
+	Provider string `yaml:"provider"  envconfig:"license_provider"`   // URI
+	Profile  string `yaml:"profile"  envconfig:"license_profile"`     // standard profile URI
+	HintLink string `yaml:"hint_link"  envconfig:"license_hint_link"` // URL
 }
 
 type Status struct {
-	FreshLicenseLink            string `yaml:"fresh_license_link"`
-	AllowRenewOnExpiredLicenses bool   `yaml:"allow_renew_on_expired_licenses"`
-	RenewDefaultDays            int    `yaml:"renew_default_days"`
-	RenewMaxDays                int    `yaml:"renew_max_days"`
-	RenewLink                   string `yaml:"renew_link"`
+	FreshLicenseLink            string `yaml:"fresh_license_link" envconfig:"status_freshlicenselink"`
+	AllowRenewOnExpiredLicenses bool   `yaml:"allow_renew_on_expired_licenses" envconfig:"status_allowrenewonexpiredlicenses"`
+	RenewDefaultDays            int    `yaml:"renew_default_days" envconfig:"status_renewdefaultdays"`
+	RenewMaxDays                int    `yaml:"renew_max_days" envconfig:"status_renewmaxdays"`
+	RenewLink                   string `yaml:"renew_link" envconfig:"status_renewlink"`
 }
 
 func Init(configFile string) (*Config, error) {
@@ -65,9 +66,21 @@ func Init(configFile string) (*Config, error) {
 		}
 
 	} else {
-		return nil, errors.New("failed to find the configuration file")
+		log.Println("failed to find the configuration file")
 	}
 
+	err := envconfig.Process("lcpserver", &c)
+	if err != nil {
+		return &c, err
+	}
+
+	//test
+	log.Println("Access Username:", c.Access.Username)
+	log.Println("Access Password:", c.Access.Password)
+	log.Println("Port:", c.Port)
+	log.Println("License Provider:", c.License.Provider)
+
+	// Set some defaults
 	if c.Port == 0 {
 		c.Port = 8081
 	}

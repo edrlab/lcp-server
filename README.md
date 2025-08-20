@@ -22,13 +22,21 @@ Before these tools are available, the current Encryption Tool is usable with thi
 
 ## Configuration
 
-The configuration is similar to the v1 config, but simplified. 
+The configuration is similar to the v1 config, but largely simplified. 
 
-This is a yaml file that can be located in any folder directly accessible from the application. The configuration file is found by the application via an environment variable named EDRLAB_LCPSERVER_CONFIG. 
+The configuration of the server is kept both in a configuration file and in environment variables. It is possible to mix both sets;  environment variables are expressly recommended for confidential information. 
+
+The configuration file is formatted as yaml, and can be located in any folder directly accessible from the application. The configuration file is found by the application via an environment variable named EDRLAB_LCPSERVER_CONFIG. Its value must be a file path.
+
+Configuration properties are expressed in snake case in the configuration file, and all caps prefixed by `LCPSERVER` when expressed as environment variables. 
+As an example, the `port` configuration property is mapped to the `LCPSERVER_PORT` environment variable, `public_base_url` becomes `LCPSERVER_PUBLICBASEURL`, and the `username` property of the `access` section becomes `LCPSERVER_ACCESS_USERNAME`.
 
 For now, follow this example.
 
 ```yaml
+# log level, can be "debug", "info", "warn", "error"
+log_level: "debug"
+
 # the public url of the server (used for setting links in the status document)
 public_base_url: "http://localhost:8081"
 # the port used by the server (default is 8081)
