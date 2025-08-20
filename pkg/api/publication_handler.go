@@ -15,11 +15,21 @@ import (
 	"github.com/go-chi/render"
 )
 
-// ListPublications lists all publications present in the database.
+// ListPublications lists publications present in the database.
 func (a *APICtrl) ListPublications(w http.ResponseWriter, r *http.Request) {
 	log.Debug("List Publications")
 
-	publications, err := a.Store.Publication().ListAll()
+	page := r.Context().Value(PageKey).(int)
+	perPage := r.Context().Value(PerPageKey).(int)
+
+	var publications *[]stor.Publication
+	var err error
+
+	if page == 0 || perPage == 0 {
+		publications, err = a.Store.Publication().ListAll()
+	} else {
+		publications, err = a.Store.Publication().List(page, perPage)
+	}
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return
@@ -43,6 +53,8 @@ func (a *APICtrl) SearchPublications(w http.ResponseWriter, r *http.Request) {
 		switch format {
 		case "epub":
 			contentType = "application/epub+zip"
+		case "pdf":
+			contentType = "application/pdf"
 		case "lcpdf":
 			contentType = "application/pdf+lcp"
 		case "lcpau":

@@ -14,11 +14,23 @@ import (
 	"github.com/edrlab/lcp-server/pkg/stor"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	log "github.com/sirupsen/logrus"
 )
 
-// ListLicenses lists all licenses present in the database.
+// ListLicenses lists licenses present in the database.
 func (a *APICtrl) ListLicenses(w http.ResponseWriter, r *http.Request) {
-	licenses, err := a.Store.License().ListAll()
+	log.Debug("List Licenses")
+
+	page := r.Context().Value(PageKey).(int)
+	perPage := r.Context().Value(PerPageKey).(int)
+	var licenses *[]stor.LicenseInfo
+	var err error
+
+	if page == 0 || perPage == 0 {
+		licenses, err = a.Store.License().ListAll()
+	} else {
+		licenses, err = a.Store.License().List(page, perPage)
+	}
 	if err != nil {
 		render.Render(w, r, ErrServer(err))
 		return
