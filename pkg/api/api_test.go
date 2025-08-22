@@ -67,7 +67,7 @@ type LicenseTest struct {
 func setConfig() *conf.Config {
 
 	c := conf.Config{
-		PublicBaseUrl: "http://localhost:8081",
+		PublicBaseUrl: "http://localhost:8989",
 		Dsn:           "sqlite3://file::memory:?cache=shared",
 		Access: conf.Access{
 			Username: "user",

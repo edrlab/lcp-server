@@ -38,9 +38,9 @@ For now, follow this example.
 log_level: "debug"
 
 # the public url of the server (used for setting links in the status document)
-public_base_url: "http://localhost:8081"
-# the port used by the server (default is 8081)
-port: 8081
+public_base_url: "http://localhost:8989"
+# the port used by the server
+port: 8989
 # data source name of access to the chosen database
 dsn: "sqlite3://file::memory:?cache=shared"
 
@@ -69,7 +69,7 @@ status:
   renew_max_days: 40
   # renew URL optionally managed by the provider, which then takes care of calling the license status server
   # must be templated using {license_id} as parameter
-  renew_link: "http://localhost:8081/renew/{license_id}"
+  renew_link: "http://localhost:8989/renew/{license_id}"
 
 # path to the X509 certificate and private key used for signing licenses
 certificate:
@@ -101,7 +101,7 @@ or, if your forked the codebase:
 
 You can add a publication to the server via:
 
-POST localhost:8081/publications/ 
+POST localhost:8989/publications/ 
 
 with a payload like:
 
@@ -123,14 +123,14 @@ You can also:
 
 1. Get a list of publications via:
 
-- GET localhost:8081/publications/, with `page` and `per_page` pagination parameters.
-- GET localhost:8081/publications/search/ with a `format` parameter taking as a value: `epub`, `pdf`, `lcpdf`, `lcpaiu` or `lcpdi`. 
+- GET localhost:8989/publications/, with `page` and `per_page` pagination parameters.
+- GET localhost:8989/publications/search/ with a `format` parameter taking as a value: `epub`, `pdf`, `lcpdf`, `lcpaiu` or `lcpdi`. 
 
 2. Fetch, update or delete (the info relative to) a publication via:
 
-- GET localhost:8081/publications/<PublicationID> 
-- PUT localhost:8081/publications/<PublicationID> (same payload as for a creation)
-- DELETE localhost:8081/publications/<PublicationID> 
+- GET localhost:8989/publications/<PublicationID> 
+- PUT localhost:8989/publications/<PublicationID> (same payload as for a creation)
+- DELETE localhost:8989/publications/<PublicationID> 
 
 Where <PublicationID> is the uuid used for the creation of the publication. 
 
@@ -145,7 +145,7 @@ This is a private route.
 
 You can generate a license via:
 
-POST localhost:8081/licenses/ 
+POST localhost:8989/licenses/ 
 
 with a payload like: 
 
@@ -182,7 +182,7 @@ This is a private route.
 
 You can fetch a fresh license via:
 
-POST localhost:8081/licenses/<licenseID>
+POST localhost:8989/licenses/<licenseID>
 
 with a payload like: 
 
@@ -207,7 +207,7 @@ This is a public route.
 
 Status is implemented as:
 
-GET localhost:8081/status/<licenseID> 
+GET localhost:8989/status/<licenseID> 
 
 The returned payload is a fresh status document.
 
@@ -218,15 +218,15 @@ Register, Renew and Return are public routes.
 
 Register is implemented as:
 
-POST localhost:8081/register/<licenseID> 
+POST localhost:8989/register/<licenseID> 
 
 Renew is implemented as: 
 
-PUT localhost:8081/renew/<licenseID>
+PUT localhost:8989/renew/<licenseID>
 
 Return is implemented as:
 
-PUT localhost:8081/return/<licenseID>
+PUT localhost:8989/return/<licenseID>
 
 There is no payload associated with these routes, but two query parameters:
 
@@ -244,7 +244,7 @@ The returned payload is a fresh status document.
 
 Renew is a private route. It is implemented as: 
 
-PUT localhost:8081/revoke/<licenseID>
+PUT localhost:8989/revoke/<licenseID>
 
 with no payload.
 
@@ -252,7 +252,7 @@ with no payload.
 
 You can add raw license information to the server via:
 
-POST localhost:8081/licenseinfo/ 
+POST localhost:8989/licenseinfo/ 
 
 with a payload like:
 
@@ -276,14 +276,14 @@ You can also:
 
 1. Get a list of licenses via:
 
-- GET localhost:8081/licenses/, with `page` and `per_page` pagination parameters.
-- GET localhost:8081/licenses/search/, with `user` (id), `pub` (id), `status` ("ready" etc.) or `count` query parameter. `count`takes a min:max tuple as value.
+- GET localhost:8989/licenses/, with `page` and `per_page` pagination parameters.
+- GET localhost:8989/licenses/search/, with `user` (id), `pub` (id), `status` ("ready" etc.) or `count` query parameter. `count`takes a min:max tuple as value.
 
 2. Fetch, update or delete a license (the info relative to) via:
 
-- GET localhost:8081/licenseinfo/<LicenseID> 
-- PUT localhost:8081/licenseinfo/<LicenseID> (same payload as for a creation)
-- DELETE localhost:8081/licenseinfo/<LicenseID> 
+- GET localhost:8989/licenseinfo/<LicenseID> 
+- PUT localhost:8989/licenseinfo/<LicenseID> (same payload as for a creation)
+- DELETE localhost:8989/licenseinfo/<LicenseID> 
 
 Where <LicenseID> is the uuid used for the creation of the license. 
 

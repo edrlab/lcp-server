@@ -76,7 +76,7 @@ func Init(configFile string) (*Config, error) {
 
 	// Set some defaults
 	if c.Port == 0 {
-		c.Port = 8081
+		c.Port = 8989
 	}
 
 	return &c, nil

@@ -25,7 +25,7 @@ var LicInfo stor.LicenseInfo
 func setConfig() *conf.Config {
 
 	c := conf.Config{
-		PublicBaseUrl: "http://localhost:8081",
+		PublicBaseUrl: "http://localhost:8989",
 		Certificate: conf.Certificate{
 			Cert:       "../test/cert/cert-edrlab-test.pem",
 			PrivateKey: "../test/cert/privkey-edrlab-test.pem",
