@@ -1,0 +1,50 @@
+name: lcp
+services:
+  server:
+    build:
+      context: .
+      target: final
+    ports:
+      - 8989:8989
+    volumes:
+      - db-data:/database
+      - resources:/resources
+    environment:
+      - LCPSERVER_ACCESS_FILE=/run/secrets/basic-auth
+    secrets:
+      - basic-auth
+
+# Uncomment and adapt if your application is using a PostgreSQL database.
+# You must create `db/password.txt` and add a password 
+# of your choosing to it before running `docker compose up`.
+#     depends_on:
+#       db:
+#         condition: service_healthy
+#   db:
+#     image: postgres
+#     restart: always
+#     user: postgres
+#     secrets:
+#       - db-password
+#     volumes:
+#       - db-data:/var/lib/postgresql/data
+#     environment:
+#       - POSTGRES_DB=example
+#       - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+#     expose:
+#       - 5432
+#     healthcheck:
+#       test: [ "CMD", "pg_isready" ]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+#
+volumes:
+   db-data:
+   resources:
+
+secrets:
+   basic-auth:
+     file: config/basic-auth.txt
+
+

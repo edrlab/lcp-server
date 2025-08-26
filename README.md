@@ -6,7 +6,7 @@ This is a major evolution of the Readium LCP Server available on https://github.
 
 V2 requires go 1.16 or higher, due to the use of new features of the `os` package. It is currently developed using go 1.24. 
 
-The `lcpserver`:
+The `lcpserver2`:
 
 - Receives notifications for each encryption of a publication.
 - Serves LCP licenses for these publications. 
@@ -26,7 +26,7 @@ The configuration is similar to the v1 config, but largely simplified.
 
 The configuration of the server is kept both in a configuration file and in environment variables. It is possible to mix both sets;  environment variables are expressly recommended for confidential information. 
 
-The configuration file is formatted as yaml, and can be located in any folder directly accessible from the application. The configuration file is found by the application via an environment variable named EDRLAB_LCPSERVER_CONFIG. Its value must be a file path.
+The configuration file is formatted as yaml, and can be located in any folder directly accessible from the application. The configuration file is found by the application via an environment variable named `EDRLAB_LCPSERVER_CONFIG`. Its value must be a file path.
 
 Configuration properties are expressed in snake case in the configuration file, and all caps prefixed by `LCPSERVER` when expressed as environment variables. 
 As an example, the `port` configuration property is mapped to the `LCPSERVER_PORT` environment variable, `public_base_url` becomes `LCPSERVER_PUBLICBASEURL`, and the `username` property of the `access` section becomes `LCPSERVER_ACCESS_USERNAME`.
@@ -44,7 +44,9 @@ port: 8989
 # data source name of access to the chosen database
 dsn: "sqlite3://file::memory:?cache=shared"
 
-# admin access for private routes
+# username / password allowing access to the server API via http basic authentication
+# for security reasons, it is much better to express these as environment variables (see the documentation)
+# and docker secrets (https://docs.docker.com/compose/how-tos/use-secrets/)
 access:
   username: "login"
   password: "password"

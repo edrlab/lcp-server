@@ -5,9 +5,11 @@
 package conf
 
 import (
-	"log"
 	"os"
 	"path/filepath"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/kelseyhightower/envconfig"
 	"gopkg.in/yaml.v2"
@@ -66,12 +68,26 @@ func Init(configFile string) (*Config, error) {
 		}
 
 	} else {
-		log.Println("failed to find the configuration file")
+		log.Println("failed to find the configuration file ", configFile)
 	}
 
+	// Process environment variables
 	err := envconfig.Process("lcpserver", &c)
 	if err != nil {
 		return &c, err
+	}
+
+	// Process docker secrets
+	if os.Getenv("LCPSERVER_ACCESS_FILE") != "" {
+		data, err := os.ReadFile(os.Getenv("LCPSERVER_ACCESS_FILE"))
+		if err != nil {
+			return nil, err
+		}
+		lines := strings.Split(string(data), "\n")
+		if len(lines) >= 2 {
+			c.Access.Username = lines[0]
+			c.Access.Password = lines[1]
+		}
 	}
 
 	// Set some defaults

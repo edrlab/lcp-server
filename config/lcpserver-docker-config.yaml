@@ -1,0 +1,62 @@
+# Configuration of an LCP v2 server
+
+# log level, can be "debug", "info", "warn", "error"
+log_level: "debug"
+
+# port on which the server is listening
+port: 8989
+
+# base url at which the server can be accessed from a client app
+# this url is used in license and status document links, and it should be a public URL
+public_base_url: "http://localhost:8989"
+
+# data source name of the server database
+dsn: "sqlite3://file:/database/lcpsv2.sqlite?cache=shared&mode=rwc"
+# during testing, it can be useful to use an in-memory database
+#dsn: "sqlite3://file::memory:?cache=shared"
+
+# username / password allowing access to the server API via http basic authentication
+# for security reasons, in production, it is much better to express these as
+# environment variables (see the documentation) and docker secrets (https://docs.docker.com/compose/how-tos/use-secrets/)
+#access:
+#  username: "username"
+#  password: "password"
+
+# The local directory in which encrypted content and cover images are found,
+# if lcpencrypt manages an fs storage and we want to use the lcp server
+# as a static file server for these resources
+resources: /resources
+
+license:
+  # identifier of the license provider: it must be a URL
+  provider: "http://edrlab.org"
+  # identifier of the license profile
+  profile: "http://readium.org/lcp/basic-profile"
+  # url of the hint page, included in the license document
+  # this is a required page about how passphrases can be retrieved if forgotten
+  # the LCP Server will replace the optional license_id template with the actual license ID
+  # alternatively, it may be a generic page
+  hint_link: "https://your-cms.org/help/{license_id}"
+
+status:
+  # url of the fresh license, included in the status document
+  # it must be served via a License Gateway
+  # the LCP Server will replace the license_id template with the actual license ID 
+  fresh_license_link: "http://your-license-gateway.org/licenses/{license_id}"
+  # allow renew on expired licenses
+  allow_renew_on_expired_licenses: true
+  # remove the 3 following properties if you do not support e-lending
+  # default number of days of extension of a loan
+  renew_default_days: 7
+  # maximum number of days a loan can be extended
+  renew_max_days: 40
+  # the provider can optionally manage his own renew URL and take care of calling the license status server
+  # the LCP Server will replace the license_id template with the actual license ID 
+  #renew_link: "http://your-cms.org/renew/{license_id}"
+
+# path to the X509 certification and private key
+# the test certificate is provided with the open-source project
+# a production certificate, provided by EDRLab, should be used in a real deployment
+certificate:
+  cert:       "/config/cert-edrlab-test.pem"
+  private_key: "/config/privkey-edrlab-test.pem"
