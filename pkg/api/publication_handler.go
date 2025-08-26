@@ -92,7 +92,6 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	publication := data.Publication
-	log.Debugf("Create Publication: %+v", publication)
 
 	// db create
 	err := a.Store.Publication().Create(publication)
