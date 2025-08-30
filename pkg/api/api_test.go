@@ -36,7 +36,7 @@ type PublicationTest struct {
 	UUID          string `json:"uuid"`
 	Title         string `json:"title"`
 	EncryptionKey []byte `json:"encryption_key"`
-	Location      string `json:"location"`
+	Href          string `json:"location"`
 	ContentType   string `json:"content_type"`
 	Size          uint32 `json:"size"`
 	Checksum      string `json:"checksum"`
@@ -98,7 +98,7 @@ func newPublication() *PublicationTest {
 	pub.Title = faker.Company().CatchPhrase()
 	pub.EncryptionKey = make([]byte, 16)
 	rand.Read(pub.EncryptionKey)
-	pub.Location = faker.Internet().Url()
+	pub.Href = faker.Internet().Url()
 	pub.ContentType = "application/epub+zip"
 	pub.Size = uint32(faker.Number().NumberInt(5))
 	pub.Checksum = faker.Lorem().Characters(16)

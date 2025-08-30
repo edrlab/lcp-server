@@ -52,7 +52,7 @@ func TestMain(m *testing.M) {
 	Pub.Title = faker.Company().CatchPhrase()
 	Pub.EncryptionKey = make([]byte, 16)
 	rand.Read(Pub.EncryptionKey)
-	Pub.Location = faker.Internet().Url()
+	Pub.Href = faker.Internet().Url()
 	Pub.ContentType = "application/epub+zip"
 	Pub.Size = uint32(faker.Number().NumberInt(5))
 	Pub.Checksum = faker.Lorem().Characters(16)

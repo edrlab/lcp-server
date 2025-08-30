@@ -20,7 +20,7 @@ func comparePublications(inPub *PublicationTest, outPub *PublicationTest) bool {
 	if outPub.UUID != inPub.UUID ||
 		outPub.Title != inPub.Title ||
 		!bytes.Equal(outPub.EncryptionKey, inPub.EncryptionKey) ||
-		outPub.Location != inPub.Location ||
+		outPub.Href != inPub.Href ||
 		outPub.ContentType != inPub.ContentType ||
 		outPub.Size != inPub.Size ||
 		outPub.Checksum != inPub.Checksum {

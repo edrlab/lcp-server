@@ -167,7 +167,7 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	// set updated fields
 	publication.Title = pubUpdates.Title
 	publication.EncryptionKey = pubUpdates.EncryptionKey
-	publication.Location = pubUpdates.Location
+	publication.Href = pubUpdates.Href
 	publication.ContentType = pubUpdates.ContentType
 	publication.Size = pubUpdates.Size
 	publication.Checksum = pubUpdates.Checksum

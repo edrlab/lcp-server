@@ -220,9 +220,9 @@ func setLinks(publicBaseUrl string, hintTemplate string, l *License, pub *stor.P
 	// if the pub location is the specific value below, prefix it with the public base URL
 	// and the "resources" route.
 	localhost := "http://localhost/"
-	if pub.Location != "" && len(pub.Location) > 17 && (pub.Location[:17] == localhost) {
+	if pub.Href != "" && len(pub.Href) > 17 && (pub.Href[:17] == localhost) {
 		var err error
-		pub.Location, err = url.JoinPath(publicBaseUrl, "resources", pub.Location[17:])
+		pub.Href, err = url.JoinPath(publicBaseUrl, "resources", pub.Href[17:])
 		if err != nil {
 			log.Printf("failed to join publication link: %v", err)
 		}
@@ -231,7 +231,7 @@ func setLinks(publicBaseUrl string, hintTemplate string, l *License, pub *stor.P
 	// set the publication link
 	pubLink := Link{
 		Rel:      "publication",
-		Href:     pub.Location,
+		Href:     pub.Href,
 		Type:     pub.ContentType,
 		Title:    pub.Title,
 		Size:     int64(pub.Size),
