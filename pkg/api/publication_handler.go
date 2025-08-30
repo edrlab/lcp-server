@@ -93,6 +93,12 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 	}
 	publication := data.Publication
 
+	// Check the presence of a UUID
+	if publication.UUID == "" {
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication UUID")))
+		return
+	}
+
 	// db create
 	err := a.Store.Publication().Create(publication)
 	if err != nil {
@@ -141,15 +147,14 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
-	publication := data.Publication
-	log.Debugf("Update Publication: %+v", publication)
+	pubUpdates := data.Publication
 
-	var currentPub *stor.Publication
+	var publication *stor.Publication
 	var err error
 
 	// get the existing publication
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
-		currentPub, err = a.Store.Publication().Get(publicationID)
+		publication, err = a.Store.Publication().Get(publicationID)
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier"))) // publicationID is nil
 		return
@@ -159,11 +164,13 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// set the gorm fields
-	publication.ID = currentPub.ID
-	publication.CreatedAt = currentPub.CreatedAt
-	//publication.UpdatedAt = currentPub.UpdatedAt
-	//publication.DeletedAt = currentPub.DeletedAt
+	// set updated fields
+	publication.Title = pubUpdates.Title
+	publication.EncryptionKey = pubUpdates.EncryptionKey
+	publication.Location = pubUpdates.Location
+	publication.ContentType = pubUpdates.ContentType
+	publication.Size = pubUpdates.Size
+	publication.Checksum = pubUpdates.Checksum
 
 	// db update
 	err = a.Store.Publication().Update(publication)

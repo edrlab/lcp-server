@@ -1,4 +1,4 @@
-// Copyright 2022 European Digital Reading Lab. All rights reserved.
+// Copyright 2025 European Digital Reading Lab. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // specified in the Github project LICENSE file.
 
@@ -12,12 +12,12 @@ import (
 // Publication data model
 type Publication struct {
 	gorm.Model
-	UUID          string `json:"uuid" validate:"required,uuid4_rfc4122" gorm:"uniqueIndex"`
-	Title         string `json:"title,omitempty"`
-	EncryptionKey []byte `json:"encryption_key"`
-	Location      string `json:"location" validate:"required,url"`
-	ContentType   string `json:"content_type"`
-	Size          uint32 `json:"size"`
+	UUID          string `json:"uuid" validate:"omitempty,uuid4_rfc4122" gorm:"uniqueIndex"`
+	Title         string `json:"title,omitempty" validate:"required"`
+	EncryptionKey []byte `json:"encryption_key" validate:"required"`
+	Location      string `json:"location" validate:"required,http_url"`
+	ContentType   string `json:"content_type" validate:"required"`
+	Size          uint32 `json:"size" validate:"required,number"`
 	Checksum      string `json:"checksum" validate:"required,base64"`
 }
 
