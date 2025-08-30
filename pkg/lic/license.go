@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"math/big"
+	"net/url"
 	"reflect"
 	"strconv"
 
@@ -216,6 +217,17 @@ func buildKeyCheck(licenseID string, encrypter crypto.Encrypter, key []byte) ([]
 // setLinks sets the links structure in the license
 func setLinks(publicBaseUrl string, hintTemplate string, l *License, pub *stor.Publication) {
 
+	// if the pub location is the specific value below, prefix it with the public base URL
+	// and the "resources" route.
+	localhost := "http://localhost/"
+	if pub.Location != "" && len(pub.Location) > 17 && (pub.Location[:17] == localhost) {
+		var err error
+		pub.Location, err = url.JoinPath(publicBaseUrl, "resources", pub.Location[17:])
+		if err != nil {
+			log.Printf("failed to join publication link: %v", err)
+		}
+	}
+
 	// set the publication link
 	pubLink := Link{
 		Rel:      "publication",
@@ -228,14 +240,19 @@ func setLinks(publicBaseUrl string, hintTemplate string, l *License, pub *stor.P
 	l.Links = append(l.Links, pubLink)
 
 	// set the status link
+	statusHref, err := url.JoinPath(publicBaseUrl, "status", l.UUID)
+	if err != nil {
+		log.Printf("failed to join status link: %v", err)
+		statusHref = publicBaseUrl + "/status/" + l.UUID // fallback
+	}
 	statusLink := Link{
 		Rel:  "status",
-		Href: publicBaseUrl + "/status/" + l.UUID,
+		Href: statusHref,
 		Type: ContentType_LSD_JSON,
 	}
 	l.Links = append(l.Links, statusLink)
 
-	// expand the link template
+	// expand the link template for the hint
 	template, _ := uritemplates.Parse(hintTemplate)
 	values := make(map[string]interface{})
 	values["license_id"] = l.UUID
