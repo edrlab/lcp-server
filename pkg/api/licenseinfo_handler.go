@@ -96,6 +96,12 @@ func (a *APICtrl) CreateLicense(w http.ResponseWriter, r *http.Request) {
 	}
 	license := data.LicenseInfo
 
+	// Check the presence of a UUID
+	if license.UUID == "" {
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required license UUID")))
+		return
+	}
+
 	// force the status to ready (the caller does not has to set it)
 	license.Status = stor.STATUS_READY
 
@@ -151,14 +157,14 @@ func (a *APICtrl) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
-	license := data.LicenseInfo
+	licUpdates := data.LicenseInfo
 
-	var currentLic *stor.LicenseInfo
+	var license *stor.LicenseInfo
 	var err error
 
 	// get the existing license
 	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
-		currentLic, err = a.Store.License().Get(licenseID)
+		license, err = a.Store.License().Get(licenseID)
 	} else {
 		render.Render(w, r, ErrNotFound)
 		return
@@ -168,9 +174,17 @@ func (a *APICtrl) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// set the gorm fields which should stay intact
-	license.ID = currentLic.ID
-	license.CreatedAt = currentLic.CreatedAt
+	// set updated fields
+	license.Provider = licUpdates.Provider
+	license.UserID = licUpdates.UserID
+	license.Start = licUpdates.Start
+	license.End = licUpdates.End
+	license.MaxEnd = licUpdates.MaxEnd
+	license.Copy = licUpdates.Copy
+	license.Print = licUpdates.Print
+	license.Status = licUpdates.Status
+	license.StatusUpdated = licUpdates.StatusUpdated
+	license.DeviceCount = licUpdates.DeviceCount
 
 	// db update
 	err = a.Store.License().Update(license)

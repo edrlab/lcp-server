@@ -18,7 +18,7 @@ import (
 type LicenseInfo struct {
 	gorm.Model
 	Updated       *time.Time  `json:"updated,omitempty"` // see comment above
-	UUID          string      `json:"uuid" validate:"required,uuid" gorm:"uniqueIndex"`
+	UUID          string      `json:"uuid" validate:"omitempty,uuid4_rfc4122" gorm:"uniqueIndex"`
 	Provider      string      `json:"provider" validate:"required,url"`
 	UserID        string      `json:"user_id,omitempty" validate:"required" gorm:"index"`
 	Start         *time.Time  `json:"start,omitempty"`
