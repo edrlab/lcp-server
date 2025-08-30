@@ -112,7 +112,7 @@ with a payload like:
     "uuid": "c6abe80a-1681-4694-b6f4-80c165213781",
     "title": "Voyage au centre de la terre",
     "encryption_key": "ZW5jcnlwdGlvbl9rZXkgeCBlbmNyeXB0aW9uX2tleQ==",
-    "location": "https://edrlab.org/f/pub1.epub",
+    "href": "https://edrlab.org/f/pub1.epub",
     "content_type": "application/epub+zip",
     "size": 769257,
     "checksum": "edce32ca54c36aa73da9075098fc592fa29ff3e12406d1442544535d99dc1b87" 
@@ -136,7 +136,7 @@ You can also:
 
 Where <PublicationID> is the uuid used for the creation of the publication. 
 
-`location` must be a public URL, accessible from any device on the internet. 
+`href` must be a public URL, accessible from any device on the internet. 
 
 Note: because publications are submitted to a soft delete, the suppression of a publication does not impact the existing 
 licenses associated with the publication. But no new license can be generated for a deleted publication. 

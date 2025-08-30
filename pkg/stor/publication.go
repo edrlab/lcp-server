@@ -15,7 +15,7 @@ type Publication struct {
 	UUID          string `json:"uuid" validate:"omitempty,uuid4_rfc4122" gorm:"uniqueIndex"`
 	Title         string `json:"title,omitempty" validate:"required"`
 	EncryptionKey []byte `json:"encryption_key" validate:"required"`
-	Href          string `json:"location" validate:"required,http_url"`
+	Href          string `json:"href" validate:"required,http_url"`
 	ContentType   string `json:"content_type" validate:"required"`
 	Size          uint32 `json:"size" validate:"required,number"`
 	Checksum      string `json:"checksum" validate:"required,base64"`

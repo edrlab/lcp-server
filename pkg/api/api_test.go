@@ -36,7 +36,7 @@ type PublicationTest struct {
 	UUID          string `json:"uuid"`
 	Title         string `json:"title"`
 	EncryptionKey []byte `json:"encryption_key"`
-	Href          string `json:"location"`
+	Href          string `json:"href"`
 	ContentType   string `json:"content_type"`
 	Size          uint32 `json:"size"`
 	Checksum      string `json:"checksum"`
