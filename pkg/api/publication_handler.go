@@ -166,6 +166,8 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 
 	// set updated fields
 	publication.Title = pubUpdates.Title
+	publication.Authors = pubUpdates.Authors
+	publication.CoverUrl = pubUpdates.CoverUrl
 	publication.EncryptionKey = pubUpdates.EncryptionKey
 	publication.Href = pubUpdates.Href
 	publication.ContentType = pubUpdates.ContentType
@@ -232,7 +234,7 @@ type PublicationRequest struct {
 // PublicationResponse is the response publication payload.
 type PublicationResponse struct {
 	*stor.Publication
-	// do not serialize the following properties
+	// TODO do not serialize the following properties
 	//ID omit `json:"ID,omitempty"`
 	//CreatedAt omit `json:"CreatedAt,omitempty"`
 	//UpdatedAt omit `json:"UpdatedAt,omitempty"`
