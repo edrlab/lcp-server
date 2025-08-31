@@ -12,8 +12,10 @@ import (
 // Publication data model
 type Publication struct {
 	gorm.Model
-	UUID          string `json:"uuid" validate:"omitempty,uuid4_rfc4122" gorm:"uniqueIndex"`
+	UUID          string `json:"uuid" validate:"omitempty,uuid" gorm:"uniqueIndex"`
 	Title         string `json:"title,omitempty" validate:"required"`
+	Authors       string `json:"authors,omitempty"`
+	CoverUrl      string `json:"cover_url,omitempty" validate:"omitempty,url"`
 	EncryptionKey []byte `json:"encryption_key" validate:"required"`
 	Href          string `json:"href" validate:"required,http_url"`
 	ContentType   string `json:"content_type" validate:"required"`
