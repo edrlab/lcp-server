@@ -217,17 +217,6 @@ func buildKeyCheck(licenseID string, encrypter crypto.Encrypter, key []byte) ([]
 // setLinks sets the links structure in the license
 func setLinks(publicBaseUrl string, hintTemplate string, l *License, pub *stor.Publication) {
 
-	// if the pub href is the specific value below, prefix it with the public base URL
-	// and the "resources" route.
-	localhost := "http://localhost/"
-	if pub.Href != "" && len(pub.Href) > 17 && (pub.Href[:17] == localhost) {
-		var err error
-		pub.Href, err = url.JoinPath(publicBaseUrl, "resources", pub.Href[17:])
-		if err != nil {
-			log.Printf("failed to join publication link: %v", err)
-		}
-	}
-
 	// set the publication link
 	pubLink := Link{
 		Rel:      "publication",
