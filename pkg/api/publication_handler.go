@@ -88,6 +88,7 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 	// get the payload
 	data := &PublicationRequest{}
 	if err := render.Bind(r, data); err != nil {
+		log.Errorf("Create Publication: unable to bind the json request: %v", err)
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
@@ -95,6 +96,7 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 
 	// Check the presence of a UUID
 	if publication.UUID == "" {
+		log.Error("Create Publication: missing required publication UUID")
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication UUID")))
 		return
 	}
@@ -102,6 +104,7 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 	// db create
 	err := a.Store.Publication().Create(publication)
 	if err != nil {
+		log.Errorf("Create Publication: failed to create publication: %v", err)
 		render.Render(w, r, ErrServer(err))
 		return
 	}
