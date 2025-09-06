@@ -13,6 +13,7 @@ import (
 type Publication struct {
 	gorm.Model
 	UUID          string `json:"uuid" validate:"omitempty,uuid" gorm:"uniqueIndex"`
+	ProviderUri   string `json:"provider_uri,omitempty" validate:"omitempty,url"`
 	Title         string `json:"title,omitempty" validate:"required"`
 	Authors       string `json:"authors,omitempty"`
 	CoverUrl      string `json:"cover_url,omitempty" validate:"omitempty,url"`
