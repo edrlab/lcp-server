@@ -56,16 +56,17 @@ func main() {
 		log.SetFormatter(&log.TextFormatter{})
 	}
 
-	// Graceful shutdown
+	// Create the Server
 	server := &http.Server{
 		Addr:    ":" + strconv.Itoa(c.Port),
 		Handler: s.Router,
 	}
 
-	// System signals
+	// Set the system signals
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
+	// Launch the server
 	go func() {
 		log.Println("Server starting on port " + strconv.Itoa(c.Port))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -73,6 +74,7 @@ func main() {
 		}
 	}()
 
+	// Graceful shutdown
 	<-stop
 	log.Println("Shutdown requested, initiating graceful shutdown...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
