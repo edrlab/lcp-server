@@ -251,18 +251,26 @@ func (lc *LicenseCtrl) Renew(licenseID string, device *DeviceInfo, newEnd *time.
 		return nil, ErrLicenseNotFound
 	}
 
+	// check that the license has an end date
+	if license.End == nil {
+		log.Warning("This license has no end date, cannot be renewed")
+		return nil, errors.New("requesting a renew on a license that has no end date")
+	}
+
 	// if the provider has explicitly allowed it, expired licenses are reactivated and extended
 	if license.Status == stor.STATUS_EXPIRED && lc.Config.Status.AllowRenewOnExpiredLicenses {
 		license.Status = stor.STATUS_ACTIVE
 	}
 	// check that the license is in active state
 	if license.Status != stor.STATUS_ACTIVE {
+		log.Warning("Requesting a renew on a non-active license is prohibited")
 		return nil, errors.New("requesting a renew on a non-active license is prohibited")
 	}
 
 	// check that the device had been registered for this license
 	_, err = lc.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
 	if err != nil {
+		log.Warning("Requesting a renew on a license which has not been registered by this device is prohibited")
 		return nil, errors.New("requesting a renew on a license which has not been registered by this device is prohibited")
 	}
 
@@ -318,20 +326,29 @@ func (lc *LicenseCtrl) Return(licenseID string, device *DeviceInfo) (*StatusDoc,
 		return nil, ErrLicenseNotFound
 	}
 
+	// check that the license has an end date
+	if license.End == nil {
+		log.Warning("This license has no end date, cannot be returned")
+		return nil, errors.New("requesting a return on a license that has no end date")
+	}
+
 	// check that the license has not already expired
 	now := time.Now().Truncate(time.Second)
 	if license.End.Before(now) {
+		log.Warning("This license has already expired on ", license.End.Format(time.RFC822))
 		return nil, errors.New("this license expired on " + license.End.Format(time.RFC822))
 	}
 
 	// check that the license is in active status
 	if license.Status != stor.STATUS_ACTIVE {
+		log.Warning("Requesting a return on a non-active license is prohibited")
 		return nil, errors.New("requesting a return on a non-active license is prohibited")
 	}
 
 	// check that the device had been registered for this license
 	_, err = lc.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
 	if err != nil {
+		log.Warning("Requesting a return on a license which has not been registered by this device is prohibited")
 		return nil, errors.New("requesting a return on a license which has not been registered by this device is prohibited")
 	}
 
