@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -47,8 +48,8 @@ func main() {
 
 	// parse the command line
 	serve := flag.Bool("serve", false, "if set, start the utility as a server")
-	input := flag.String("input", "", "source file locator (file path or url); required if not -serve")
-	uuid := flag.String("uuid", "", "force the publication uuid; unused if -serve is set")
+	input := flag.String("input", "", "source file locator (file path or url); only used in command line")
+	uuid := flag.String("uuid", "", "force the publication uuid; only used in command line")
 	usefn := flag.Bool("usefn", false, "if set, use the input file name as storage file name")
 	verbose := flag.Bool("verbose", false, "if set, display info messages; if not set, display only warnings and errors.")
 	v2 := flag.Bool("v2", false, "optional, boolean, indicates a v2 License server, true by default")
@@ -64,7 +65,8 @@ func main() {
 	var c Config
 
 	// init config from command line flags
-	c.InputPath = *input
+	c.InputPath = filepath.Dir(*input)
+	filename := filepath.Base(*input) // get the file name from the input path
 	c.UUID = *uuid
 	c.UseFileName = *usefn
 	c.Verbose = *verbose
@@ -99,7 +101,7 @@ func main() {
 		activateServer(c)
 	} else {
 		// run the utility as a command line tool
-		err = processFile(c, c.InputPath)
+		err = processFile(c, filename)
 		if err != nil {
 			log.Errorf("Error processing file %s: %v", c.InputPath, err)
 		}
