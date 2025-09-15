@@ -101,7 +101,7 @@ func ErrServer(err error) render.Renderer {
 		Err:            err,
 		HTTPStatusCode: 500,
 		Type:           SERVER_ERROR,
-		Title:          "An unexpected error has occurred.",
+		Title:          "An unexpected error has occurred",
 		Detail:         err.Error(),
 	}
 }
@@ -109,7 +109,7 @@ func ErrServer(err error) render.Renderer {
 var ErrNotFound = &ErrResponse{
 	HTTPStatusCode: 404,
 	Type:           "about:blank",
-	Title:          "Resource not found.",
+	Title:          "Resource not found",
 }
 
 func ErrRegister(err error) render.Renderer {
@@ -117,7 +117,7 @@ func ErrRegister(err error) render.Renderer {
 		Err:            err,
 		HTTPStatusCode: 400,
 		Type:           REGISTER_ERROR,
-		Title:          "Error registering a device.",
+		Title:          "Error registering a device",
 		Detail:         err.Error(),
 	}
 }
@@ -127,7 +127,7 @@ func ErrRenew(err error) render.Renderer {
 		Err:            err,
 		HTTPStatusCode: 400,
 		Type:           RENEW_ERROR,
-		Title:          "Error extending a license (renew).",
+		Title:          "Error extending a license",
 		Detail:         err.Error(),
 	}
 }
@@ -137,7 +137,7 @@ func ErrReturn(err error) render.Renderer {
 		Err:            err,
 		HTTPStatusCode: 400,
 		Type:           RETURN_ERROR,
-		Title:          "Error returning a license.",
+		Title:          "Error returning a license",
 		Detail:         err.Error(),
 	}
 }
@@ -147,7 +147,7 @@ func ErrRevoke(err error) render.Renderer {
 		Err:            err,
 		HTTPStatusCode: 400,
 		Type:           REVOKE_ERROR,
-		Title:          "Error revoking / cancelling a license.",
+		Title:          "Error revoking / cancelling a license",
 		Detail:         err.Error(),
 	}
 }

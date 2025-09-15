@@ -39,7 +39,7 @@ func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("invalid publication ID")))
 		return
 	}
 

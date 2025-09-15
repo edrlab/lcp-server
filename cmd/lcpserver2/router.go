@@ -110,7 +110,6 @@ func (s *Server) setRoutes() *chi.Mux {
 
 		// License revocation
 		r.Put("/revoke/{licenseID}", a.Revoke) // PUT /revoke/123
-
 	})
 
 	return r

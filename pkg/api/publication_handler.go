@@ -68,11 +68,11 @@ func (a *APICtrl) SearchPublications(w http.ResponseWriter, r *http.Request) {
 			publications, err = a.Store.Publication().FindByType(contentType)
 		}
 	} else {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("invalid format parameter")))
 		return
 	}
 	if err != nil {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 	if err := render.RenderList(w, r, NewPublicationListResponse(publications)); err != nil {
@@ -97,7 +97,7 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 	// Check the presence of a UUID
 	if publication.UUID == "" {
 		log.Error("Create Publication: missing required publication UUID")
-		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication UUID")))
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication ID")))
 		return
 	}
 
@@ -127,11 +127,10 @@ func (a *APICtrl) GetPublication(w http.ResponseWriter, r *http.Request) {
 		log.Debugf("Get Publication: %s", publicationID)
 		publication, err = a.Store.Publication().Get(publicationID)
 	} else {
-		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier")))
-		return
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication ID")))
 	}
 	if err != nil {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("invalid publication ID")))
 		return
 	}
 	if err := render.Render(w, r, NewPublicationResponse(publication)); err != nil {
@@ -159,11 +158,11 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	if publicationID := chi.URLParam(r, "publicationID"); publicationID != "" {
 		publication, err = a.Store.Publication().Get(publicationID)
 	} else {
-		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier"))) // publicationID is nil
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication ID"))) // publicationID is nil
 		return
 	}
 	if err != nil {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("invalid publication ID")))
 		return
 	}
 
@@ -202,11 +201,11 @@ func (a *APICtrl) DeletePublication(w http.ResponseWriter, r *http.Request) {
 		log.Debugf("Delete Publication: %s", publicationID)
 		publication, err = a.Store.Publication().Get(publicationID)
 	} else {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication ID"))) // publicationID is nil
 		return
 	}
 	if err != nil {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("invalid publication ID")))
 		return
 	}
 

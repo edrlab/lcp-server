@@ -44,7 +44,7 @@ const (
 // ====
 // LCP License
 // ====
-// note: a signature is nill when a license is canonicalized for being signed
+// note: a signature is nil when a license is canonicalized before being signed
 
 type License struct {
 	Provider   string          `json:"provider"`
