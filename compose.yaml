@@ -10,9 +10,9 @@ services:
       - db-data:/database
       - resources:/resources
     environment:
-      - LCPSERVER_ACCESS_FILE=/run/secrets/basic-auth
+      - LCPSERVER_ACCESS_FILE=/run/secrets/access
     secrets:
-      - basic-auth
+      - access
 
 # Uncomment and adapt if your application is using a PostgreSQL database.
 # You must create `db/password.txt` and add a password 
@@ -45,6 +45,6 @@ volumes:
 
 secrets:
    basic-auth:
-     file: config/basic-auth.txt
+     file: config/access.txt
 
 

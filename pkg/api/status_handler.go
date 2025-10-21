@@ -205,12 +205,12 @@ func getNewEnd(w http.ResponseWriter, r *http.Request) (*time.Time, error) {
 // Request and Response payloads for the REST api.
 // --
 
-// LicenseResponse is the response payload for licenses.
+// StatusDocResponse is the response payload for licenses.
 type StatusDocResponse struct {
 	*lic.StatusDoc
 }
 
-// NewLicenseResponse creates a rendered license
+// NewStatusDocResponse creates a rendered status document
 func NewStatusDocResponse(statusDoc *lic.StatusDoc) *StatusDocResponse {
 	return &StatusDocResponse{StatusDoc: statusDoc}
 }

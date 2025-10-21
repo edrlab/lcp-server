@@ -1,4 +1,4 @@
-// Copyright 2023 European Digital Reading Lab. All rights reserved.
+// Copyright 2025 European Digital Reading Lab. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // specified in the Github project LICENSE file.
 
@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
 
 	"github.com/edrlab/lcp-server/pkg/api"
@@ -31,6 +32,16 @@ func (s *Server) setRoutes() *chi.Mux {
 	r.Use(middleware.Recoverer)
 
 	r.NotFound(notFoundProblemDetail)
+
+	// CORS Configuration
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:8090", "http://localhost:8091"}, // URLs of the React frontend
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	}))
 
 	// Public routes
 	// Heartbeat
@@ -110,6 +121,21 @@ func (s *Server) setRoutes() *chi.Mux {
 
 		// License revocation
 		r.Put("/revoke/{licenseID}", a.Revoke) // PUT /revoke/123
+	})
+
+	// Dashboard
+	r.Post("/dashboard/login", Login(s.Config)) // POST /dashboard/login
+	// Require JWT Authentication
+	r.Group(func(r chi.Router) {
+		r.Use(AuthMiddleware(s.Config))
+		r.Use(render.SetContentType(render.ContentTypeJSON))
+
+		r.Route("/dashboard", func(r chi.Router) {
+			r.Get("/data", a.GetDashboardData)            // GET /dashboard/data
+			r.Get("/overshared", a.GetOversharedLicenses) // GET /dashboard/overshared
+			r.Put("/revoke/{licenseID}", a.Revoke)        // PUT /dashboard/revoke/123
+
+		})
 	})
 
 	return r

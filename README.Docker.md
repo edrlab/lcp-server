@@ -1,9 +1,13 @@
-### Setting secrets
-A http basic authentication username and password, which are allowing access to the server API private endpoints, are managed via docker secrets.
+### Setting docker secrets
+They are defined in /config/access.txt.
 
-Please update /config/basic-auth.txt with the data you want to use for accessing the LCP Server:
-- the first line is the username (replace "username" by a secure value),
-- the second line is the password (replace "password" by a secure value).
+This file defines colon separated usernames and passwords allowing access to the server API private endpoints and dashboard.
+
+Please update /config/access.txt with the data you want to use for accessing the LCP Server:
+- the first line is the username and password used to access the server using basic auth (private routes),
+- the next lines are usernames and passwords used to access the server using JWT (dashboard).
+
+Do not forget to replace the sample values by secure values.
 
 ### Building and running your application
 

@@ -25,6 +25,8 @@ type Config struct {
 	Certificate   `yaml:"certificate"`
 	License       `yaml:"license"`
 	Status        `yaml:"status"`
+	Dashboard     `yaml:"dashboard"`
+	JWT           `yaml:"jwt"`
 	Resources     string `yaml:"resources"`
 }
 
@@ -50,6 +52,16 @@ type Status struct {
 	RenewDefaultDays            int    `yaml:"renew_default_days" envconfig:"status_renewdefaultdays"`
 	RenewMaxDays                int    `yaml:"renew_max_days" envconfig:"status_renewmaxdays"`
 	RenewLink                   string `yaml:"renew_link" envconfig:"status_renewlink"`
+}
+
+type Dashboard struct {
+	ExcessiveSharingThreshold int  `yaml:"excessive_sharing_threshold" envconfig:"dashboard_excessivesharingthreshold"`
+	LimitToLast12Months       bool `yaml:"limit_to_last_12_months" envconfig:"dashboard_limittolast12months"`
+}
+
+type JWT struct {
+	SecretKey string            `yaml:"secret_key" envconfig:"jwt_secretkey"`
+	Admin     map[string]string `yaml:"admin" envconfig:"jwt_admin"` // list of admin usernames and passwords
 }
 
 func Init(configFile string) (*Config, error) {
@@ -84,15 +96,40 @@ func Init(configFile string) (*Config, error) {
 			return nil, err
 		}
 		lines := strings.Split(string(data), "\n")
+		var tuple []string
+		if len(lines) >= 1 {
+			// the first line is the username and password used to access the server using basic auth (private routes).
+			tuple = strings.Split(string(lines[0]), ":")
+			if len(tuple) == 2 {
+				c.Access.Username = strings.TrimSpace(tuple[0])
+				c.Access.Password = strings.TrimSpace(tuple[1])
+			}
+		}
 		if len(lines) >= 2 {
-			c.Access.Username = lines[0]
-			c.Access.Password = lines[1]
+			// next lines are usernames and passwords used to access the server using JWT (dashboard).
+			//c.JWT.Admin = make(map[string]string)
+			for _, line := range lines[1:] {
+				tuple = strings.Split(string(line), ":")
+				if len(tuple) == 2 {
+					username := strings.TrimSpace(tuple[0])
+					password := strings.TrimSpace(tuple[1])
+					if username != "" && password != "" {
+						c.JWT.Admin[username] = password
+					}
+				}
+			}
 		}
 	}
 
 	// Set some defaults
 	if c.Port == 0 {
 		c.Port = 8989
+	}
+	if c.Dashboard.ExcessiveSharingThreshold == 0 {
+		c.Dashboard.ExcessiveSharingThreshold = 1
+	}
+	if c.JWT.SecretKey == "" {
+		c.JWT.SecretKey = "default_jwt_secret_key_please_change_in_production"
 	}
 
 	return &c, nil

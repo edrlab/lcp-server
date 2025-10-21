@@ -28,7 +28,7 @@ type LicenseInfo struct {
 	Print         int32       `json:"print,omitempty"`
 	Status        string      `json:"status" validate:"oneof=ready active expired cancelled revoked" gorm:"index"`
 	StatusUpdated *time.Time  `json:"status_updated,omitempty"`
-	DeviceCount   int         `json:"device_count"`
+	DeviceCount   int         `json:"device_count" gorm:"index"`
 	PublicationID string      `json:"publication_id" validate:"required,uuid"` // implicit foreign key to the related publication
 	Publication   Publication `gorm:"references:UUID" validate:"-"`            // the license belongs to the publication
 }

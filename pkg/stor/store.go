@@ -28,12 +28,14 @@ type (
 	publicationStore dbStore
 	licenseStore     dbStore
 	eventStore       dbStore
+	dashboardStore   dbStore
 
 	// Store interface, giving access to specialized interfaces
 	Store interface {
 		Publication() PublicationRepository
 		License() LicenseRepository
 		Event() EventRepository
+		Dashboard() DashboardRepository
 	}
 
 	// PublicationRepository interface, defining publication operations
@@ -73,6 +75,12 @@ type (
 		Update(e *Event) error
 		Delete(e *Event) error
 	}
+
+	// DashboardRepository interface, defining dashboard operations
+	DashboardRepository interface {
+		GetDashboard(excessiveSharingThreshold int, limitToLast12Months bool) (*DashboardData, error)
+		GetOversharedLicenses(excessiveSharingThreshold int, limitToLast12Months bool) ([]OversharedLicenseData, error)
+	}
 )
 
 // implementation of the different repository interfaces
@@ -86,6 +94,11 @@ func (s *dbStore) License() LicenseRepository {
 
 func (s *dbStore) Event() EventRepository {
 	return (*eventStore)(s)
+}
+
+// Dashboard implements Store.
+func (s *dbStore) Dashboard() DashboardRepository {
+	return (*dashboardStore)(s)
 }
 
 // List of status values as strings
@@ -149,6 +162,13 @@ func Init(dsn string) (Store, error) {
 		return nil, err
 	}
 
+	// Create indexes to optimize dashboard queries
+	err = createDashboardIndexes(db)
+	if err != nil {
+		log.Printf("Failed creating dashboard indexes: %v", err)
+		return nil, err
+	}
+
 	stor := &dbStore{db: db}
 
 	return stor, nil
@@ -184,5 +204,34 @@ func performDialectSpecific(db *gorm.DB, dialect string) error {
 	default:
 		return fmt.Errorf("invalid dialect: %s", dialect)
 	}
+	return nil
+}
+
+// createDashboardIndexes creates necessary indexes to optimize dashboard queries
+func createDashboardIndexes(db *gorm.DB) error {
+	// Index on created_at for period queries
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_license_info_created_at ON license_infos(created_at)").Error; err != nil {
+		return err
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_publication_created_at ON publications(created_at)").Error; err != nil {
+		return err
+	}
+
+	// Index on device_count for excessive sharing queries
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_license_info_device_count ON license_infos(device_count)").Error; err != nil {
+		return err
+	}
+
+	// Index on content_type for publication type queries
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_publication_content_type ON publications(content_type)").Error; err != nil {
+		return err
+	}
+
+	// Index on publication_id for JOIN queries in GetOversharedLicenses
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_license_info_publication_id ON license_infos(publication_id)").Error; err != nil {
+		return err
+	}
+
+	// Note: Indexes on status and user_id already exist in the LicenseInfo model via gorm tags
 	return nil
 }

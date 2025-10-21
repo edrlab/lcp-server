@@ -1,0 +1,52 @@
+# LCP Server Configuration - Example
+# This file shows how to configure administrator accounts
+
+log_level: "info"
+public_base_url: "https://your-lcp-server.com"
+port: 8989
+dsn: "sqlite:///data/lcp.db"
+
+# Basic access configuration for LCP API
+access:
+  username: "lcp_api_user"
+  password: "lcp_api_password"
+
+# Certificates for license signing
+certificate:
+  cert: "/path/to/cert.pem"
+  private_key: "/path/to/private_key.pem"
+
+# License configuration
+license:
+  provider: "https://your-lcp-server.com"
+  profile: "http://readium.org/lcp/basic-profile"
+  hint_link: "https://your-lcp-server.com/hint"
+
+# License status configuration
+status:
+  fresh_license_link: "https://your-lcp-server.com/license"
+  allow_renew_on_expired_licenses: true
+  renew_default_days: 30
+  renew_max_days: 365
+  renew_link: "https://your-lcp-server.com/renew"
+
+# Dashboard configuration
+dashboard:
+  excessive_sharing_threshold: 5
+  limit_to_last_12_months: true
+
+# JWT configuration and administrator accounts
+jwt:
+  # Secret key for signing JWT tokens (CHANGE THIS KEY IN PRODUCTION!)
+  secret_key: "your-super-secret-jwt-key-change-this-in-production-environment"
+  
+  # Administrator accounts for dashboard access
+  # Format: username: password
+  admin:
+    laurent: "secret"           # Main administrator
+    alice: "secret"             # Secondary administrator
+    manager: "manager123"       # Manager
+    operator: "op3rat0r!"       # Operator
+    support: "supp0rt_p@ss"     # Technical support
+
+resources: "/path/to/resources"
