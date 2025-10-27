@@ -46,6 +46,7 @@ func activateServer(c Config) {
 }
 
 // processExistingFiles processes files already present in the input directory
+// TODO: Move provider URI and input path to a map in config.
 func processExistingFiles(c Config) {
 	files, err := os.ReadDir(c.InputPath)
 	if err != nil {
@@ -70,6 +71,8 @@ func processExistingFiles(c Config) {
 }
 
 // watchFileChanges monitors changes in the input directory
+// TODO: Move provider URI and input path to a map in config.
+
 func watchFileChanges(ctx context.Context, c Config, wg *sync.WaitGroup, sem chan struct{}) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
