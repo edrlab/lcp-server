@@ -46,7 +46,7 @@ func processFile(c Config, fileName string) error {
 		}
 	}
 
-	// if the file name is used as storage file name, use it without extension
+	// if the file name is used as storage file name, use it. If not, the storage file name will be generated during encryption.
 	var storageFileName string
 	if c.UseFileName {
 		storageFileName = fileName
@@ -59,7 +59,7 @@ func processFile(c Config, fileName string) error {
 	// no specific temp directory, no specific output directory
 	// request a cover image
 	log.Println("Starting encryption...")
-	publication, err := encrypt.ProcessEncryption(c.UUID, contentkey, inputFilePath, "", "", c.StoragePath, c.StorageUrl, storageFileName, true)
+	publication, err := encrypt.ProcessEncryption(c.UUID, contentkey, inputFilePath, "", "", c.StoragePath, c.StorageUrl, storageFileName, c.ExtractCover, c.PDFNoMeta)
 	if err != nil {
 		return err
 	}
