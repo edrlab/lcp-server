@@ -13,11 +13,11 @@ import (
 type Event struct {
 	ID         uint        `json:"-" gorm:"primaryKey"`
 	Timestamp  time.Time   `json:"timestamp"`
-	Type       string      `json:"type"`
-	DeviceName string      `json:"name"`
-	DeviceID   string      `json:"id" gorm:"index"`
-	LicenseID  string      `json:"-"  gorm:"index"`          // implicit foreign key to the related license
-	License    LicenseInfo `json:"-" gorm:"references:UUID"` // the event belongs to the license
+	Type       string      `json:"type" gorm:"type:varchar(100)"`
+	DeviceName string      `json:"name" gorm:"type:varchar(1024)"`
+	DeviceID   string      `json:"id" gorm:"type:varchar(255);index"`
+	LicenseID  string      `json:"-"  gorm:"type:varchar(100);index"` // implicit foreign key to the related license
+	License    LicenseInfo `json:"-" gorm:"references:UUID"`          // the event belongs to the license
 }
 
 func (s eventStore) List(licenseID string) (*[]Event, error) {

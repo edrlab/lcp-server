@@ -8,6 +8,6 @@ import (
 )
 
 func GormDialector(cnx string) gorm.Dialector {
-
+	println("PostgreSQL database")
 	return postgres.Open(cnx)
 }

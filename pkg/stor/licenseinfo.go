@@ -17,20 +17,21 @@ import (
 // therefore we keep the Updated property, which must be maintained manually.
 type LicenseInfo struct {
 	gorm.Model
+	CreatedAt     time.Time   `gorm:"index"`             // index on created_at, useful for dashboard queries
 	Updated       *time.Time  `json:"updated,omitempty"` // see comment above
-	UUID          string      `json:"uuid" validate:"omitempty,uuid" gorm:"uniqueIndex"`
-	Provider      string      `json:"provider" validate:"required,url"`
-	UserID        string      `json:"user_id,omitempty" validate:"required" gorm:"index"`
+	UUID          string      `json:"uuid" validate:"omitempty,uuid" gorm:"type:varchar(100);uniqueIndex"`
+	Provider      string      `json:"provider" validate:"required,url" gorm:"type:varchar(255)"`
+	UserID        string      `json:"user_id,omitempty" validate:"required" gorm:"type:varchar(100);index"`
 	Start         *time.Time  `json:"start,omitempty"`
 	End           *time.Time  `json:"end,omitempty"`
 	MaxEnd        *time.Time  `json:"max_end,omitempty"`
 	Copy          int32       `json:"copy,omitempty"`
 	Print         int32       `json:"print,omitempty"`
-	Status        string      `json:"status" validate:"oneof=ready active expired cancelled revoked" gorm:"index"`
+	Status        string      `json:"status" validate:"oneof=ready active expired cancelled revoked" gorm:"type:varchar(100);index"`
 	StatusUpdated *time.Time  `json:"status_updated,omitempty"`
 	DeviceCount   int         `json:"device_count" gorm:"index"`
-	PublicationID string      `json:"publication_id" validate:"required,uuid"` // implicit foreign key to the related publication
-	Publication   Publication `gorm:"references:UUID" validate:"-"`            // the license belongs to the publication
+	PublicationID string      `json:"publication_id" validate:"required,uuid"  gorm:"type:varchar(100);index"` // implicit foreign key to the related publication
+	Publication   Publication `gorm:"references:UUID" validate:"-"`                                            // the license belongs to the publication
 }
 
 // Validate checks required fields and values

@@ -1,4 +1,4 @@
-//go:build !PGSQL
+//go:build !PGSQL && !MYSQL
 
 package stor
 
@@ -8,6 +8,6 @@ import (
 )
 
 func GormDialector(cnx string) gorm.Dialector {
-
+	println("SQLite database")
 	return sqlite.Open(cnx)
 }

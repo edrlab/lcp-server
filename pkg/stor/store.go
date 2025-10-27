@@ -125,11 +125,8 @@ func Init(dsn string) (Store, error) {
 		return nil, fmt.Errorf("incorrect database source name: %q", dsn)
 	}
 
-	// the use of time.Time fields for mysql requires parseTime
-	if dialect == "mysql" && !strings.Contains(cnx, "parseTime") {
-		return nil, fmt.Errorf("incomplete mysql database source name, parseTime required: %q", dsn)
-	}
-	// Any constraint for other databases?
+	// add parameters specific to the dialect
+	cnx = addParamsDialectSpecific(cnx, dialect)
 
 	// database logger
 	newLogger := logger.New(
@@ -162,13 +159,6 @@ func Init(dsn string) (Store, error) {
 		return nil, err
 	}
 
-	// Create indexes to optimize dashboard queries
-	err = createDashboardIndexes(db)
-	if err != nil {
-		log.Printf("Failed creating dashboard indexes: %v", err)
-		return nil, err
-	}
-
 	stor := &dbStore{db: db}
 
 	return stor, nil
@@ -181,6 +171,23 @@ func dbFromURI(uri string) (string, string) {
 		return "error", ""
 	}
 	return parts[0], parts[1]
+}
+
+// addParamsDialectSpecific takes a connection string and adds parameters specific to the SQL dialect
+func addParamsDialectSpecific(cnx, dialect string) string {
+	switch dialect {
+	case "sqlite3":
+		cnx += "?cache=shared&mode=rwc"
+	case "mysql":
+		cnx += "?charset=utf8mb4&parseTime=True&loc=Local"
+	case "postgres":
+		cnx += "?sslmode=disable"
+	case "mssql":
+		// nothing , so far
+	default:
+		log.Printf("Invalid dialect: %s", dialect)
+	}
+	return cnx
 }
 
 // performDialectSpecific
@@ -204,34 +211,5 @@ func performDialectSpecific(db *gorm.DB, dialect string) error {
 	default:
 		return fmt.Errorf("invalid dialect: %s", dialect)
 	}
-	return nil
-}
-
-// createDashboardIndexes creates necessary indexes to optimize dashboard queries
-func createDashboardIndexes(db *gorm.DB) error {
-	// Index on created_at for period queries
-	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_license_info_created_at ON license_infos(created_at)").Error; err != nil {
-		return err
-	}
-	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_publication_created_at ON publications(created_at)").Error; err != nil {
-		return err
-	}
-
-	// Index on device_count for excessive sharing queries
-	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_license_info_device_count ON license_infos(device_count)").Error; err != nil {
-		return err
-	}
-
-	// Index on content_type for publication type queries
-	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_publication_content_type ON publications(content_type)").Error; err != nil {
-		return err
-	}
-
-	// Index on publication_id for JOIN queries in GetOversharedLicenses
-	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_license_info_publication_id ON license_infos(publication_id)").Error; err != nil {
-		return err
-	}
-
-	// Note: Indexes on status and user_id already exist in the LicenseInfo model via gorm tags
 	return nil
 }

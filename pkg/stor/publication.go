@@ -5,6 +5,8 @@
 package stor
 
 import (
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
@@ -12,16 +14,17 @@ import (
 // Publication data model
 type Publication struct {
 	gorm.Model
-	UUID          string `json:"uuid" validate:"omitempty,uuid" gorm:"uniqueIndex"`
-	ProviderUri   string `json:"provider_uri,omitempty" validate:"omitempty,url"`
-	Title         string `json:"title,omitempty" validate:"required"`
-	Authors       string `json:"authors,omitempty"`
-	CoverUrl      string `json:"cover_url,omitempty" validate:"omitempty,url"`
-	EncryptionKey []byte `json:"encryption_key" validate:"required"`
-	Href          string `json:"href" validate:"required,http_url"`
-	ContentType   string `json:"content_type" validate:"required"`
-	Size          uint32 `json:"size" validate:"required,number"`
-	Checksum      string `json:"checksum" validate:"required,base64"`
+	CreatedAt     time.Time `gorm:"index"` // index on created_at, useful for dashboard queries
+	UUID          string    `json:"uuid" validate:"omitempty,uuid" gorm:"type:varchar(100);uniqueIndex"`
+	Provider      string    `json:"provider,omitempty" validate:"omitempty,url" gorm:"type:varchar(255)"`
+	Title         string    `json:"title,omitempty" validate:"required"`
+	Authors       string    `json:"authors,omitempty"`
+	CoverUrl      string    `json:"cover_url,omitempty" validate:"omitempty,url" gorm:"type:varchar(1024)"`
+	EncryptionKey []byte    `json:"encryption_key" validate:"required"`
+	Href          string    `json:"href" validate:"required,http_url" gorm:"type:varchar(1024)"`
+	ContentType   string    `json:"content_type" validate:"required" gorm:"type:varchar(100);index"`
+	Size          uint32    `json:"size" validate:"required,number"`
+	Checksum      string    `json:"checksum" validate:"required,base64" gorm:"type:varchar(255)"`
 }
 
 // Validate checks required fields and values
