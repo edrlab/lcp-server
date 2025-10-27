@@ -4,7 +4,7 @@ This is a major evolution of the Readium LCP Server available on https://github.
 
 **Note: This project is almost ready for production. We are currently testing it on a demo plateform before release.**
 
-V2 requires go 1.16 or higher, due to the use of new features of the `os` package. It is currently developed using go 1.24. 
+V2 requires go 1.17 or higher, due to the use of new features of the `os` package, and the use of fsnotify. It is currently developed using go 1.24. 
 
 ### lcpserver
 
@@ -332,8 +332,11 @@ On August 2022:
 ### GORM
 Working with an ORM abstracts us from low-level storage code and is especially useful for software which must be adapted to different database solutions.  
 
-Gorm officially supports the following databases: SQLite, MySQL, PostgreSQL, SQL Server. An Oracle driver is available as an open PR on the Gorm Github (may 2021). 
+Gorm officially supports the following databases: SQLite, MySQL, PostgreSQL, SQL Server, Oracle, GaussDB, TiDB, Clickhouse. Using a compatible databases (e.g. MariaDB) should not be an issue. 
 
 Note: The proper driver must be included in the codebase and the codebase recompiled for a given database to be usable. See: [https://gorm.io/docs/connecting_to_the_database.html](https://gorm.io/docs/connecting_to_the_database.html) 
 
-The open-source codebase is provided with an **sqlite** driver. It is up to integrators to replace it by the driver of their choice if sqlite does not fit their needs.
+The open-source codebase is provided with **SQLite**, **MySQL** and **PostgresQL** drivers. The default is sqlite. It is up to integrators to replace it by the driver of their choice if sqlite does not fit their needs.
+
+This is achieved by adding a tag at build time: 
+> go build -tags MYSQL -o $GOPATH/bin/lcpserver2  ./cmd/lcpserver
