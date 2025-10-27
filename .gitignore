@@ -19,5 +19,8 @@
 # local debug directives
 .vscode/launch.json
 
+# local config files
+config/access.txt
+
 # Dependency directories (remove the comment below to include it)
 # vendor/
