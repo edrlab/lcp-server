@@ -83,7 +83,6 @@ func (a *APICtrl) SearchPublications(w http.ResponseWriter, r *http.Request) {
 
 // CreatePublication adds a new Publication to the database.
 func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
-	log.Debug("Create Publication")
 
 	// get the payload
 	data := &PublicationRequest{}
@@ -108,6 +107,8 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrServer(err))
 		return
 	}
+
+	log.Debug("Create Publication ", publication.Title)
 
 	render.Status(r, http.StatusCreated)
 	if err := render.Render(w, r, NewPublicationResponse(publication)); err != nil {
