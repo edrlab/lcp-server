@@ -89,8 +89,8 @@ func Login(config *conf.Config) http.HandlerFunc {
 			},
 		}
 
-		responseJSON, _ := json.Marshal(response)
-		log.Println("Response:", string(responseJSON))
+		//responseJSON, _ := json.Marshal(response)
+		//log.Println("Response:", string(responseJSON))
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
