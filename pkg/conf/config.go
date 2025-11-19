@@ -99,6 +99,7 @@ func Init(configFile string) (*Config, error) {
 		var tuple []string
 		if len(lines) >= 1 {
 			// the first line is the username and password used to access the server using basic auth (private routes).
+			// it overrides any value set in the configuration file or environment variables.
 			tuple = strings.Split(string(lines[0]), ":")
 			if len(tuple) == 2 {
 				c.Access.Username = strings.TrimSpace(tuple[0])
@@ -107,13 +108,17 @@ func Init(configFile string) (*Config, error) {
 		}
 		if len(lines) >= 2 {
 			// next lines are usernames and passwords used to access the server using JWT (dashboard).
-			//c.JWT.Admin = make(map[string]string)
+			// it completes any value set in the configuration file or environment variables.
 			for _, line := range lines[1:] {
 				tuple = strings.Split(string(line), ":")
 				if len(tuple) == 2 {
 					username := strings.TrimSpace(tuple[0])
 					password := strings.TrimSpace(tuple[1])
 					if username != "" && password != "" {
+						// Initialize map if nil
+						if c.JWT.Admin == nil {
+							c.JWT.Admin = make(map[string]string)
+						}
 						c.JWT.Admin[username] = password
 					}
 				}
@@ -130,6 +135,23 @@ func Init(configFile string) (*Config, error) {
 	}
 	if c.JWT.SecretKey == "" {
 		c.JWT.SecretKey = "default_jwt_secret_key_please_change_in_production"
+	}
+
+	// Initialize JWT.Admin map if nil
+	if c.JWT.Admin == nil {
+		c.JWT.Admin = make(map[string]string)
+	}
+
+	// Set default admin account if none configured
+	if len(c.JWT.Admin) == 0 {
+		c.JWT.Admin["admin"] = "supersecret"
+		log.Println("⚠️  Aucun compte admin configuré, utilisation du compte par défaut: admin/supersecret")
+	}
+
+	// Log configured admin accounts (without passwords for security)
+	log.Printf("📋 Comptes admin configurés: %d", len(c.JWT.Admin))
+	for name := range c.JWT.Admin {
+		log.Printf("   - %s", name)
 	}
 
 	return &c, nil
