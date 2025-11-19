@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license
 // specified in the Github project LICENSE file.
 
+//go:build !PLCP
+// +build !PLCP
+
 package lic
 
 import (
@@ -9,13 +12,11 @@ import (
 	"errors"
 )
 
-var LCP_PRODUCTION_LIB = false
-
 // GenerateUserKey function prepares the user key
 func GenerateUserKey(profile, passhash string) ([]byte, error) {
 
 	if profile != "http://readium.org/lcp/basic-profile" {
-		return nil, errors.New("this version can only process LCP basic profile; failed to decode the user passphrase")
+		return nil, errors.New("this development version can only process LCP basic profile; failed to decode the user passphrase")
 	}
 	// compute a byte array from a string
 	value, err := hex.DecodeString(passhash)
