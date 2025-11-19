@@ -3,8 +3,7 @@
 This is a major evolution of the Readium LCP Server available on https://github.com/readium/readium-lcp-server. Because it is not an incremental evolution, and because this codebase is entirely maintained by EDRLab, we decided to create a new repository on the EDRLab Github space. 
 
 **Note: This project is almost ready for production. We are currently testing it on a demo plateform before release.**
-
-V2 requires go 1.17 or higher, due to the use of new features of the `os` package, and the use of fsnotify. It is currently developed using go 1.24. 
+**But the project still lacks documentation. We will work on it asap** 
 
 ### lcpserver
 
@@ -18,9 +17,16 @@ Licenses can be verified using a separate command line executable, developed in 
 
 ### lcpencrypt
 
-`lcpencrypt` aims to encrypt publications, publish encrypted publications at a location given as a parameter, and notify the lcpserver of the availability of this new asset. `lcpencrypt` is both available as a command line utility and a server tied to a watch folder. 
+`lcpencrypt`:
+
+- Is both available as a command line utility and a server tied to a watch folder:
+- Encrypts EPUBs, PDF documents, and packaged Web Publications.
+- Stores encrypted publications at a location given as a parameter.
+- Notifies the LCP Server of the availability of this new asset. 
 
 ### lcpchecker
+
+`lcpchecker` verifies the compliance of an LCP license with the LCP specification and the LSD protocol. 
 
 ### Other tools
 
@@ -30,10 +36,44 @@ This lightweight content management system named `pubstore` manages publications
 #### LCP Server Dashboard
 The lighweight dashboard server named `lcpdashboard` offers metrics on the LCP Server, displays oversharded licenses and allows admins to revoke overshared licenses. In can be used in production to manage an LCP Server.   
 
+## Install
+
+Assuming a working Go installation (Go 1.24 or higher) ... 
+
+```sh
+# fetch, build and install the different packages and their dependencies
+go install github.com/edrlab/lcp-server/cmd/lcpserver@latest
+go install github.com/edrlab/lcp-server/cmd/lcpencrypt@latest
+go install github.com/edrlab/lcp-server/cmd/lcpchecker@latest
+```
+
+If you wish to prepare an installation in production mode, you must first clone the software. 
+
+Create a working folder (ex. lcp-server), and from this folder, enter:
+
+```sh
+git clone https://github.com/edrlab/lcp-server.git
+```
+
+Option 1: For testing the lcpserver application without compiling it, use:
+
+```sh
+cd cmd/lcpserver
+go run server.go router.go authenticator.go
+```
+
+Option 2: For compiling the lcpserver application, use:
+
+```sh
+# Compile and create the binary in the Go bin folder
+go build -o $GOPATH/bin  ./cmd/lcpserver2
+# Launch the application
+lcpserver2
+```
 
 ## Configuration
 
-The configuration is similar to the v1 config, but largely simplified. 
+The configuration is similar to the LCP Server V1 config, but largely simplified. 
 
 The configuration of the server is kept both in a configuration file and in environment variables. It is possible to mix both sets;  environment variables are expressly recommended for confidential information. 
 
@@ -100,21 +140,7 @@ The test certificate is provided in the /test/cert folder on the project.
 
 ## Usage
 
-For compiling and installing the application in the bin folder, use: 
 
-> go install cmd/lcpserver/server.go
-
-From the `lcp-server` folder ...
-
-For testing the lcpserver application you can use:
-
-> cd cmd/lcpserver
-> go run server.go router.go authenticator.go
-
-
-or, if your forked the codebase:
-
-> go build -o $GOPATH/bin  ./cmd/lcpserver2
 
 ## API calls
 
