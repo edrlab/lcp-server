@@ -305,7 +305,7 @@ func (c *LicenseChecker) CheckReturn() error {
 	// fetch the fresh license and check that it has been correctly updated
 	err = c.GetFreshLicense()
 	if err != nil {
-		log.Error("Failed to get the fresh license: ", err)
+		log.Warning("Failed to get the fresh license after it was returned. This is not an error: ", err)
 		return nil
 	} else {
 		log.Info("The license end timestamp is now ", c.license.Rights.End.Format(time.RFC822))
