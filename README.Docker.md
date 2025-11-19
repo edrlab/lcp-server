@@ -11,7 +11,7 @@ Do not forget to replace the sample values by secure values.
 
 ### Building and running your application
 
-Build the image of an LCP Server using SQLite and start the containers:
+Build the image of an LCP Server, using SQLite by default, and start the containers:
 `docker compose up -d`
 or
 `docker compose up`
@@ -28,7 +28,8 @@ Your application will be available at http://localhost:8989.
 Build the image of an LCP server using SQLite by running:
 `docker compose build --tag lcp-server:sqlite .`
 
-Build the image of an LCP server using PostgresQL by running:
+Build the image of an LCP server using MySQL by running:
+`docker compose build --tag lcp-server:mysql .`
 
 ### Run in detached mode
 
