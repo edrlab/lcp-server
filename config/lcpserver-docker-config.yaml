@@ -11,7 +11,10 @@ port: 8989
 public_base_url: "http://localhost:8989"
 
 # data source name of the server database
-dsn: "sqlite3://file:/database/lcpsv2.sqlite?cache=shared&mode=rwc"
+# For Docker Compose with MySQL
+dsn: "mysql://lcp_user:lcp_user_password@(mysql:3306)/lcp_server"
+# SQLite alternative (requires CGO_ENABLED=1)
+#dsn: "sqlite3://file:/database/lcpsv2.sqlite?cache=shared&mode=rwc"
 # during testing, it can be useful to use an in-memory database
 #dsn: "sqlite3://file::memory:?cache=shared"
 
