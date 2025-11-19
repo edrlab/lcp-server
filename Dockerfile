@@ -22,14 +22,15 @@ ARG TARGETARCH
 # Install any build dependencies that are needed to build the application.
 RUN apt-get update && apt-get install -y gcc libc6-dev
 
-# TODO: On my Mac M1, creates GOARCH=arm64: will it be ok when moved to the cloud? 
-# Build the application.
-# Leverage a cache mount to /go/pkg/mod/ to speed up subsequent builds.
-# Leverage a bind mount to the current directory to avoid having to copy the
-# source code into the container.
-RUN --mount=type=cache,target=/go/pkg/mod/ \
-    --mount=type=bind,target=. \
-    CGO_ENABLED=1 GOARCH=$TARGETARCH go build -o /app/server ./cmd/lcpserver2
+# Copy source code to avoid mount issues with CGO and static libraries
+COPY . /src
+
+# The libuserkey.a in place must be the linux version, or PLCP must be used
+# Enable CGO for MySQL driver and/or LCP support
+# Build the application for Docker, with MySQL support but without the LCP production library
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH go build -tags "MYSQL" -o /app/server ./cmd/lcpserver
+# Build the application with MySQL and LCP support
+#RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH go build -tags "PLCP,MYSQL" -o /app/server ./cmd/lcpserver
 
 ################################################################################
 # Create a new stage for running the application that contains the minimal

@@ -13,6 +13,31 @@ services:
       - LCPSERVER_ACCESS_FILE=/run/secrets/access
     secrets:
       - access
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4.7
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql-root-password
+      - MYSQL_DATABASE=lcp_server
+      - MYSQL_USER=lcp_user
+      - MYSQL_PASSWORD_FILE=/run/secrets/mysql-password
+    secrets:
+      - mysql-root-password
+      - mysql-password
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$(cat /run/secrets/mysql-root-password)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 # Uncomment and adapt if your application is using a PostgreSQL database.
 # You must create `db/password.txt` and add a password 
@@ -44,7 +69,11 @@ volumes:
    resources:
 
 secrets:
-   basic-auth:
+   access:
      file: config/access.txt
+   mysql-root-password:
+     file: config/mysql-root-password.txt
+   mysql-password:
+     file: config/mysql-password.txt
 
 
