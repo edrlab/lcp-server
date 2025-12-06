@@ -46,7 +46,7 @@ func (s *Server) setRoutes() *chi.Mux {
 	// Public routes
 	// Heartbeat
 	r.Group(func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("The LCP Server is running!"))
 		})
 	})
