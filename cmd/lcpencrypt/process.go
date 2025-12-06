@@ -95,7 +95,7 @@ func processFile(c Config, fileName string) error {
 	if err := os.Remove(inputFilePath); err != nil {
 		return err
 	}
-	log.Printf("File deleted: %s", fileName)
+	log.Printf("Input file deleted: %s", fileName)
 	return nil
 }
 
