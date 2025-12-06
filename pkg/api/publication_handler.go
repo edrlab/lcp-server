@@ -168,6 +168,7 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// set updated fields
+	publication.Provider = pubUpdates.Provider
 	publication.Title = pubUpdates.Title
 	publication.Authors = pubUpdates.Authors
 	publication.CoverUrl = pubUpdates.CoverUrl
