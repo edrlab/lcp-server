@@ -42,7 +42,7 @@ func init() {
 }
 
 func usage() {
-	fmt.Println("Usage: lcpencrypt [-serve] [-input] [-uuid] [-usefn] [-verbose] [-v2]")
+	fmt.Println("Usage: lcpencrypt [-serve] [-input] [-uuid] [-usefn] [-verbose] [-v2] [-pdfnometa] [-cover]")
 	flag.PrintDefaults()
 }
 
@@ -50,15 +50,15 @@ func main() {
 
 	// parse the command line
 	// some values (storage path, storage url, lcp server and cms url) can only be set through environment variables
-	serve := flag.Bool("serve", false, "if set, start the utility as a server")
-	input := flag.String("input", "", "source file locator (file path or url); only used in command line")
-	provider := flag.String("provider", "", "publication provider URI")
-	uuid := flag.String("uuid", "", "force the publication uuid; only used in command line")
+	serve := flag.Bool("serve", false, "if set, start the utility as a server; no other parameter is used in this mode")
+	input := flag.String("input", "", "source file locator (file path or url)")
+	provider := flag.String("provider", "", "provider URI of the publication(s)")
+	uuid := flag.String("uuid", "", "Forced publication uuid")
 	usefn := flag.Bool("usefn", false, "if set, use the input file name as storage file name")
 	verbose := flag.Bool("verbose", false, "if set, display info messages; if not set, display only warnings and errors.")
-	v2 := flag.Bool("v2", true, "optional, boolean, indicates a v2 License server, true by default")
-	cover := flag.Bool("cover", true, "optional, boolean, indicates if a cover should be exported, true by default")
-	pdfnometa := flag.Bool("pdfnometa", false, "optional, boolean, indicates if PDF metadata should be omitted, false by default")
+	v2 := flag.Bool("v2", true, "indicates a v2 License server")
+	cover := flag.Bool("cover", true, "indicates if a cover should be exported")
+	pdfnometa := flag.Bool("pdfnometa", false, "if set, indicates that PDF metadata are omitted")
 	help := flag.Bool("help", false, "shows information")
 
 	flag.Parse()
@@ -72,8 +72,8 @@ func main() {
 
 	// init config from command line flags
 	// TODO: Move provider URI and input path to a map in config.
-	c.InputPath = filepath.Dir(*input)
 	c.ProviderUri = *provider
+	c.InputPath = filepath.Dir(*input)
 	filename := filepath.Base(*input) // get the file name from the input path
 	c.UUID = *uuid
 	c.UseFileName = *usefn
@@ -108,17 +108,20 @@ func main() {
 	}
 
 	if *serve {
-		log.Warnln("Entering server mode")
+		log.Infoln("Entering server mode")
 		log.Infoln("Watching directory: ", os.Getenv("LCPENCRYPT_INPUT_PATH"))
 		log.Infoln("Storage path: ", os.Getenv("LCPENCRYPT_STORAGE_PATH"))
 		// start the utility as a server
 		activateServer(c)
-	} else {
+	} else if filename != "." {
 		// run the utility as a command line tool
 		err = processFile(c, filename)
 		if err != nil {
-			log.Errorf("Error processing file %s: %v", c.InputPath, err)
+			log.Errorf("Error processing file %s / %s: %v", c.InputPath, filename, err)
 		}
+	} else {
+		usage()
+		os.Exit(1)
 	}
 
 }
