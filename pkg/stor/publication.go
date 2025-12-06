@@ -16,7 +16,7 @@ type Publication struct {
 	gorm.Model
 	CreatedAt     time.Time `gorm:"index"` // index on created_at, useful for dashboard queries
 	UUID          string    `json:"uuid" validate:"omitempty,uuid" gorm:"type:varchar(100);uniqueIndex"`
-	Provider      string    `json:"provider_uri,omitempty" validate:"omitempty,url" gorm:"type:varchar(255)"`
+	Provider      string    `json:"provider,omitempty" validate:"omitempty,url" gorm:"type:varchar(255)"`
 	Title         string    `json:"title,omitempty" validate:"required"`
 	Authors       string    `json:"authors,omitempty"`
 	CoverUrl      string    `json:"cover_url,omitempty" validate:"omitempty,url" gorm:"type:varchar(1024)"`
