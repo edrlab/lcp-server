@@ -19,8 +19,13 @@
 # local debug directives
 .vscode/launch.json
 
-# local config files
-config/access.txt
+# local config and log files
+config/
+logs/
+backups/
+
+# Environment variables
+.env
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
