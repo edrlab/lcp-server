@@ -3,11 +3,12 @@
 package stor
 
 import (
+	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func GormDialector(cnx string) gorm.Dialector {
-	println("PostgreSQL database")
+	log.Println("PostgreSQL database")
 	return postgres.Open(cnx)
 }
