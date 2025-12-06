@@ -114,7 +114,7 @@ func NewLicense(config *conf.Config, cert *tls.Certificate, pubInfo *stor.Public
 		Updated:  licInfo.Updated,
 	}
 
-	userKey, err := setEncryption(config.Profile, l, pubInfo, encryption, passhash)
+	userKey, err := setEncryption(config.License.Profile, l, pubInfo, encryption, passhash)
 	if err != nil {
 		return nil, err
 	}
