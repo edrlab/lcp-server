@@ -42,7 +42,7 @@ type Certificate struct {
 
 type License struct {
 	Provider string `yaml:"provider"  envconfig:"license_provider"`   // URI
-	Profile  string `yaml:"profile"  envconfig:"license_profile"`     // standard profile URI
+	Profile  string `yaml:"profile"  envconfig:"license_profile"`     // default profile URI
 	HintLink string `yaml:"hint_link"  envconfig:"license_hint_link"` // URL
 }
 
@@ -145,11 +145,11 @@ func Init(configFile string) (*Config, error) {
 	// Set default admin account if none configured
 	if len(c.JWT.Admin) == 0 {
 		c.JWT.Admin["admin"] = "supersecret"
-		log.Println("⚠️  Aucun compte admin configuré, utilisation du compte par défaut: admin/supersecret")
+		log.Println("⚠️  No admin account configured, using default account: admin/supersecret")
 	}
 
 	// Log configured admin accounts (without passwords for security)
-	log.Printf("📋 Comptes admin configurés: %d", len(c.JWT.Admin))
+	log.Printf("📋 Configured admin accounts: %d", len(c.JWT.Admin))
 	for name := range c.JWT.Admin {
 		log.Printf("   - %s", name)
 	}
