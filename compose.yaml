@@ -1,29 +1,102 @@
 name: lcp
 services:
+  #nginx:
+  #  image: nginx:1.27-alpine
+  #  restart: unless-stopped
+  #  ports:
+  #    - "80:80"
+  #    - "443:443"
+  #  volumes:
+  #    - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Uncomment for SSL certificates:
+      # - ./config/ssl:/etc/ssl:ro
+   # depends_on:
+   #   server:
+   #     condition: service_started
+   # healthcheck:
+   #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+   #   interval: 30s
+   #   timeout: 10s
+   #   retries: 3
+   #   start_period: 40s
+
   server:
     build:
       context: .
       target: final
+    # Only accessible through nginx
+    #expose:
+    #  - "8989"
+    # Temporarily expose port for testing (nginx commented out)
     ports:
-      - 8989:8989
+      - "8989:8989"
     volumes:
-      - db-data:/database
-      - resources:/resources
+      # Activate if using SQLite
+      #- db-data:/database
+      # Where LCP Encrypt finds input files (comment if using lcpencrypt as a separate service)
+      # A Bind Mount is necessary, as the FTP Server is running outside Docker
+      - ${LCPENCRYPT_INPUT_PATH:-./input}:/input
+      # Where LCP Encrypt stores encrypted publications and covers (comment if the resources are stored on a Cloud server)
+      # A Bind Mount makes it easier to backup the resources folder from the host system
+      - ${LCPENCRYPT_STORAGE_PATH:-./resources}:/resources
+
     environment:
+      # --- LCP Server Configuration ---
+      # Values are sourced from the .env file at the root of the project.
+      # See pkg/conf/config.go for all available environment variables.
+      - LCPSERVER_LOGLEVEL=${LCPSERVER_LOGLEVEL}
+      - LCPSERVER_PUBLICBASEURL=${LCPSERVER_PUBLICBASEURL}
+      - LCPSERVER_PORT=${LCPSERVER_PORT}
+      - LCPSERVER_DSN=${LCPSERVER_DSN}
+      - LCPSERVER_CERTIFICATE_CERT=${LCPSERVER_CERTIFICATE_CERT}
+      - LCPSERVER_CERTIFICATE_PRIVATEKEY=${LCPSERVER_CERTIFICATE_PRIVATEKEY}
+      - LCPSERVER_LICENSE_PROVIDER=${LCPSERVER_LICENSE_PROVIDER}
+      - LCPSERVER_LICENSE_PROFILE=${LCPSERVER_LICENSE_PROFILE}
+      - LCPSERVER_LICENSE_HINTLINK=${LCPSERVER_LICENSE_HINTLINK}
+      - LCPSERVER_STATUS_FRESHLICENSELINK=${LCPSERVER_STATUS_FRESHLICENSELINK}
+      - LCPSERVER_STATUS_ALLOWRENEWONEXPIREDLICENSES=${LCPSERVER_STATUS_ALLOWRENEWONEXPIREDLICENSES}
+      - LCPSERVER_STATUS_RENEWDEFAULTDAYS=${LCPSERVER_STATUS_RENEWDEFAULTDAYS}
+      - LCPSERVER_STATUS_RENEWMAXDAYS=${LCPSERVER_STATUS_RENEWMAXDAYS}
+      - LCPSERVER_STATUS_RENEWLINK=${LCPSERVER_STATUS_RENEWLINK}
+      - LCPSERVER_DASHBOARD_EXCESSIVESHARINGTHRESHOLD=${LCPSERVER_DASHBOARD_EXCESSIVESHARINGTHRESHOLD}
+      - LCPSERVER_DASHBOARD_LIMITTOLAST12MONTHS=${LCPSERVER_DASHBOARD_LIMITTOLAST12MONTHS}
+      - LCPSERVER_RESOURCES=/resources
+      # This one will have to become a Docker secret in production
+      - LCPSERVER_JWT_SECRETKEY=${LCPSERVER_JWT_SECRETKEY}
+      # Path to the access file for basic authentication and JWT admin accounts
       - LCPSERVER_ACCESS_FILE=/run/secrets/access
+      # --- LCP Encrypt Configuration ---
+      - LCPENCRYPT_PROVIDER_URI=${LCPENCRYPT_PROVIDER_URI}
+      - LCPENCRYPT_INPUT_PATH=/input
+      - LCPENCRYPT_STORAGE_PATH=/resources
+      - LCPENCRYPT_STORAGE_URL=${LCPENCRYPT_STORAGE_URL}
+      - LCPENCRYPT_LCPSERVER_URL=${LCPENCRYPT_LCPSERVER_URL}
+      - LCPENCRYPT_UUID=${LCPENCRYPT_UUID}
+      - LCPENCRYPT_USEFN=${LCPENCRYPT_USEFN}
+      - LCPENCRYPT_VERBOSE=${LCPENCRYPT_VERBOSE}
+      - LCPENCRYPT_V2=${LCPENCRYPT_V2}
+      - LCPENCRYPT_COVER=${LCPENCRYPT_COVER}
+      - LCPENCRYPT_PDF_NO_META=${LCPENCRYPT_PDF_NO_META}
+      - LCPENCRYPT_CMS_URL=${LCPENCRYPT_CMS_URL}
     secrets:
       - access
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8989/health"]
+      interval: 120s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   mysql:
     image: mysql:8.4.7
     restart: always
     environment:
       - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql-root-password
-      - MYSQL_DATABASE=lcp_server
-      - MYSQL_USER=lcp_user
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD_FILE=/run/secrets/mysql-password
     secrets:
       - mysql-root-password
@@ -31,7 +104,7 @@ services:
     volumes:
       - db-data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "3307:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$(cat /run/secrets/mysql-root-password)"]
       interval: 10s
@@ -39,34 +112,110 @@ services:
       retries: 5
       start_period: 30s
 
-# Uncomment and adapt if your application is using a PostgreSQL database.
-# You must create `db/password.txt` and add a password 
-# of your choosing to it before running `docker compose up`.
-#     depends_on:
-#       db:
-#         condition: service_healthy
-#   db:
-#     image: postgres
-#     restart: always
-#     user: postgres
-#     secrets:
-#       - db-password
-#     volumes:
-#       - db-data:/var/lib/postgresql/data
-#     environment:
-#       - POSTGRES_DB=example
-#       - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
-#     expose:
-#       - 5432
-#     healthcheck:
-#       test: [ "CMD", "pg_isready" ]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
-#
+  # Uncomment and adapt if your application is using a PostgreSQL database.
+  # You must create `db/password.txt` and add a password 
+  # of your choosing to it before running `docker compose up`.
+  #     depends_on:
+  #       db:
+  #         condition: service_healthy
+  #   db:
+  #     image: postgres
+  #     restart: always
+  #     user: postgres
+  #     secrets:
+  #       - db-password
+  #     volumes:
+  #       - db-data:/var/lib/postgresql/data
+  #     environment:
+  #       - POSTGRES_DB=example
+  #       - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+  #     expose:
+  #       - 5432
+  #     healthcheck:
+  #       test: [ "CMD", "pg_isready" ]
+  #       interval: 10s
+  #       timeout: 5s
+  #       retries: 5
+  #
+
+  # LCP Encrypt service (uncomment to run as separate service)
+  # lcpencrypt:
+  #   build:
+  #     context: .
+  #     target: final
+  #   command: ["/app/lcpencrypt", "-serve"]
+  #   volumes:
+  #     - resources:/resources
+  #     - input:/input
+  #   environment:
+  #     - LCPSERVER_CONFIG=/config/lcpconfig.yaml
+  #   profiles:
+  #     - encrypt
+
+
+  # Hot backup service - minimal service impact (run with: docker compose --profile backup run --rm hot-backup)
+  hot-backup:
+    image: mysql:8.4.7
+    restart: "no"
+    profiles:
+      - backup
+    environment:
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql-root-password
+    volumes:
+      - ./backups:/backup
+      - db-data:/var/lib/mysql:ro
+    secrets:
+      - mysql-root-password
+    command: >
+      bash -c "
+        mkdir -p /backup &&
+        BACKUP_FILE=/backup/hot_backup_$$(date +%Y%m%d_%H%M%S).sql.gz &&
+        echo 'Creating HOT MySQL dump (service remains available)...' &&
+        mysqldump -h mysql -u root -p$$(cat /run/secrets/mysql-root-password) --single-transaction --quick --lock-tables=false --no-autocommit --routines --triggers --events --complete-insert --extended-insert=false --set-gtid-purged=OFF --default-character-set=utf8mb4 --hex-blob --order-by-primary lcpserver | gzip > \$$BACKUP_FILE &&
+        echo 'Cleaning old backups...' &&
+        find /backup -name 'hot_backup_*.sql.gz' -mtime +30 -delete &&
+        echo 'HOT backup completed: '\$$BACKUP_FILE &&
+        echo 'Service impact: MINIMAL - Service remained available' &&
+        ls -lah /backup/hot_backup_*.sql.gz 2>/dev/null | tail -3 || true
+      "
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # Cold backup service (run with: docker compose --profile backup run --rm cold-backup)
+  cold-backup:
+    image: mysql:8.4.7
+    restart: "no"
+    profiles:
+      - backup
+    environment:
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql-root-password
+    volumes:
+      - ./backups:/backup
+      - db-data:/var/lib/mysql:ro
+    secrets:
+      - mysql-root-password
+    command: >
+      bash -c "
+        mkdir -p /backup &&
+        BACKUP_FILE=/backup/cold_backup_$$(date +%Y%m%d_%H%M%S).sql &&
+        echo 'Creating COLD MySQL dump...' &&
+        mysqldump -h mysql -u root -p$$(cat /run/secrets/mysql-root-password) --single-transaction --routines --triggers --events --complete-insert --extended-insert --set-gtid-purged=OFF --source-data=2 --default-character-set=utf8mb4 --hex-blob --order-by-primary lcpserver > \$$BACKUP_FILE &&
+        echo 'Compressing backup...' &&
+        gzip \$$BACKUP_FILE &&
+        echo 'Cleaning old backups...' &&
+        find /backup -name 'cold_backup_*.sql.gz' -mtime +30 -delete &&
+        echo 'Backup completed: '\$$BACKUP_FILE.gz &&
+        ls -lah /backup/cold_backup_*.sql.gz 2>/dev/null | tail -5 || true
+      "
+    depends_on:
+      mysql:
+        condition: service_healthy
+
 volumes:
    db-data:
    resources:
+   input:
 
 secrets:
    access:

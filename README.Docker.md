@@ -1,5 +1,17 @@
-### Setting docker secrets
-They are defined in /config/access.txt.
+## Configuration
+Using a configuration file is uneasy when setting up Docker images. 
+
+The configuration of the LCP Server therefore goes through two steps:
+- Setting environment variables
+- Setting Docker secrets
+
+### Setting environment variables
+Information that may change over time but is not secret should be stored as environment variable, via a `.env` file stored on the root folder of the project.
+
+Values unset in `.env` are mapped to empty string in the configuration codebase, and such values have to be treated in the source code. 
+
+### Setting Docker secrets
+Access to private endpoints of the LCP Server via HTTP Basic Authentication and usernames and passwords used to access the server using JWT are defined in `/config/access.txt`.
 
 This file defines colon separated usernames and passwords allowing access to the server API private endpoints and dashboard.
 
@@ -11,24 +23,40 @@ Do not forget to replace the sample values by secure values.
 
 ### Building and running your application
 
-Build the image of an LCP Server, using SQLite by default, and start the containers:
+Build the image of an LCP Server using SQLite (this is the default value) and start the containers:
 `docker compose up -d`
 or
 `docker compose up`
-if you prefer seeing application logs in the terminal 
+if you prefer seeing application logs in the terminal.
 
 The image is named `lcp-server`. 
 
 Note: to force the image to be rebuilt, type:
 `docker compose up --build`
 
+And to restart and rebuild with a new configuration:
+`docker compose down && docker compose up --build -d`
+
+To check the logs
+`docker compose logs server --tail=15`
+
+To simply restart
+`docker compose restart server`
+
 Your application will be available at http://localhost:8989.
 
-### Alternative builds
-Build the image of an LCP server using SQLite by running:
+### Launch LCP Encrypt
+The lcpencrypt binary is part of the container. You can launch it in a one-shot mode using: 
+
+`docker compose exec server /app/lcpencrypt` with parameters
+
+More 
+
+### Alternative builds, with a MySQL database
+Build the image of an LCP server using SQLite by typing:
 `docker compose build --tag lcp-server:sqlite .`
 
-Build the image of an LCP server using MySQL by running:
+Build the image of an LCP server using MySQL by typing:
 `docker compose build --tag lcp-server:mysql .`
 
 ### Run in detached mode
@@ -42,7 +70,7 @@ First, build your image, e.g.: `docker build -t lcp-server .`.
 If your cloud uses a different CPU architecture than your development
 machine (e.g., you are on a Mac M1 and your cloud provider is amd64),
 you'll want to build the image for that platform, e.g.:
-`docker build --platform=linux/amd64 -t lcp-server .`.
+`docker build --platform=linux/amd64 -t lcp-server .`
 
 Then, push it to your registry, e.g. `docker push myregistry.com/lcp-server`.
 
