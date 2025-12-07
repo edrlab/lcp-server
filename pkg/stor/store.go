@@ -179,7 +179,8 @@ func addParamsDialectSpecific(cnx, dialect string) string {
 	case "sqlite3":
 		cnx += "?cache=shared&mode=rwc"
 	case "mysql":
-		cnx += "?charset=utf8mb4&parseTime=True&loc=Local"
+		// tls false to overcome the use of a self-signed certificates on a mysql docker container
+		cnx += "?charset=utf8mb4&parseTime=True&loc=Local&tls=false"
 	case "postgres":
 		cnx += "?sslmode=disable"
 	case "mssql":
