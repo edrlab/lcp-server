@@ -21,6 +21,7 @@
 
 # local config and log files
 config/
+config-vm/
 logs/
 backups/
 
