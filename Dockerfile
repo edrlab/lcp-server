@@ -42,14 +42,14 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
       if [ -f "./config/lib/linux-amd64/libuserkey.a" ]; then \
         echo "LCP library found, copying and building with PLCP support"; \
         cp ./config/lib/linux-amd64/libuserkey.a ./pkg/lic/; \
-        CGO_ENABLED=1 go build -tags "PLCP,MYSQL" -o /app/server ./cmd/lcpserver; \
+        CGO_ENABLED=1 go build -tags "PLCP,MYSQL" -o /app/lcpserver ./cmd/lcpserver; \
       else \
         echo "No LCP library found for AMD64, building without PLCP support"; \
-        CGO_ENABLED=0 go build -tags "MYSQL" -o /app/server ./cmd/lcpserver; \
+        CGO_ENABLED=0 go build -tags "MYSQL" -o /app/lcpserver ./cmd/lcpserver; \
       fi; \
     else \
       echo "Building for $TARGETARCH without LCP library"; \
-      CGO_ENABLED=0 go build -tags "MYSQL" -o /app/server ./cmd/lcpserver; \
+      CGO_ENABLED=0 go build -tags "MYSQL" -o /app/lcpserver ./cmd/lcpserver; \
     fi
 
 ################################################################################
@@ -65,37 +65,35 @@ FROM debian:trixie-slim AS final
 RUN apt-get update && apt-get install -y ca-certificates wget mupdf-tools && rm -rf /var/lib/apt/lists/*
 
 # Create a non-privileged user that the app will run under.
-#ARG UID=10001
-#RUN useradd --uid "${UID}" --user-group --system --no-log-init --create-home appuser
+ARG UID=10001
+RUN useradd --uid "${UID}" --user-group --system --no-log-init --create-home appuser
 
 # Copy the X509 test certificate (to be replaced later by the production certificate)
 COPY /config/cert-edrlab-test.pem ./config/
 COPY /config/privkey-edrlab-test.pem ./config/
-
-# create a database directory in the container, to be used if SQLite is selected
-#RUN mkdir /database
-# the user of the container owns the database directory. 
-#RUN chown -R appuser:appuser /database
+# For production, use:
+COPY /config/cert-production.pem ./config/
+COPY /config/privkey-production.pem ./config/
 
 # create a directory in the container for input files
 RUN mkdir /input
 # the user of the container owns the directory. 
-#RUN chown -R appuser:appuser /input
+RUN chown -R appuser:appuser /input
 
 # create a directory in the container for external resources
 RUN mkdir /resources
 # the user of the container owns the directory. 
-#RUN chown -R appuser:appuser /resources
+RUN chown -R appuser:appuser /resources
 
 # from here on, the container runs as the non-privileged user
-#USER appuser
+USER appuser
 
 # Copy the executables from the "build" stage.
-COPY --from=build /app/server /app/
+COPY --from=build /app/lcpserver /app/
 COPY --from=build /app/lcpencrypt /app/
 
 # Expose the port that the application listens on.
 EXPOSE 8989
 
 # What the container should run when it is started.
-ENTRYPOINT ["/app/server"]
+CMD ["/app/lcpserver"]
