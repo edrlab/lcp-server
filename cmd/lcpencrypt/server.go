@@ -131,8 +131,8 @@ func watchFileChanges(ctx context.Context, c Config, wg *sync.WaitGroup, sem cha
 // waitForFileReady waits until the file is not empty, its size is stable, and it is readable.
 func waitForFileReady(filePath string) error {
 	const (
-		checkInterval = 500 * time.Millisecond
-		maxRetries    = 60 // Wait up to 30 seconds
+		checkInterval = 1000 * time.Millisecond
+		maxRetries    = 60 // Wait up to 60 seconds
 	)
 
 	var lastSize int64 = -1
