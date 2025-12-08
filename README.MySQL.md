@@ -10,9 +10,9 @@
 
 The Docker Compose configuration creates:
 - A MySQL 8.4.7 Community server
-- Database: `lcp_server`
-- User: `lcp_user` with access to the `lcp_server` database
-- Data stored in Docker volume: `db-data`
+- Database: `lcpserver`
+- User: `lcp_user` with access to the `lcpserver` database
+- Data stored in Docker volume: `db-data`, mapped to /var/lib/mysql
 
 ## Security Notes
 
@@ -26,7 +26,7 @@ The Docker Compose configuration creates:
 
 For the LCP server configuration, use a DSN like:
 ```
-dsn: "lcp_user:password@tcp(mysql:3306)/lcp_server?parseTime=true"
+dsn: "lcp_user:password@tcp(mysql:3306)/lcpserver"
 ```
 
 Where `password` matches the content of `mysql-password.txt`.
