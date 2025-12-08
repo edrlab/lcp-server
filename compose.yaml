@@ -20,6 +20,42 @@ services:
    #   retries: 3
    #   start_period: 40s
 
+
+  # LCP Encrypt service
+  encrypt:
+    build:
+      context: .
+      target: final
+    command: ["/app/lcpencrypt", "-serve"]
+    volumes:
+      # Where LCP Encrypt finds input files (comment if using lcpencrypt as a separate service)
+      # A Bind Mount is necessary, as the FTP Server is running outside Docker
+      - ${LCPENCRYPT_INPUT_PATH:-./input}:/input
+      # Where LCP Encrypt stores encrypted publications and covers (comment if the resources are stored on a Cloud server)
+      # A Bind Mount makes it easier to backup the resources folder from the host system
+      - ${LCPENCRYPT_STORAGE_PATH:-./resources}:/resources
+    environment:
+      - LCPENCRYPT_PROVIDER_URI=${LCPENCRYPT_PROVIDER_URI}
+      - LCPENCRYPT_INPUT_PATH=/input
+      - LCPENCRYPT_STORAGE_PATH=/resources
+      - LCPENCRYPT_STORAGE_URL=${LCPENCRYPT_STORAGE_URL}
+      - LCPENCRYPT_LCPSERVER_URL=${LCPENCRYPT_LCPSERVER_URL}
+      - LCPENCRYPT_UUID=${LCPENCRYPT_UUID}
+      - LCPENCRYPT_USEFN=${LCPENCRYPT_USEFN}
+      - LCPENCRYPT_VERBOSE=${LCPENCRYPT_VERBOSE}
+      - LCPENCRYPT_V2=${LCPENCRYPT_V2}
+      - LCPENCRYPT_COVER=${LCPENCRYPT_COVER}
+      - LCPENCRYPT_PDF_NO_META=${LCPENCRYPT_PDF_NO_META}
+      - LCPENCRYPT_CMS_URL=${LCPENCRYPT_CMS_URL}
+      # Activate the following lines to run LCP Encrypt only when needed
+      # using 'docker compose --profile encrypt up'
+      #   profiles:
+      #     - encrypt
+    depends_on:
+      server:
+        condition: service_healthy
+
+  # LCP Server service
   server:
     build:
       context: .
@@ -33,13 +69,8 @@ services:
     volumes:
       # Activate if using SQLite
       #- db-data:/database
-      # Where LCP Encrypt finds input files (comment if using lcpencrypt as a separate service)
-      # A Bind Mount is necessary, as the FTP Server is running outside Docker
-      - ${LCPENCRYPT_INPUT_PATH:-./input}:/input
-      # Where LCP Encrypt stores encrypted publications and covers (comment if the resources are stored on a Cloud server)
-      # A Bind Mount makes it easier to backup the resources folder from the host system
+      # Where the service finds encrypted publications and covers (comment if the resources are stored on a Cloud server)
       - ${LCPENCRYPT_STORAGE_PATH:-./resources}:/resources
-
     environment:
       # --- LCP Server Configuration ---
       # Values are sourced from the .env file at the root of the project.
@@ -65,30 +96,17 @@ services:
       - LCPSERVER_JWT_SECRETKEY=${LCPSERVER_JWT_SECRETKEY}
       # Path to the access file for basic authentication and JWT admin accounts
       - LCPSERVER_ACCESS_FILE=/run/secrets/access
-      # --- LCP Encrypt Configuration ---
-      - LCPENCRYPT_PROVIDER_URI=${LCPENCRYPT_PROVIDER_URI}
-      - LCPENCRYPT_INPUT_PATH=/input
-      - LCPENCRYPT_STORAGE_PATH=/resources
-      - LCPENCRYPT_STORAGE_URL=${LCPENCRYPT_STORAGE_URL}
-      - LCPENCRYPT_LCPSERVER_URL=${LCPENCRYPT_LCPSERVER_URL}
-      - LCPENCRYPT_UUID=${LCPENCRYPT_UUID}
-      - LCPENCRYPT_USEFN=${LCPENCRYPT_USEFN}
-      - LCPENCRYPT_VERBOSE=${LCPENCRYPT_VERBOSE}
-      - LCPENCRYPT_V2=${LCPENCRYPT_V2}
-      - LCPENCRYPT_COVER=${LCPENCRYPT_COVER}
-      - LCPENCRYPT_PDF_NO_META=${LCPENCRYPT_PDF_NO_META}
-      - LCPENCRYPT_CMS_URL=${LCPENCRYPT_CMS_URL}
     secrets:
       - access
     depends_on:
       mysql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8989/health"]
-      interval: 120s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      test: ["CMD", "wget", "--quiet", "--tries=1", "-O", "-", "http://localhost:8989/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   mysql:
     image: mysql:8.4.7
@@ -137,21 +155,6 @@ services:
   #       timeout: 5s
   #       retries: 5
   #
-
-  # LCP Encrypt service (uncomment to run as separate service)
-  # lcpencrypt:
-  #   build:
-  #     context: .
-  #     target: final
-  #   command: ["/app/lcpencrypt", "-serve"]
-  #   volumes:
-  #     - resources:/resources
-  #     - input:/input
-  #   environment:
-  #     - LCPSERVER_CONFIG=/config/lcpconfig.yaml
-  #   profiles:
-  #     - encrypt
-
 
   # Hot backup service - minimal service impact (run with: docker compose --profile backup run --rm hot-backup)
   hot-backup:
