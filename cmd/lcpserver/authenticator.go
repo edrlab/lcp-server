@@ -26,7 +26,7 @@ type Claims struct {
 }
 
 // validateCredentials checks if the provided username and password match
-// any of the configured admin accounts
+// any of the configured dashboard accounts
 func validateCredentials(username, password string, config *conf.Config) bool {
 	if storedPassword, exists := config.JWT.Admin[username]; exists {
 		return storedPassword == password
@@ -44,7 +44,7 @@ func Login(config *conf.Config) http.HandlerFunc {
 			return
 		}
 
-		// Check credentials using configured admin accounts
+		// Check credentials using configured dashboard accounts
 		if !validateCredentials(creds.Username, creds.Password, config) {
 			log.Printf("🚫 Connection attempt failed for user: %s", creds.Username)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
