@@ -27,115 +27,118 @@ func (s *Server) setRoutes() *chi.Mux {
 	// Define the router
 	r := chi.NewRouter()
 
-	// Logger and recovery middleware.
-	r.Use(middleware.Logger)
+	// Recovery middleware
 	r.Use(middleware.Recoverer)
 
-	r.NotFound(notFoundProblemDetail)
-
-	// CORS Configuration
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:8090", "http://localhost:8091"}, // URLs of the React frontend
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
-	}))
-
-	// Public routes
-	// Heartbeat
-	r.Group(func(r chi.Router) {
-		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("The LCP Server is running!"))
-		})
+	// Heartbeat (excluded from logs)
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("The LCP Server is running!"))
 	})
 
-	// Static resources management (optional)
-	if s.Config.Resources != "" {
+	// Group for all other routes
+	r.Group(func(r chi.Router) {
+		// Logger middleware
+		r.Use(middleware.Logger)
+
+		r.NotFound(notFoundProblemDetail)
+
+		// CORS Configuration
+		r.Use(cors.Handler(cors.Options{
+			AllowedOrigins:   []string{"http://localhost:8090", "http://localhost:8091"}, // URLs of the React frontend
+			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+			ExposedHeaders:   []string{"Link"},
+			AllowCredentials: true,
+			MaxAge:           300, // Maximum value not ignored by any of major browsers
+		}))
+
+		// Static resources management (optional)
+		if s.Config.Resources != "" {
+			r.Group(func(r chi.Router) {
+				resourceDir := s.Config.Resources
+				path := "/resources/*"
+
+				r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+					rctx := chi.RouteContext(r.Context())
+					pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
+					fs := http.StripPrefix(pathPrefix, http.FileServer(http.Dir(resourceDir)))
+					fs.ServeHTTP(w, r)
+				})
+			})
+		}
+
+		// Status document management
 		r.Group(func(r chi.Router) {
-			resourceDir := s.Config.Resources
-			path := "/resources/*"
+			r.Use(render.SetContentType(render.ContentTypeJSON))
+			r.Get("/status/{licenseID}", a.StatusDoc)   // GET /status/123
+			r.Post("/register/{licenseID}", a.Register) // POST /register/123
+			r.Put("/renew/{licenseID}", a.Renew)        // PUT /renew/123
+			r.Put("/return/{licenseID}", a.Return)      // PUT /return/123
+		})
 
-			r.Get(path, func(w http.ResponseWriter, r *http.Request) {
-				rctx := chi.RouteContext(r.Context())
-				pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
-				fs := http.StripPrefix(pathPrefix, http.FileServer(http.Dir(resourceDir)))
-				fs.ServeHTTP(w, r)
+		// Private Routes
+		// Require Authentication
+		credentials := make(map[string]string)
+		credentials[s.Config.Access.Username] = s.Config.Access.Password
+
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.BasicAuth("restricted", credentials))
+			r.Use(render.SetContentType(render.ContentTypeJSON))
+
+			// Publications, CRUD
+			r.Route("/publications", func(r chi.Router) {
+				r.With(paginate).Get("/", a.ListPublications)         // GET /publications/
+				r.With(paginate).Get("/search", a.SearchPublications) // GET /publications/search{?format}
+				r.Post("/", a.CreatePublication)                      // POST /publications
+
+				r.Route("/{publicationID}", func(r chi.Router) {
+					r.Get("/", a.GetPublication)       // GET /publications/123
+					r.Put("/", a.UpdatePublication)    // PUT /publications/123
+					r.Delete("/", a.DeletePublication) // DELETE /publications/123
+				})
+			})
+
+			// LicenseInfo, CRUD
+			r.Route("/licenseinfo", func(r chi.Router) {
+				r.With(paginate).Get("/", a.ListLicenses)         // GET /licenseinfo/
+				r.With(paginate).Get("/search", a.SearchLicenses) // GET /licenseinfo/search{?pub,user,status,count}
+				r.Post("/", a.CreateLicense)                      // POST /licenseinfo
+
+				r.Route("/{licenseID}", func(r chi.Router) {
+					r.Get("/", a.GetLicense)       // GET /licenseinfo/123
+					r.Put("/", a.UpdateLicense)    // PUT /licenseinfo/123
+					r.Delete("/", a.DeleteLicense) // DELETE /licenseinfo	/123
+				})
+			})
+
+			// License generation
+			r.Route("/licenses", func(r chi.Router) {
+				r.Post("/", a.GenerateLicense) // POST /licenses
+
+				r.Route("/{licenseID}", func(r chi.Router) {
+					r.Post("/", a.FreshLicense) // POST /licenses/123
+				})
+			})
+
+			// License revocation
+			r.Put("/revoke/{licenseID}", a.Revoke) // PUT /revoke/123
+		})
+
+		// Dashboard
+		r.Post("/dashboard/login", Login(s.Config)) // POST /dashboard/login
+		// Require JWT Authentication
+		r.Group(func(r chi.Router) {
+			r.Use(AuthMiddleware(s.Config))
+			r.Use(render.SetContentType(render.ContentTypeJSON))
+
+			r.Route("/dashboard", func(r chi.Router) {
+				r.Get("/data", a.GetDashboardData)            // GET /dashboard/data
+				r.Get("/overshared", a.GetOversharedLicenses) // GET /dashboard/overshared
+				r.Put("/revoke/{licenseID}", a.Revoke)        // PUT /dashboard/revoke/123
+
 			})
 		})
-	}
 
-	// Status document management
-	r.Group(func(r chi.Router) {
-		r.Use(render.SetContentType(render.ContentTypeJSON))
-		r.Get("/status/{licenseID}", a.StatusDoc)   // GET /status/123
-		r.Post("/register/{licenseID}", a.Register) // POST /register/123
-		r.Put("/renew/{licenseID}", a.Renew)        // PUT /renew/123
-		r.Put("/return/{licenseID}", a.Return)      // PUT /return/123
-	})
-
-	// Private Routes
-	// Require Authentication
-	credentials := make(map[string]string)
-	credentials[s.Config.Access.Username] = s.Config.Access.Password
-
-	r.Group(func(r chi.Router) {
-		r.Use(middleware.BasicAuth("restricted", credentials))
-		r.Use(render.SetContentType(render.ContentTypeJSON))
-
-		// Publications, CRUD
-		r.Route("/publications", func(r chi.Router) {
-			r.With(paginate).Get("/", a.ListPublications)         // GET /publications/
-			r.With(paginate).Get("/search", a.SearchPublications) // GET /publications/search{?format}
-			r.Post("/", a.CreatePublication)                      // POST /publications
-
-			r.Route("/{publicationID}", func(r chi.Router) {
-				r.Get("/", a.GetPublication)       // GET /publications/123
-				r.Put("/", a.UpdatePublication)    // PUT /publications/123
-				r.Delete("/", a.DeletePublication) // DELETE /publications/123
-			})
-		})
-
-		// LicenseInfo, CRUD
-		r.Route("/licenseinfo", func(r chi.Router) {
-			r.With(paginate).Get("/", a.ListLicenses)         // GET /licenseinfo/
-			r.With(paginate).Get("/search", a.SearchLicenses) // GET /licenseinfo/search{?pub,user,status,count}
-			r.Post("/", a.CreateLicense)                      // POST /licenseinfo
-
-			r.Route("/{licenseID}", func(r chi.Router) {
-				r.Get("/", a.GetLicense)       // GET /licenseinfo/123
-				r.Put("/", a.UpdateLicense)    // PUT /licenseinfo/123
-				r.Delete("/", a.DeleteLicense) // DELETE /licenseinfo	/123
-			})
-		})
-
-		// License generation
-		r.Route("/licenses", func(r chi.Router) {
-			r.Post("/", a.GenerateLicense) // POST /licenses
-
-			r.Route("/{licenseID}", func(r chi.Router) {
-				r.Post("/", a.FreshLicense) // POST /licenses/123
-			})
-		})
-
-		// License revocation
-		r.Put("/revoke/{licenseID}", a.Revoke) // PUT /revoke/123
-	})
-
-	// Dashboard
-	r.Post("/dashboard/login", Login(s.Config)) // POST /dashboard/login
-	// Require JWT Authentication
-	r.Group(func(r chi.Router) {
-		r.Use(AuthMiddleware(s.Config))
-		r.Use(render.SetContentType(render.ContentTypeJSON))
-
-		r.Route("/dashboard", func(r chi.Router) {
-			r.Get("/data", a.GetDashboardData)            // GET /dashboard/data
-			r.Get("/overshared", a.GetOversharedLicenses) // GET /dashboard/overshared
-			r.Put("/revoke/{licenseID}", a.Revoke)        // PUT /dashboard/revoke/123
-
-		})
 	})
 
 	return r
@@ -144,7 +147,7 @@ func (s *Server) setRoutes() *chi.Mux {
 // paginate middleware
 func paginate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// pefault values
+		// default values
 		page := 1
 		perPage := 20
 
