@@ -17,8 +17,8 @@ import (
 
 // LCP Server configuration
 type Config struct {
-	LogLevel      string `yaml:"log_level"` // "debug", "info", "warn", "error"
-	PublicBaseUrl string `yaml:"public_base_url"`
+	LogLevel      string `yaml:"loglevel"` // "debug", "info", "warn", "error"
+	PublicBaseUrl string `yaml:"publicbaseurl"`
 	Port          int    `yaml:"port"`
 	Dsn           string `yaml:"dsn"`
 	Access        `yaml:"access"`
@@ -41,9 +41,9 @@ type Certificate struct {
 }
 
 type License struct {
-	Provider string `yaml:"provider"  envconfig:"license_provider"`   // URI
-	Profile  string `yaml:"profile"  envconfig:"license_profile"`     // default profile URI
-	HintLink string `yaml:"hint_link"  envconfig:"license_hint_link"` // URL
+	Provider string `yaml:"provider"  envconfig:"license_provider"`  // URI
+	Profile  string `yaml:"profile"  envconfig:"license_profile"`    // default profile URI
+	HintLink string `yaml:"hint_link"  envconfig:"license_hintlink"` // URL
 }
 
 type Status struct {
@@ -78,9 +78,9 @@ func Init(configFile string) (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		log.Println("Configuration file", configFile)
 	} else {
-		log.Println("failed to find the configuration file ", configFile)
+		log.Println("No configuration file provided, using environment variables and defaults")
 	}
 
 	// Process environment variables
@@ -142,14 +142,14 @@ func Init(configFile string) (*Config, error) {
 		c.JWT.Admin = make(map[string]string)
 	}
 
-	// Set default admin account if none configured
+	// Set default dashboard account if none configured
 	if len(c.JWT.Admin) == 0 {
 		c.JWT.Admin["admin"] = "supersecret"
-		log.Println("⚠️  No admin account configured, using default account: admin/supersecret")
+		log.Println("⚠️  No dashboard account configured, using default account: admin/supersecret")
 	}
 
-	// Log configured admin accounts (without passwords for security)
-	log.Printf("📋 Configured admin accounts: %d", len(c.JWT.Admin))
+	// Log configured dashboard accounts (without passwords for security)
+	log.Printf("📋 Configured dashboard accounts: %d", len(c.JWT.Admin))
 	for name := range c.JWT.Admin {
 		log.Printf("   - %s", name)
 	}
