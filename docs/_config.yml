@@ -1,0 +1,5 @@
+title: LCP Server
+description: Documentation for the Readium LCP Server
+theme: jekyll-theme-slate
+plugins:
+  - jekyll-seo-tag
