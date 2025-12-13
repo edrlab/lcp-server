@@ -18,6 +18,7 @@
 
 # local debug directives
 .vscode/launch.json
+.vscode/settings.json
 
 # local config and log files
 config/
