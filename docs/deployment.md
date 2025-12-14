@@ -1,3 +1,13 @@
+---
+layout: default
+title: Deployment
+nav_order: 3
+---
+
+# Deployment 
+
+# Docker
+
 ## Configuration
 Using a configuration file is uneasy when setting up Docker images. 
 
@@ -8,7 +18,7 @@ The configuration of the LCP Server therefore goes through two steps:
 ### Setting environment variables
 Information that may change over time but is not secret should be stored as environment variable, via a `.env` file stored on the root folder of the project.
 
-Values unset in `.env` are mapped to empty string in the configuration codebase, and such values have to be treated in the source code. 
+Values unset in `.env` are mapped to empty string in the configuration codebase, and are treated as such by the application. 
 
 ### Setting Docker secrets
 Access to private endpoints of the LCP Server via HTTP Basic Authentication and usernames and passwords used to access the server using JWT are defined in `/config/access.txt`.
@@ -79,3 +89,37 @@ docs for more detail on building and pushing.
 
 ### References
 * [Docker's Go guide](https://docs.docker.com/language/golang/)
+
+# MySQL
+
+# Required Files
+
+- `access.txt` - Basic authentication credentials for LCP server API
+- `mysql-root-password.txt` - MySQL root password
+- `mysql-password.txt` - Password for the `lcp_user` database user
+
+## MySQL Setup
+
+The Docker Compose configuration creates:
+- A MySQL 8.4.7 Community server
+- Database: `lcpserver`
+- User: `lcp_user` with access to the `lcpserver` database
+- Data stored in Docker volume: `db-data`, mapped to /var/lib/mysql
+
+## Security Notes
+
+**IMPORTANT**: Change the default passwords in the `.txt` files before running in production!
+
+1. Edit `mysql-root-password.txt` with a strong root password (the default is `your_secure_root_password_change_this`)
+2. Edit `mysql-password.txt` with a strong password for the lcp_user (the default is `lcp_user_password_change_this`)
+3. Make sure these files have restricted permissions (600)
+
+## Connection String Example
+
+For the LCP server configuration, use a DSN like:
+```
+dsn: "lcp_user:password@tcp(mysql:3306)/lcpserver"
+```
+
+Where `password` matches the content of `mysql-password.txt`.
+
