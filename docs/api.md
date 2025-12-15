@@ -14,7 +14,7 @@ Access is protected by HTTP Basic Auth.
 
 You can generate a license via:
 
-POST {{LCPServerURL}}/licenses/ 
+POST {LCPServerURL}/licenses/ 
 
 with a payload like: 
 
@@ -54,7 +54,7 @@ Access is protected by HTTP Basic Auth.
 
 You can fetch a fresh license via:
 
-POST {{LCPServerURL}}/licenses/<licenseID>
+POST {LCPServerURL}/licenses/{licenseID}
 
 with a payload like: 
 
@@ -79,7 +79,7 @@ The License Server does not store user information. This is why user information
 
 One can add a publication to the server via:
 
-POST {{LCPServerURL}}/publications/ 
+POST {LCPServerURL}/publications/ 
 
 with a payload like:
 
@@ -101,16 +101,16 @@ You can also:
 
 1. Get a list of publications via:
 
-- GET localhost:8989/publications/, with `page` and `per_page` pagination parameters.
-- GET localhost:8989/publications/search/ with a `format` parameter taking as a value: `epub`, `pdf`, `lcpdf`, `lcpaiu` or `lcpdi`. 
+- GET {LCPServerURL}/publications/, with `page` and `per_page` pagination parameters.
+- GET {LCPServerURL}/publications/search/ with a `format` parameter taking as a value: `epub`, `pdf`, `lcpdf`, `lcpaiu` or `lcpdi`. 
 
 2. Fetch, update or delete (the info relative to) a publication via:
 
-- GET localhost:8989/publications/<PublicationID> 
-- PUT localhost:8989/publications/<PublicationID> (same payload as for a creation)
-- DELETE localhost:8989/publications/<PublicationID> 
+- GET {LCPServerURL}/publications/{publicationID} 
+- PUT {LCPServerURL}/publications/{publicationID} (same payload as for a creation)
+- DELETE {LCPServerURL}/publications/{publicationID} 
 
-Where <PublicationID> is the uuid used for the creation of the publication. 
+Where {publicationID} is the uuid used for the creation of the publication. 
 
 `href` must be a public URL, accessible from any device on the internet. 
 
@@ -124,7 +124,7 @@ This is a public route.
 
 Status is implemented as:
 
-GET {{LCPServerURL}}/status/<licenseID> 
+GET {LCPServerURL}/status/{licenseID} 
 
 The returned payload is a fresh status document.
 
@@ -135,15 +135,15 @@ Register, Renew and Return are public routes.
 
 Register is implemented as:
 
-POST localhost:8989/register/<licenseID> 
+POST {LCPServerURL}/register/{licenseID} 
 
 Renew is implemented as: 
 
-PUT localhost:8989/renew/<licenseID>
+PUT {LCPServerURL}/renew/{licenseID}
 
 Return is implemented as:
 
-PUT {{LCPServerURL}}/return/<licenseID>
+PUT {LCPServerURL}/return/{licenseID}
 
 There is no payload associated with these routes, but two query parameters:
 
@@ -161,7 +161,7 @@ The returned payload is a fresh status document.
 
 Renew is a private route. It is implemented as: 
 
-PUT {{LCPServerURL}}/revoke/<licenseID>
+PUT {LCPServerURL}/revoke/{licenseID}
 
 with no payload.
 
@@ -169,7 +169,7 @@ with no payload.
 
 You can add raw license information to the server via:
 
-POST {{LCPServerURL}}/licenseinfo/ 
+POST {LCPServerURL}/licenseinfo/ 
 
 with a payload like:
 
@@ -193,13 +193,13 @@ You can also:
 
 1. Get a list of licenses via:
 
-- GET localhost:8989/licenses/, with `page` and `per_page` pagination parameters.
-- GET localhost:8989/licenses/search/, with `user` (id), `pub` (id), `status` ("ready" etc.) or `count` query parameter. `count`takes a min:max tuple as value.
+- GET {LCPServerURL}/licenses/, with `page` and `per_page` pagination parameters.
+- GET {LCPServerURL}/licenses/search/, with `user` (id), `pub` (id), `status` ("ready" etc.) or `count` query parameter. `count`takes a min:max tuple as value.
 
 2. Fetch, update or delete a license (the info relative to) via:
 
-- GET localhost:8989/licenseinfo/{{LicenseID}} 
-- PUT localhost:8989/licenseinfo/{{LicenseID}} (same payload as for a creation)
-- DELETE localhost:8989/licenseinfo/{{LicenseID}} 
+- GET {LCPServerURL}/licenseinfo/{{LicenseID}} 
+- PUT {LCPServerURL}/licenseinfo/{{LicenseID}} (same payload as for a creation)
+- DELETE {LCPServerURL}/licenseinfo/{{LicenseID}} 
 
 Where {{LicenseID}} is the uuid used for the creation of the license. 
