@@ -44,7 +44,7 @@ To support a request for a fresh license, the ebook delivery platform must imple
 
 The client application will use an HTTPS GET (!) method to call the License Gateway, with a license identifier as a parameter. 
 
-The License Gateway must retrieve information about the user associated with the license (this is why the license identifier must be stored as part of the user-publication transaction), and call the Licence Server via a POST (!) request, with the license identifier and user information just retrieved. A fresh license is returned, which is then sent back to the caller application.
+The License Gateway must retrieve information about the user associated with the license (this is why the license identifier must be stored as part of the user-publication transaction), and call the Licence Server via a POST (!) request (see [Fetch a Fresh License](./api.md#fetch-a-fresh-license)), with the license identifier and user information just retrieved. A fresh license is returned, which is then sent back to the caller application.
 
 You can shape the URL of the fresh license as you like. For a license with id d038611c-b0b2-4afe-a23b-3322ff3e1f4b, it may be something like:
 1. https://yourdomain.com/somepath/d038611c-b0b2-4afe-a23b-3322ff3e1f4b
