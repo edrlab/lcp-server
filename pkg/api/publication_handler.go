@@ -131,7 +131,7 @@ func (a *APICtrl) GetPublication(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication ID")))
 	}
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(errors.New("invalid publication ID")))
+		render.Render(w, r, ErrNotFound)
 		return
 	}
 	if err := render.Render(w, r, NewPublicationResponse(publication)); err != nil {
@@ -168,6 +168,7 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// set updated fields
+	publication.AltID = pubUpdates.AltID
 	publication.Provider = pubUpdates.Provider
 	publication.Title = pubUpdates.Title
 	publication.Authors = pubUpdates.Authors
@@ -207,7 +208,7 @@ func (a *APICtrl) DeletePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(errors.New("invalid publication ID")))
+		render.Render(w, r, ErrNotFound)
 		return
 	}
 

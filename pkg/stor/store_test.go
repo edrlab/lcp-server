@@ -24,6 +24,11 @@ func TestMain(m *testing.M) {
 	for i := 0; i < 10; i++ {
 		pub := Publication{}
 		pub.UUID = uuid.New().String()
+		if i == 5 {
+			pub.AltID = "123456789"
+		} else {
+			pub.AltID = faker.Lorem().Word()
+		}
 		pub.Title = faker.Company().CatchPhrase()
 		pub.EncryptionKey = make([]byte, 16)
 		rand.Read(pub.EncryptionKey)
@@ -146,6 +151,19 @@ func TestPublications(t *testing.T) {
 	publication, err = St.Publication().Get(pubUUID)
 	if err != nil {
 		t.Fatalf("Failed to get a publication by uuid: %v", err)
+	}
+	if publication.UUID != pubUUID {
+		t.Fatalf("Incorrect publication returned by Get(): %s != %s", publication.UUID, pubUUID)
+	}
+
+	// get a publication by its alternative id
+	pubAltID := Publications[5].AltID
+	publication, err = St.Publication().GetByAltID(pubAltID)
+	if err != nil {
+		t.Fatalf("Failed to get a publication by alt_id: %v", err)
+	}
+	if publication.AltID != pubAltID {
+		t.Fatalf("Incorrect publication returned by GetByAltID(): %s != %s", publication.AltID, pubAltID)
 	}
 
 	// update the publication Title

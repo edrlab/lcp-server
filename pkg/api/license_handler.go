@@ -34,6 +34,10 @@ func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if licRequest.PublicationID != "" {
 		pubInfo, err = a.Store.Publication().Get(licRequest.PublicationID)
+	} else if licRequest.AltID != "" {
+		pubInfo, err = a.Store.Publication().GetByAltID(licRequest.AltID)
+		// set the publication ID in the request for further processing
+		licRequest.PublicationID = pubInfo.UUID
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier in payload")))
 		return
@@ -188,7 +192,8 @@ func newLicenseInfo(provider string, licRequest *LicenseRequest) *stor.LicenseIn
 // TODO: add an extension point for custom user properties, that have to
 // be returned in the license, optionally encrypted.
 type LicenseRequest struct {
-	PublicationID string     `json:"publication_id" validate:"required,uuid"`
+	PublicationID string     `json:"publication_id" validate:"omitempty,uuid"`
+	AltID         string     `json:"alt_id,omitempty"`
 	UserID        string     `json:"user_id,omitempty" validate:"required"`
 	UserName      string     `json:"user_name,omitempty"`
 	UserEmail     string     `json:"user_email,omitempty"`
