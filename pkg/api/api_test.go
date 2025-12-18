@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/json"
@@ -34,6 +35,7 @@ var s Server
 // PublicationTest data model
 type PublicationTest struct {
 	UUID          string `json:"uuid"`
+	AltID         string `json:"alt_id,omitempty"`
 	Title         string `json:"title"`
 	EncryptionKey []byte `json:"encryption_key"`
 	Href          string `json:"href"`
@@ -95,6 +97,7 @@ func setConfig() *conf.Config {
 func newPublication() *PublicationTest {
 	pub := &PublicationTest{}
 	pub.UUID = uuid.New().String()
+	pub.AltID = faker.Lorem().Word()
 	pub.Title = faker.Company().CatchPhrase()
 	pub.EncryptionKey = make([]byte, 16)
 	rand.Read(pub.EncryptionKey)
@@ -281,6 +284,15 @@ func TestMain(m *testing.M) {
 
 	r.Group(func(r chi.Router) {
 		r.Use(render.SetContentType(render.ContentTypeJSON))
+
+		// Mock pagination middleware
+		r.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ctx := context.WithValue(r.Context(), PageKey, 1)
+				ctx = context.WithValue(ctx, PerPageKey, 20)
+				next.ServeHTTP(w, r.WithContext(ctx))
+			})
+		})
 
 		// Publications
 		r.Route("/publications", func(r chi.Router) {
