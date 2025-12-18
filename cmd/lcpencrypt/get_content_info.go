@@ -8,11 +8,12 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type ContentInfo struct {
@@ -34,6 +35,8 @@ func getContentKey(contentID, lcpsv, username, password string, v2 bool) (string
 	if lcpsv == "" {
 		return "", nil
 	}
+
+	log.Debug("Checking if the publication exists on the LCP Server...")
 
 	if !strings.HasPrefix(lcpsv, "http://") && !strings.HasPrefix(lcpsv, "https://") {
 		lcpsv = "http://" + lcpsv
@@ -74,7 +77,9 @@ func getContentKey(contentID, lcpsv, username, password string, v2 bool) (string
 		}
 
 		contentKey = b64.StdEncoding.EncodeToString(contentInfo.EncryptionKey)
-		fmt.Println("Existing encryption key retrieved")
+		log.Debug("Existing encryption key retrieved")
+	} else {
+		log.Debug("Content not found on LCP Server, a new encryption key will be generated")
 	}
 	return contentKey, nil
 }
