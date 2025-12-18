@@ -17,7 +17,7 @@ import (
 
 func TestEmptyLicenseInfoTable(t *testing.T) {
 
-	// get a list of publications in an empty db
+	// get a list of licenses in an empty db
 	req, _ := http.NewRequest("GET", "/licenseinfo", nil)
 	response := executeRequest(req)
 
