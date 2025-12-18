@@ -19,7 +19,7 @@ type LicenseInfo struct {
 	gorm.Model
 	CreatedAt     time.Time   `gorm:"index"`             // index on created_at, useful for dashboard queries
 	Updated       *time.Time  `json:"updated,omitempty"` // see comment above
-	UUID          string      `json:"uuid" validate:"omitempty,uuid" gorm:"type:varchar(100);uniqueIndex"`
+	UUID          string      `json:"uuid" validate:"required,uuid" gorm:"type:varchar(100);uniqueIndex"`
 	Provider      string      `json:"provider" validate:"required,url" gorm:"type:varchar(255)"`
 	UserID        string      `json:"user_id,omitempty" validate:"required" gorm:"type:varchar(100);index"`
 	Start         *time.Time  `json:"start,omitempty"`
@@ -44,14 +44,14 @@ func (l *LicenseInfo) Validate() error {
 func (s licenseStore) ListAll() (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
 	// security: limited to 1000 results
-	return &licenses, s.db.Limit(1000).Order("id ASC").Find(&licenses).Error
+	return &licenses, s.db.Limit(1000).Order("id DESC").Find(&licenses).Error
 }
 
 func (s licenseStore) List(pageNum, pageSize int) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
 	// pageNum starts at 1
 	// result sorted to assure the same order for each request
-	return &licenses, s.db.Offset((pageNum - 1) * pageSize).Limit(pageSize).Order("id ASC").Find(&licenses).Error
+	return &licenses, s.db.Offset((pageNum - 1) * pageSize).Limit(pageSize).Order("id DESC").Find(&licenses).Error
 }
 
 func (s licenseStore) FindByUser(userID string) (*[]LicenseInfo, error) {
