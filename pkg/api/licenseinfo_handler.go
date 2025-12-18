@@ -209,7 +209,7 @@ func (a *APICtrl) DeleteLicense(w http.ResponseWriter, r *http.Request) {
 	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
 		license, err = a.Store.License().Get(licenseID)
 	} else {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required license ID"))) // licenseID is nil)
 		return
 	}
 	if err != nil {

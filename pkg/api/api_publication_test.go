@@ -249,7 +249,7 @@ func TestSearchPublications(t *testing.T) {
 		case "lcpau", "lcpdi":
 			checkResponseCode(t, http.StatusOK, response)
 		case "unknown":
-			checkResponseCode(t, http.StatusNotFound, response)
+			checkResponseCode(t, http.StatusBadRequest, response)
 		}
 	}
 
