@@ -65,7 +65,7 @@ func processExistingFiles(c Config) {
 			continue
 		}
 		log.Printf("File found: %s", file.Name())
-		err = processFile(c, file.Name())
+		err = processFile(c, file.Name(), DeleteFile)
 		if err != nil {
 			log.Errorf("Error processing file %s: %v", file.Name(), err)
 		}
@@ -87,7 +87,6 @@ func watchFileChanges(ctx context.Context, c Config, wg *sync.WaitGroup, sem cha
 		log.Fatalf("Error adding watched directory %s: %v", c.InputPath, err)
 	}
 
-	log.Printf("Monitoring directory: %s", c.InputPath)
 	for {
 		select {
 		case <-ctx.Done():
@@ -113,7 +112,7 @@ func watchFileChanges(ctx context.Context, c Config, wg *sync.WaitGroup, sem cha
 					}
 
 					fileName := filepath.Base(filePath)
-					err = processFile(c, fileName)
+					err = processFile(c, fileName, DeleteFile)
 					if err != nil {
 						log.Errorf("Error processing file %s: %v", fileName, err)
 					}

@@ -19,7 +19,7 @@ import (
 )
 
 // processFile processes a single file
-func processFile(c Config, fileName string) error {
+func processFile(c Config, fileName string, fileHandling FileHandling) error {
 	log.Printf("Processing file: %s", fileName)
 
 	// create a path from c.InputPath and fileName
@@ -32,7 +32,7 @@ func processFile(c Config, fileName string) error {
 		return err
 	}
 
-	// if contentid is set, check if the content already exists in the License Server.
+	// if the publication ID is set, check if the content already exists in the License Server.
 	// If this is the case, get the content encryption key for the server, so that the new encryption
 	// keeps the same key.
 	// This is necessary to allow fresh licenses being capable of decrypting previously downloaded content.
@@ -46,20 +46,13 @@ func processFile(c Config, fileName string) error {
 		}
 	}
 
-	// if the file name is used as storage file name, use it. If not, the storage file name will be generated during encryption.
-	var storageFileName string
-	if c.UseFileName {
-		storageFileName = fileName
-		log.Println("Storage file name:", storageFileName)
-	}
-
 	start := time.Now()
 
 	// encrypt the publication
 	// no specific temp directory, no specific output directory
 	// request a cover image
 	log.Println("Starting encryption...")
-	publication, err := encrypt.ProcessEncryption(c.UUID, contentkey, inputFilePath, "", "", c.StoragePath, c.StorageUrl, storageFileName, c.ExtractCover, c.PDFNoMeta)
+	publication, err := encrypt.ProcessEncryption(c.UUID, contentkey, inputFilePath, "", "", c.StoragePath, c.StorageUrl, "", c.ExtractCover, c.PDFNoMeta)
 	if err != nil {
 		return err
 	}
@@ -73,7 +66,7 @@ func processFile(c Config, fileName string) error {
 	elapsed := time.Since(start)
 
 	// notify the license server
-	err = encrypt.NotifyLCPServer(*publication, c.ProviderUri, c.LCPServerUrl, c.V2, username, password, c.Verbose)
+	err = encrypt.NotifyLCPServer(*publication, c.ProviderUri, c.LCPServerUrl, c.V2, username, password, c.Verbose, c.GenAltID)
 	if err != nil {
 		return err
 	}
@@ -91,11 +84,13 @@ func processFile(c Config, fileName string) error {
 
 	fmt.Println("The encryption took", elapsed)
 
-	// delete the file
-	if err := os.Remove(inputFilePath); err != nil {
-		return err
+	if fileHandling == DeleteFile {
+		// delete the file
+		if err := os.Remove(inputFilePath); err != nil {
+			return err
+		}
+		log.Printf("Input file deleted: %s", fileName)
 	}
-	log.Printf("Input file deleted: %s", fileName)
 	return nil
 }
 
