@@ -45,6 +45,7 @@ type (
 		FindByType(contentType string) (*[]Publication, error)
 		Count() (int64, error)
 		Get(uuid string) (*Publication, error)
+		GetByAltID(altID string) (*Publication, error)
 		Create(p *Publication) error
 		Update(p *Publication) error
 		Delete(p *Publication) error
@@ -126,7 +127,7 @@ func Init(dsn string) (Store, error) {
 	}
 
 	// add parameters specific to the dialect
-	cnx = addParamsDialectSpecific(cnx, dialect)
+	cnx = addDialectSpecificParams(cnx, dialect)
 
 	// database logger
 	newLogger := logger.New(
@@ -146,6 +147,17 @@ func Init(dsn string) (Store, error) {
 		log.Printf("Failed connecting to the database: %v", err)
 		return nil, err
 	}
+
+	// configure database connection pool
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Printf("Failed getting generic database object: %v", err)
+		return nil, err
+	}
+	sqlDB.SetMaxOpenConns(25)                 // Limit maximum concurrent connections
+	sqlDB.SetMaxIdleConns(10)                 // Keep 10 connections ready for reuse
+	sqlDB.SetConnMaxLifetime(5 * time.Minute) // Recycle connections every 5 minutes
+	sqlDB.SetConnMaxIdleTime(2 * time.Minute) // Close idle connections after 2 minutes
 
 	err = performDialectSpecific(db, dialect)
 	if err != nil {
@@ -173,11 +185,11 @@ func dbFromURI(uri string) (string, string) {
 	return parts[0], parts[1]
 }
 
-// addParamsDialectSpecific takes a connection string and adds parameters specific to the SQL dialect
-func addParamsDialectSpecific(cnx, dialect string) string {
+// addDialectSpecificParams takes a connection string and adds parameters specific to the SQL dialect
+func addDialectSpecificParams(cnx, dialect string) string {
 	switch dialect {
 	case "sqlite3":
-		cnx += "?cache=shared&mode=rwc"
+		cnx += "?mode=rwc"
 	case "mysql":
 		// tls false to overcome the use of a self-signed certificates on a mysql docker container
 		cnx += "?charset=utf8mb4&parseTime=True&loc=Local&tls=false"
