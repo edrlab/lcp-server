@@ -35,11 +35,12 @@ with a payload like:
 }
 ```
 
+- `publication_id`can be replaced by `alt_id`. In this case, the alternative identifier indicated here must correspond to the file name (without extension) of the publication that was processed by lcpencrypt with the `altid` command argument properly set. 
 - `user_name` and `user_email` and `user_encrypted` are optional. `user_encrypted` is the list of user properties that will be encrypted in the LCP license. 
 - `copy`, `print`, `start`, `end` are optional constraints. No value set means no constraint. 
 - `profile`is optional. Allowed values are provided by EDRLab on request. A default value should be set in the LCP Server configuration.  
 
-All other parameters are mandatory. 
+The other parameters are mandatory. 
 
 About `pass_hash`: this is the user passphrase hashed using SHA256 and serialized as an hex-encoding string. For instance, the passphrase "123 456" becomes "4981AA0A50D563040519E9032B5D74367B1D129E239A1BA82667A57333866494" when hashed ([try with this online tool for testing](https://xorbin.com/tools/sha256-hash-calculator)). 
 
