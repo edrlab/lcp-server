@@ -188,13 +188,12 @@ func dbFromURI(uri string) (string, string) {
 // addDialectSpecificParams takes a connection string and adds parameters specific to the SQL dialect
 func addDialectSpecificParams(cnx, dialect string) string {
 	switch dialect {
-	case "sqlite3":
-		cnx += "?mode=rwc"
 	case "mysql":
 		// tls false to overcome the use of a self-signed certificates on a mysql docker container
 		cnx += "?charset=utf8mb4&parseTime=True&loc=Local&tls=false"
 	case "postgres":
 		cnx += "?sslmode=disable"
+	case "sqlite3":
 	case "mssql":
 		// nothing , so far
 	default:
