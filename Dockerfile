@@ -64,7 +64,9 @@ FROM debian:trixie-slim AS final
 # mupdf-tools pulls in all the shared libraries (freetype, jbig2dec, etc.) needed by the CGO-linked binary
 RUN apt-get update && apt-get install -y ca-certificates wget mupdf-tools && rm -rf /var/lib/apt/lists/*
 
-# Create a non-privileged user that the app will run under.
+# Create a non-privileged user that the app will run under by default.
+# the gid will be lower than 1000 to avoid conflicts with host users; this is driven by --system. 
+# It is better to override it in compose.yaml a user that exists in the VM.
 ARG UID=10001
 RUN useradd --uid "${UID}" --user-group --system --no-log-init --create-home appuser
 
