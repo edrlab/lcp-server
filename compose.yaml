@@ -1,24 +1,25 @@
 name: lcp
 services:
-  #nginx:
-  #  image: nginx:1.27-alpine
-  #  restart: unless-stopped
-  #  ports:
-  #    - "80:80"
-  #    - "443:443"
-  #  volumes:
-  #    - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Reads the nginx configuration file in the config folder of the host machine
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
       # Uncomment for SSL certificates:
       # - ./config/ssl:/etc/ssl:ro
-   # depends_on:
-   #   server:
-   #     condition: service_started
-   # healthcheck:
-   #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-   #   interval: 30s
-   #   timeout: 10s
-   #   retries: 3
-   #   start_period: 40s
+    depends_on:
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 
   # LCP Encrypt service
@@ -40,8 +41,7 @@ services:
       - LCPENCRYPT_STORAGE_PATH=/resources
       - LCPENCRYPT_STORAGE_URL=${LCPENCRYPT_STORAGE_URL}
       - LCPENCRYPT_LCPSERVER_URL=${LCPENCRYPT_LCPSERVER_URL}
-      - LCPENCRYPT_UUID=${LCPENCRYPT_UUID}
-      - LCPENCRYPT_USEFN=${LCPENCRYPT_USEFN}
+      - LCPENCRYPT_GEN_ALT_ID=${LCPENCRYPT_GEN_ALT_ID}
       - LCPENCRYPT_VERBOSE=${LCPENCRYPT_VERBOSE}
       - LCPENCRYPT_V2=${LCPENCRYPT_V2}
       - LCPENCRYPT_COVER=${LCPENCRYPT_COVER}
@@ -61,11 +61,11 @@ services:
       context: .
       target: final
     # Only accessible through nginx
-    #expose:
-    #  - "8989"
-    # Temporarily expose port for testing (nginx commented out)
-    ports:
-      - "8989:8989"
+    expose:
+      - "8989"
+    # Temporarily expose port for testing (if nginx commented out)
+    #ports:
+    #  - "8989:8989"
     volumes:
       # Activate if using SQLite
       #- db-data:/database
