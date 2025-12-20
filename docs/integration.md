@@ -6,6 +6,10 @@ nav_order: 4
 
 The integration of the LCP Server in an ebook delivery platform is a critical aspect, and one many integrators struggle with at first (usually because they do not read this documentation).
 
+This illustrates a standard processing pipeline, when the store and the ebook distributor are separate. They can be merged in one entity without problem. 
+
+![LCP standard processing pipeling](./lcp-process-shop-distributor-server.png)
+
 # Context
 
 The LCP Server has no clue about users' profile. In its database, it stores a user ID for every license it generates, nothing else. The user name, email address, LCP passphrase and associated textual hint are unknown from the LCP Server; this is the only way the system can avoid duplicating a user database (with the security issues it involves) and support the evolution of user profiles in time. 
