@@ -9,6 +9,6 @@ import (
 )
 
 func GormDialector(cnx string) gorm.Dialector {
-	log.Println("SQLite database")
+	log.Println("Using SQLite")
 	return sqlite.Open(cnx)
 }

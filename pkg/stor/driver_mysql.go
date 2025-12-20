@@ -9,6 +9,6 @@ import (
 )
 
 func GormDialector(cnx string) gorm.Dialector {
-	log.Println("MySQL database")
+	log.Println("Using MySQL")
 	return mysql.Open(cnx)
 }
