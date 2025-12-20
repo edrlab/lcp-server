@@ -57,11 +57,14 @@ func usage() {
 func main() {
 
 	// parse the command line
-	// some values (storage path, storage url, lcp server and cms url) can only be set through environment variables
 	serve := flag.Bool("serve", false, "if set, start the utility as a server; the uuid flag is ignored in this mode")
 	input := flag.String("input", "", "source file locator (file path or url)")
 	uuid := flag.String("uuid", "", "Forced publication UUID")
 	provider := flag.String("provider", "", "provider URI of the publication(s)")
+	storagePath := flag.String("storage", "", "storage path")
+	storageUrl := flag.String("url", "", "storage URL")
+	lcpServerUrl := flag.String("lcpsv", "", "LCP Server URL")
+	cmsUrl := flag.String("cms", "", "CMS URL")		
 	verbose := flag.Bool("verbose", false, "if set, display info messages; if not set, display only warnings and errors.")
 	v2 := flag.Bool("v2", true, "indicates a v2 License server")
 	cover := flag.Bool("cover", true, "indicates if a cover should be exported")
@@ -84,6 +87,10 @@ func main() {
 	c.InputPath = filepath.Dir(*input)
 	c.UUID = *uuid
 	c.GenAltID = *genaltid
+	c.StoragePath = *storagePath
+	c.StorageUrl = *storageUrl
+	c.LCPServerUrl = *lcpServerUrl
+	c.CMSUrl = *cmsUrl
 	c.Verbose = *verbose
 	c.V2 = *v2
 	c.ExtractCover = *cover
