@@ -17,8 +17,8 @@ import (
 
 // LCP Server configuration
 type Config struct {
-	LogLevel      string `yaml:"loglevel"` // "debug", "info", "warn", "error"
-	PublicBaseUrl string `yaml:"publicbaseurl"`
+	LogLevel      string `yaml:"log_level" envconfig:"loglevel"` // "debug", "info", "warn", "error"
+	PublicBaseUrl string `yaml:"public_base_url" envconfig:"publicbaseurl"`
 	Port          int    `yaml:"port"`
 	Dsn           string `yaml:"dsn"`
 	Access        `yaml:"access"`
