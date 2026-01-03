@@ -15,15 +15,17 @@ import (
 type Publication struct {
 	gorm.Model
 	CreatedAt     time.Time `gorm:"index"` // index on created_at, useful for dashboard queries
+	Provider      string    `json:"provider,omitempty" validate:"omitempty,url" gorm:"type:varchar(255)"`
 	UUID          string    `json:"uuid" validate:"omitempty,uuid" gorm:"type:varchar(100);uniqueIndex"`
 	AltID         string    `json:"alt_id,omitempty" validate:"omitempty" gorm:"type:varchar(255);index"`
-	Provider      string    `json:"provider,omitempty" validate:"omitempty,url" gorm:"type:varchar(255)"`
-	Title         string    `json:"title,omitempty" validate:"required"`
+	ContentType   string    `json:"content_type" validate:"required" gorm:"type:varchar(100);index"`
+	Title         string    `json:"title" validate:"required"`
+	Description   string    `json:"description,omitempty"`
 	Authors       string    `json:"authors,omitempty"`
+	Publishers    string    `json:"publishers,omitempty"`
 	CoverUrl      string    `json:"cover_url,omitempty" validate:"omitempty,url" gorm:"type:varchar(1024)"`
 	EncryptionKey []byte    `json:"encryption_key" validate:"required"`
 	Href          string    `json:"href" validate:"required,http_url" gorm:"type:varchar(1024)"`
-	ContentType   string    `json:"content_type" validate:"required" gorm:"type:varchar(100);index"`
 	Size          uint32    `json:"size" validate:"required,number"`
 	Checksum      string    `json:"checksum" validate:"required,base64" gorm:"type:varchar(255)"`
 }
