@@ -82,7 +82,7 @@ machine (e.g., you are on a Mac M1 and your cloud provider is amd64),
 you'll want to build the image for that platform, e.g.:
 `docker build --platform=linux/amd64 -t lcp-server .`
 
-Then, push it to your registry, e.g. `docker push myregistry.com/lcp-server`.
+Then, push it to your registry, e.g. `docker push myregistry/lcp-server`.
 
 Consult Docker's [getting started](https://docs.docker.com/go/get-started-sharing/)
 docs for more detail on building and pushing.
