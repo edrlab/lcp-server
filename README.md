@@ -50,6 +50,12 @@ go install github.com/edrlab/lcp-server/cmd/lcpencrypt@latest
 go install github.com/edrlab/lcp-server/cmd/lcpchecker@latest
 ```
 
+Before testing, the LCP Server requires proper configuration, expressed is a yaml config file and/or environment variables. [Read the documentation to create one](https://edrlab.github.io/lcp-server/).
+
+After install, the LCP Server is launched by the `lcpserver` command. 
+
+`lcpencrypt` and `lcpchecker` require command-line arguments. There again, the documentation is a useful read.
+
 ### Installing the LCP Server in Production mode
 
 The quick install decribed above does not allow you to serve or check production-grade LCP licenses. 
@@ -66,20 +72,20 @@ git clone https://github.com/edrlab/lcp-server.git
 Option 1: For testing the lcpserver application without compiling it, use:
 
 ```sh
-cd cmd/lcpserver
-go run server.go router.go authenticator.go
+# From the lcp-server directory
+go run ./cmd/lcpserver/.
 ```
 
 Option 2: For compiling the lcpserver application, use:
 
 ```sh
 # Compile and create the binary in the Go bin folder
-go build -o $GOPATH/bin/lcpserver2  ./cmd/lcpserver
+go build -o $GOPATH/bin/lcpserver  ./cmd/lcpserver
 # Launch the application
-lcpserver2
+lcpserver
 ```
 
-Note: the name of the executable is your choice. We're using `lcpserver2` here to avoid any clash with the former version of the LCP Server executable. 
+Note: the name of the executable is your choice. You can use `lcpserver2` to avoid a clash with the former version of the LCP Server executable. 
 
 The open-source codebase is provided with **SQLite**, **MySQL** and **PostgresQL** drivers. The default is sqlite. It is up to integrators to replace it by the driver of their choice if sqlite does not fit their needs.
 
