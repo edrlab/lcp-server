@@ -48,7 +48,7 @@ func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// set license info
-	licInfo := newLicenseInfo(a.Config.License.Provider, licRequest)
+	licInfo := newLicenseInfo(a.Config.License.Provider, a.Config.Status.RenewMaxDays, licRequest)
 
 	// store license info
 	err = a.Store.License().Create(licInfo)
@@ -79,6 +79,7 @@ func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	// generate the license
 	license, err := lic.NewLicense(a.Config, a.Cert, pubInfo, licInfo, &userInfo, &encryption, licRequest.PassHash)
 	if err != nil {
+		log.Errorf("Failed generating a license: %v", err)
 		render.Render(w, r, ErrServer(err))
 		return
 	}
@@ -160,7 +161,7 @@ func (a *APICtrl) FreshLicense(w http.ResponseWriter, r *http.Request) {
 }
 
 // newLicenseInfo sets license info from request parameters
-func newLicenseInfo(provider string, licRequest *LicenseRequest) *stor.LicenseInfo {
+func newLicenseInfo(provider string, renewMaxDays int, licRequest *LicenseRequest) *stor.LicenseInfo {
 
 	noLimit := int32(-1) // -1 stored for no print/copy limits
 	if licRequest.Copy == nil {
@@ -181,6 +182,11 @@ func newLicenseInfo(provider string, licRequest *LicenseRequest) *stor.LicenseIn
 		Print:         *licRequest.Print,
 		Status:        stor.STATUS_READY,
 	}
+	if licInfo.End != nil {
+	maxEnd := licInfo.End.AddDate(0, 0, renewMaxDays)
+	licInfo.MaxEnd = &maxEnd
+	}
+
 	return &licInfo
 }
 
@@ -209,6 +215,7 @@ type LicenseRequest struct {
 
 // Bind post-processes requests after unmarshalling.
 func (l *LicenseRequest) Bind(r *http.Request) error {
+	// validate the request
 	validate := validator.New()
 	return validate.Struct(l)
 }
