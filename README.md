@@ -29,13 +29,19 @@ The `lcpserver`:
 
 ### Other tools
 
-Thesse open-source tools are related to the LCP Server but maintained in different repositories: 
+These open-source tools are related to the LCP Server but maintained in different repositories: 
 
 #### LCP Server Dashboard (lcpdashboard)
-This lighweight dashboard tool offers metrics on the LCP Server, displays oversharded licenses and allows admins to revoke overshared licenses. In can be used in production to manage an LCP Server. We preferred developing it in a separated repository because it is a Node.js/React application: mixing it with a Go-based development would have drawbacks. 
+This SPA dashboard offers metrics on the LCP Server, displays oversharded licenses and allows admins to revoke overshared licenses. In can be used in production to manage an LCP Server. 
+
+See https://github.com/edrlab/lcp-dashboard.
+
+Note: We preferred developing it in a separated repository because it is a Node.js/React application: mixing it with a Go-based development would have drawbacks.
 
 #### PubStore (pubstore)
 This lightweight content management system has been developed for demonstration purpose. It manages publications and users, the generation of LCP licenses when a user acquires publications, and the change of status of a license. It is by no mean intended to be used in production. 
+
+See https://github.com/edrlab/pubstore. 
 
 ## Test Installation
 
