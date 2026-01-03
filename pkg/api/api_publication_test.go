@@ -205,7 +205,7 @@ func TestSearchPublications(t *testing.T) {
 	executeRequest(req)
 
 	// search publications by format
-	formats := []string{"epub", "lcpdf", "lcpau", "lcpdi", "unknown"}
+	formats := []string{"epub", "lcpdf", "lcpa", "lcpau", "lcpdi", "unknown"}
 	for _, format := range formats {
 		path = "/publications/search"
 		req, _ = http.NewRequest("GET", path, nil)
@@ -246,7 +246,7 @@ func TestSearchPublications(t *testing.T) {
 					t.Error("Failed to get an lcpdf back")
 				}
 			}
-		case "lcpau", "lcpdi":
+		case "lcpa", "lcpau", "lcpdi":
 			checkResponseCode(t, http.StatusOK, response)
 		case "unknown":
 			checkResponseCode(t, http.StatusBadRequest, response)
