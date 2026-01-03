@@ -124,17 +124,17 @@ func (s *Server) setRoutes() *chi.Mux {
 			r.Put("/revoke/{licenseID}", a.Revoke) // PUT /revoke/123
 		})
 
-		// Dashboard
-		r.Post("/dashboard/login", Login(s.Config)) // POST /dashboard/login
+		// Dashboard data
+		r.Post("/dashdata/login", Login(s.Config)) // POST /dashdata/login
 		// Require JWT Authentication
 		r.Group(func(r chi.Router) {
 			r.Use(AuthMiddleware(s.Config))
 			r.Use(render.SetContentType(render.ContentTypeJSON))
 
-			r.Route("/dashboard", func(r chi.Router) {
-				r.Get("/data", a.GetDashboardData)            // GET /dashboard/data
-				r.Get("/overshared", a.GetOversharedLicenses) // GET /dashboard/overshared
-				r.Put("/revoke/{licenseID}", a.Revoke)        // PUT /dashboard/revoke/123
+			r.Route("/dashdata", func(r chi.Router) {
+				r.Get("/data", a.GetDashboardData)            // GET /dashdata/data
+				r.Get("/overshared", a.GetOversharedLicenses) // GET /dashdata/overshared
+				r.Put("/revoke/{licenseID}", a.Revoke)        // PUT /dashdata/revoke/123
 
 			})
 		})
