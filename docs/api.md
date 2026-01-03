@@ -61,7 +61,6 @@ with a payload like:
 
 ```json
 {
-    "publication_id": "c6abe80a-1681-4694-b6f4-80c165213780",
     "user_id": "552a6ffb-d79a-4ff2-bc66-6ebb08ccc4fe",
     "user_name": "John Doe",
     "user_email": "test@company.com",
@@ -72,7 +71,9 @@ with a payload like:
 }
 ```
 
-The License Server does not store user information. This is why user information, including the textual hint and passphrase, must be repeated each time a fresh license is requested. 
+- `profile`, `user_name` and `user_email` and `user_encrypted` are optional. They should be present if they were set in the license generation request.  
+
+The License Server does not store user information. This is why such information, including the textual hint and passphrase, must be repeated each time a fresh license is requested. 
 
 ## Other calls
 
@@ -103,7 +104,7 @@ You can also:
 1. Get a list of publications via:
 
 - GET {LCPServerURL}/publications/, with `page` and `per_page` pagination parameters.
-- GET {LCPServerURL}/publications/search/ with a `format` parameter taking as a value: `epub`, `pdf`, `lcpdf`, `lcpaiu` or `lcpdi`. 
+- GET {LCPServerURL}/publications/search/ with a `format` parameter taking as a value: `epub`, `pdf`, `lcpdf`, `lcpa` or `lcpdi`. 
 
 2. Fetch, update or delete (the info relative to) a publication via:
 
