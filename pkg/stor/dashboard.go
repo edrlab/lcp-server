@@ -208,8 +208,11 @@ func mapContentTypeToDisplayName(contentType string) string {
 
 type OversharedLicenseData struct {
 	ID      string `json:"id"`
+	PublicationID string `json:"publicationId"`
+	AltID         string `json:"altId"`
 	Title   string `json:"title"`
-	User    string `json:"user"`
+	UserID        string `json:"userId"`
+	UserEmail     string `json:"userEmail"`
 	Type    string `json:"type"`
 	Status  string `json:"status"`
 	Devices int    `json:"devices"`
@@ -223,8 +226,11 @@ func (s dashboardStore) GetOversharedLicenses(excessiveSharingThreshold int, lim
 	query := s.db.Table("license_infos").
 		Select(`
 			license_infos.uuid as id,
+			license_infos.publication_id as publication_id,
+			publications.alt_id as alt_id,
 			publications.title as title,
-			license_infos.user_id as user,
+			license_infos.user_id as user_id,
+			license_infos.user_email as user_email,
 			CASE WHEN license_infos.end IS NULL THEN 'loan' ELSE 'buy' END as type,
 			license_infos.status as status,
 			license_infos.device_count as devices
