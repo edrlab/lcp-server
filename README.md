@@ -62,7 +62,7 @@ After install, the LCP Server is launched by the `lcpserver` command.
 
 `lcpencrypt` and `lcpchecker` require command-line arguments. There again, the documentation is a useful read.
 
-### Installing the LCP Server in Production mode
+### Installing the LCP Server before moving to its Production mode
 
 The quick install decribed above does not allow you to serve or check production-grade LCP licenses. 
 For that, you'll need first to sign a contract with EDRLab and obtain confidential information and instructions. 
