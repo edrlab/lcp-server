@@ -190,6 +190,12 @@ func (c *LicenseChecker) CheckRenew() error {
 			log.Info("The license end timestamp is now ", c.license.Rights.End.Truncate(time.Second).Format(time.RFC822))
 		}
 	}
+
+	// if there is no max end date, do not request additional extensions
+	if c.statusDoc.PotentialRights.End == nil {
+		return nil
+	}
+
 	// 1/2sc pause
 	time.Sleep(500 * time.Millisecond)
 
@@ -229,6 +235,9 @@ func (c *LicenseChecker) CheckRenew() error {
 	if err == nil {
 		log.Error("License extension with a wrong end date should fail")
 	}
+
+	// 1/2sc pause
+	time.Sleep(500 * time.Millisecond)
 
 	// request an extension of the license after the max end date
 	// and check that the server responds with an error
