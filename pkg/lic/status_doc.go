@@ -110,8 +110,8 @@ func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 		license.MaxEnd = nil
 	}
 
-	// set the max end date
-	if license.MaxEnd != nil {
+	// set the max end date if renew is supported
+	if license.MaxEnd != nil && lc.Config.Status.RenewMaxDays != 0 {
 		potentialRights := &PotentialRights{
 			End: license.MaxEnd,
 		}
@@ -119,7 +119,7 @@ func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 	}
 
 	// set links
-	setStatusLinks(statusDoc, lc.Config.PublicBaseUrl, lc.Config.Status.FreshLicenseLink, lc.Config.Status.RenewLink)
+	setStatusLinks(statusDoc, lc.Config.PublicBaseUrl, lc.Config.Status.FreshLicenseLink, lc.Config.Status.RenewMaxDays, lc.Config.Status.RenewLink)
 
 	// set events
 	setEvents(lc.Store, statusDoc)
@@ -128,9 +128,16 @@ func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 }
 
 // Set status links
-func setStatusLinks(statusDoc *StatusDoc, publicBaseUrl string, freshLicenseLink string, renewLink string) error {
+func setStatusLinks(statusDoc *StatusDoc, publicBaseUrl, freshLicenseLink string, renewMaxDays int, renewLink string) error {
 	var links []Link
-	actions := [4]string{"license", "register", "renew", "return"}
+	var actions []string
+	
+	if renewMaxDays == 0 { // no renew or return allowed
+		actions = []string{"license", "register"}
+	} else {
+		actions = []string{"license", "register", "renew", "return"}
+	}
+
 	var mimetype string
 
 	for _, action := range actions {

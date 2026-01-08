@@ -45,13 +45,15 @@ status:
   # url of a fresh license, served via a License Gateway 
   # must be templated using {license_id} as parameter
   fresh_license_link: "https://lcp.edrlab.org/freshlicense/{license_id}"
-  # allow renew on expired licenses
-  allow_renew_on_expired_licenses: true
-  # default number of days of extension of a license, see renew; can be overridden in the renew command
-  renew_default_days: 7
-  # max number of days of extension of a license, see the specification of the status document
+  # max number of days of extension of a license. 
+  # if not set ot set to zero, there will be not renew/return links in status documents
   renew_max_days: 40
-  # renew URL optionally managed by the provider, which then takes care of calling the license status server
+  # allow renew on expired licenses; false if not set.
+  allow_renew_on_expired_licenses: true
+  # default number of days of extension of a license, see renew; 0 if not set. Can be overridden in the renew command
+  renew_default_days: 7
+  # renew URL optionally managed by the provider, which then takes care of calling the license status server.
+  # standard behavior if not set. 
   # must be templated using {license_id} as parameter
   renew_link: "http://lcp.edrlab.org/custom/renew/{license_id}"
 
