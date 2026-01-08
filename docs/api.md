@@ -47,7 +47,8 @@ About `pass_hash`: this is the user passphrase hashed using SHA256 and serialize
 The publication identified by `publication_id` must be present in the server when a license is generated. 
 
 In case of success the server returns a 201 code. 
-The returned payload is the newly generated license. 
+
+The returned payload is by default the newly generated license. If the query parameter `link` is added to the URL with the value `true`, the server returns a download link as a Location header, with an HTTP 303 (See Other) status code.
 
 ### Fetch a fresh license
 
@@ -74,6 +75,7 @@ with a payload like:
 - `profile`, `user_name` and `user_email` and `user_encrypted` are optional. They should be present if they were set in the license generation request.  
 
 The License Server does not store user information. This is why such information, including the textual hint and passphrase, must be repeated each time a fresh license is requested. 
+
 
 ## Other calls
 

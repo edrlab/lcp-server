@@ -15,11 +15,16 @@ import (
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/jtacoma/uritemplates"
 	log "github.com/sirupsen/logrus"
 )
 
 // GenerateLicense creates a license in the db and returns a fresh license
 func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
+
+	// get the optional query parameter
+	queryParams := r.URL.Query()
+	returnLink := queryParams.Get("link")
 
 	// get the payload
 	licRequest := &LicenseRequest{}
@@ -87,9 +92,29 @@ func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 	log.Printf("New license %s generated on %s", license.UUID, license.Issued.Format(time.RFC822))
 
 	render.Status(r, http.StatusCreated)
-	if err = render.Render(w, r, NewLicenseResponse(license)); err != nil {
-		render.Render(w, r, ErrRender(err))
-		return
+
+	// return a download link as a Location header
+	if returnLink == "true" {
+		flt := a.Config.Status.FreshLicenseLink
+		template, _ := uritemplates.Parse(flt)
+		values := make(map[string]interface{})
+		values["license_id"] = license.UUID
+		expanded, err := template.Expand(values)
+		if err != nil {
+			log.Printf("failed to expand the fresh license link: %s", template)
+			render.Render(w, r, ErrServer(err))
+			return
+		}
+		// set http 303 See Other with Location header
+		w.Header().Set("Location", expanded)
+		w.WriteHeader(http.StatusSeeOther)
+		
+	// return the license
+	} else {
+		if err = render.Render(w, r, NewLicenseResponse(license)); err != nil {
+			render.Render(w, r, ErrRender(err))
+			return
+		}
 	}
 }
 
