@@ -10,7 +10,7 @@ The configuration of the server is possible using a configuration file and/or en
 
 The configuration file is formatted as yaml, and can be located in any folder directly accessible from the application. The configuration file is found by the application via an environment variable named `LCPSERVER_CONFIG`. Its value must be a file path.
 
-Configuration properties are expressed in snake case in the configuration file, and all caps prefixed by `LCPSERVER` when expressed as environment variables. 
+Configuration properties are expressed in snake case in the configuration file, and all caps with no underscore, prefixed by `LCPSERVER` plus their sub-section name, when expressed as environment variables. 
 As an example, the `port` configuration property is mapped to the `LCPSERVER_PORT` environment variable, `public_base_url` becomes `LCPSERVER_PUBLICBASEURL`, and the `username` property of the `access` section becomes `LCPSERVER_ACCESS_USERNAME`.
 
 For now, follow this example.
@@ -50,7 +50,7 @@ status:
   renew_max_days: 40
   # allow renew on expired licenses; false if not set.
   allow_renew_on_expired_licenses: true
-  # default number of days of extension of a license, see renew; 0 if not set. Can be overridden in the renew command
+  # default number of days of extension of a license, see renew; if not set, the default value is 7. Can be overridden in the renew command
   renew_default_days: 7
   # renew URL optionally managed by the provider, which then takes care of calling the license status server.
   # standard behavior if not set. 
@@ -69,4 +69,4 @@ certificate:
   private_key: "/config/privkey-edrlab-test.pem"
 ```
 
-The test certificate is provided in the source-code project, in the /test/cert folder. 
+The EDRLab LCP test certificate and private key are provided in the source-code project, in the /test/cert folder. They are only useful during a testing phase, and will be replaced by a production certificate provided by EDRLab when the system is ready for production.  
