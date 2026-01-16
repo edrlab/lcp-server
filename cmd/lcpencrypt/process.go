@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -19,11 +21,11 @@ import (
 )
 
 // processFile processes a single file
-func processFile(c Config, fileName string, fileHandling FileHandling) error {
-	log.Printf("Processing file: %s", fileName)
+func processFile(c Config, filename string, fileHandling FileHandling) error {
+	log.Printf("Processing file: %s", filename)
 
-	// create a path from c.InputPath and fileName
-	inputFilePath := path.Join(c.InputPath, fileName)
+	// create a path from c.InputPath and filename
+	inputFilePath := path.Join(c.InputPath, filename)
 
 	// extract the username and password from the url, remove them from the url
 	var username, password string
@@ -32,17 +34,32 @@ func processFile(c Config, fileName string, fileHandling FileHandling) error {
 		return err
 	}
 
-	// if the publication ID is set, check if the content already exists in the License Server.
+	// if the publication UUID or AltID is imposed, check if the content already exists in the License Server.
+	// Note that the publication UUID or AltID may also have be set via the command line. 
 	// If this is the case, get the content encryption key for the server, so that the new encryption
 	// keeps the same key.
 	// This is necessary to allow fresh licenses being capable of decrypting previously downloaded content.
-	var contentkey string
-	if c.UUID != "" {
+	filen := strings.TrimSuffix(filename, filepath.Ext(filename))
+	switch c.UseFilenameAs {
+	case "uuid":
+		c.UUID = filen
+		c.AltID = ""
+	case "altid":
+		c.AltID = filen
+		c.UUID = ""
+	}
+
+	var contentkey, uuid string
+	if c.UUID != "" || c.AltID != "" {
 		// warning: this is a synchronous REST call
-		// contentKey is not initialized if the content does not exist in the License Server
-		contentkey, err = getContentKey(c.UUID, c.LCPServerUrl, username, password, c.V2)
+		// contentKey and uuid are not initialized if the content does not exist in the License Server
+		contentkey, uuid, err = getContentKey(c.UUID, c.AltID, c.LCPServerUrl, username, password, c.V2)
 		if err != nil {
 			return err
+		}
+		// set the publication UUID if returned by the server
+		if uuid != "" {
+			c.UUID = uuid
 		}
 	}
 
@@ -57,6 +74,9 @@ func processFile(c Config, fileName string, fileHandling FileHandling) error {
 		return err
 	}
 
+	// temporary: override publication.AltID (set to the filename by process encryption) - to be suppress with lcpencrypt 1.12.8 
+	publication.AltID = c.AltID
+
 	if c.LCPServerUrl == "" {
 		// If no LCP server URL is provided, we can't notify the server
 		log.Println("No LCP server URL provided, skipping notification.")
@@ -66,7 +86,7 @@ func processFile(c Config, fileName string, fileHandling FileHandling) error {
 	elapsed := time.Since(start)
 
 	// notify the license server
-	err = encrypt.NotifyLCPServer(*publication, c.ProviderUri, c.LCPServerUrl, c.V2, username, password, c.Verbose, c.GenAltID)
+	err = encrypt.NotifyLCPServer(*publication, contentkey != "", c.ProviderUri, c.LCPServerUrl, c.V2, username, password, c.Verbose)
 	if err != nil {
 		return err
 	}
@@ -89,7 +109,7 @@ func processFile(c Config, fileName string, fileHandling FileHandling) error {
 		if err := os.Remove(inputFilePath); err != nil {
 			return err
 		}
-		log.Printf("Input file deleted: %s", fileName)
+		log.Printf("Input file deleted: %s", filename)
 	}
 	return nil
 }

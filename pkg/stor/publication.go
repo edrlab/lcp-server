@@ -61,8 +61,16 @@ func (s publicationStore) Count() (int64, error) {
 }
 
 func (s publicationStore) Get(uuid string) (*Publication, error) {
+	// it is important to use Unscoped() here to be able to retrieve publications that have been soft-deleted.
+	// licenses may still refer to publications that have been deleted, and fresh licenses must be generated for them.
 	var publication Publication
-	return &publication, s.db.Where("uuid = ?", uuid).First(&publication).Error
+	return &publication, s.db.Unscoped().Where("uuid = ?", uuid).First(&publication).Error
+}
+
+func (s publicationStore) GetByAltID(altID string) (*Publication, error) {
+	// it is important to use Unscoped() here to be able to retrieve publications that have been soft-deleted.
+	var publication Publication
+	return &publication, s.db.Unscoped().Where("alt_id = ?", altID).First(&publication).Error
 }
 
 func (s publicationStore) Create(newPublication *Publication) error {
@@ -75,9 +83,4 @@ func (s publicationStore) Update(changedPublication *Publication) error {
 
 func (s publicationStore) Delete(deletedPublication *Publication) error {
 	return s.db.Delete(deletedPublication).Error
-}
-
-func (s publicationStore) GetByAltID(altID string) (*Publication, error) {
-	var publication Publication
-	return &publication, s.db.Where("alt_id = ?", altID).First(&publication).Error
 }

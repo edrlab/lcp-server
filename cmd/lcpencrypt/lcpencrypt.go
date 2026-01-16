@@ -20,8 +20,9 @@ import (
 type Config struct {
 	InputPath    string `split_words:"true"`
 	ProviderUri  string `split_words:"true"`
+	UseFilenameAs string `split_words:"true"`
 	UUID         string
-	GenAltID     bool `split_words:"true"`
+	AltID        string
 	Verbose      bool
 	V2           bool
 	ExtractCover bool
@@ -50,7 +51,7 @@ func init() {
 }
 
 func usage() {
-	fmt.Println("Usage: lcpencrypt [-serve] [-input] [-uuid] [-usefn] [-verbose] [-v2] [-pdfnometa] [-cover]")
+	fmt.Println("Usage: lcpencrypt [-v2] [-serve] [-input] [-usefnas] [-uuid] [-altid] [-verbose] [-pdfnometa] [-cover]")
 	flag.PrintDefaults()
 }
 
@@ -59,7 +60,6 @@ func main() {
 	// parse the command line
 	serve := flag.Bool("serve", false, "if set, start the utility as a server; the uuid flag is ignored in this mode")
 	input := flag.String("input", "", "source file locator (file path or url)")
-	uuid := flag.String("uuid", "", "Forced publication UUID")
 	provider := flag.String("provider", "", "provider URI of the publication(s)")
 	storagePath := flag.String("storage", "", "storage path")
 	storageUrl := flag.String("url", "", "storage URL")
@@ -69,7 +69,9 @@ func main() {
 	v2 := flag.Bool("v2", true, "indicates a v2 License server")
 	cover := flag.Bool("cover", true, "indicates if a cover should be exported")
 	pdfnometa := flag.Bool("pdfnometa", false, "if set, indicates that PDF metadata are omitted")
-	genaltid := flag.Bool("altid", false, "if set, the file name is used as an alternative publication ID")
+	useFilenameAs := flag.String("usefnas", "", "if set to 'uuid'/'altid', the file name is used as publication uuid or alternative id")
+	uuid := flag.String("uuid", "", "imposed publication UUID, used to update an existing publication")
+	altid := flag.String("altid", "", "imposed publication alternative ID, used to update an existing publication")
 	help := flag.Bool("help", false, "shows information")
 
 	flag.Parse()
@@ -85,8 +87,9 @@ func main() {
 	// TODO: Move provider URI and input path to a map in config.
 	c.ProviderUri = *provider
 	c.InputPath = filepath.Dir(*input)
+	c.UseFilenameAs = *useFilenameAs
 	c.UUID = *uuid
-	c.GenAltID = *genaltid
+	c.AltID = *altid
 	c.StoragePath = *storagePath
 	c.StorageUrl = *storageUrl
 	c.LCPServerUrl = *lcpServerUrl
@@ -97,8 +100,8 @@ func main() {
 	c.PDFNoMeta = *pdfnometa
 
 	// TODO: Move provider URI and input path to a map as LCPENCRYPT_PROVIDERS="prov1:path1, prov2:path2"
-	// UUID makes no sense as an environment variable.
-	// INPUT_PATH must be a directory when set as an environment variable.
+	// UUID and ALTID make no sense as environment variables.
+	// INPUT_PATH must be a directory when set as an environment variable for use in server mode.
 	// The following environment variables are supported:
 	// LCPENCRYPT_INPUT_PATH
 	// LCPENCRYPT_PROVIDER_URI
@@ -106,7 +109,7 @@ func main() {
 	// LCPENCRYPT_V2
 	// LCPENCRYPT_COVER
 	// LCPENCRYPT_PDF_NO_META
-	// LCPENCRYPT_GEN_ALT_ID
+	// LCPENCRYPT_USE_FILENAME_AS
 	// LCPENCRYPT_STORAGE_PATH
 	// LCPENCRYPT_STORAGE_URL
 	// LCPENCRYPT_LCPSERVER_URL
@@ -119,8 +122,8 @@ func main() {
 	}
 
 	// the verbose flag acts on the info level
-	if !c.Verbose {
-		log.SetLevel(log.WarnLevel)
+	if c.Verbose {
+		log.SetLevel(log.DebugLevel)
 	}
 
 	// get the file name from the input path
