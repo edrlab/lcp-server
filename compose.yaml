@@ -1,5 +1,7 @@
 name: lcp
 services:
+
+  # Nginx reverse proxy
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
@@ -37,12 +39,13 @@ services:
       - ${LCPENCRYPT_STORAGE_PATH:-./resources}:/resources
     environment:
       - LCPENCRYPT_PROVIDER_URI=${LCPENCRYPT_PROVIDER_URI}
+      # Paths inside the container (mounted via volumes above)
       - LCPENCRYPT_INPUT_PATH=/input
       - LCPENCRYPT_STORAGE_PATH=/resources
       - LCPENCRYPT_STORAGE_URL=${LCPENCRYPT_STORAGE_URL}
       - LCPENCRYPT_LCPSERVER_URL=${LCPENCRYPT_LCPSERVER_URL}
-      - LCPENCRYPT_GEN_ALT_ID=${LCPENCRYPT_GEN_ALT_ID}
       - LCPENCRYPT_VERBOSE=${LCPENCRYPT_VERBOSE}
+      - LCPENCRYPT_USE_FILENAME_AS=${LCPENCRYPT_USE_FILENAME_AS}
       - LCPENCRYPT_V2=${LCPENCRYPT_V2}
       - LCPENCRYPT_COVER=${LCPENCRYPT_COVER}
       - LCPENCRYPT_PDF_NO_META=${LCPENCRYPT_PDF_NO_META}
@@ -63,7 +66,7 @@ services:
     # Only accessible through nginx
     expose:
       - "8989"
-    # Temporarily expose port for testing (if nginx commented out)
+    # Temporarily expose port for testing without nginx - to be commented
     #ports:
     #  - "8989:8989"
     volumes:
@@ -91,6 +94,7 @@ services:
       - LCPSERVER_STATUS_RENEWLINK=${LCPSERVER_STATUS_RENEWLINK}
       - LCPSERVER_DASHBOARD_EXCESSIVESHARINGTHRESHOLD=${LCPSERVER_DASHBOARD_EXCESSIVESHARINGTHRESHOLD}
       - LCPSERVER_DASHBOARD_LIMITTOLAST12MONTHS=${LCPSERVER_DASHBOARD_LIMITTOLAST12MONTHS}
+      # Path inside the container (mounted via volume above)
       - LCPSERVER_RESOURCES=/resources
       # This one will have to become a Docker secret in production
       - LCPSERVER_JWT_SECRETKEY=${LCPSERVER_JWT_SECRETKEY}
@@ -108,6 +112,17 @@ services:
       retries: 5
       start_period: 5s
 
+
+  # LCP Dashboard service
+  dashboard:
+    # TODO: build an EDRLab LCP Dashboard image supporting ARM64 and AMD64
+    image: llemeur/lcp-dashboard:latest-arm64
+    expose:
+      - "8080"
+    depends_on:
+      - server
+
+  # MySQL database for LCP Server
   mysql:
     image: mysql:8.4.7
     restart: always
