@@ -52,6 +52,12 @@ func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// error if the publication has been soft-deleted
+	if pubInfo.DeletedAt.Valid {
+		render.Render(w, r, ErrInvalidRequest(errors.New("publication has been deleted")))
+		return
+	}
+
 	// set license info
 	licInfo := newLicenseInfo(a.Config.License.Provider, a.Config.Status.RenewMaxDays, licRequest)
 
