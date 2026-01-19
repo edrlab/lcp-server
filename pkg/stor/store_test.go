@@ -180,8 +180,8 @@ func TestPublications(t *testing.T) {
 	}
 
 	// check that the publication has been (soft) deleted
-	_, err = St.Publication().Get(publication.UUID)
-	if err == nil {
+	publication, err = St.Publication().Get(publication.UUID)
+	if !publication.DeletedAt.Valid {
 		t.Fatalf("Expected publication to be deleted")
 	}
 

@@ -74,7 +74,7 @@ func processFile(c Config, filename string, fileHandling FileHandling) error {
 		return err
 	}
 
-	// temporary: override publication.AltID (set to the filename by process encryption) - to be suppress with lcpencrypt 1.12.8 
+	// Set the publication AltID (if extracted from the filename or imposed)
 	publication.AltID = c.AltID
 
 	if c.LCPServerUrl == "" {

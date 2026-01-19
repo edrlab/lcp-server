@@ -130,7 +130,9 @@ func (a *APICtrl) GetPublication(w http.ResponseWriter, r *http.Request) {
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication ID")))
 	}
-	if err != nil {
+
+	// if the publication has been soft-deleted, it is considered not found
+	if err != nil || publication.DeletedAt.Valid {
 		render.Render(w, r, ErrNotFound)
 		return
 	}
@@ -152,7 +154,8 @@ func (a *APICtrl) GetPublicationByAltID(w http.ResponseWriter, r *http.Request) 
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required Alt ID")))
 	}
-	if err != nil {
+	// if the publication has been soft-deleted, it is considered not found
+	if err != nil || publication.DeletedAt.Valid {
 		render.Render(w, r, ErrNotFound)
 		return
 	}
@@ -185,8 +188,9 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication ID"))) // publicationID is nil
 		return
 	}
-	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(errors.New("invalid publication ID")))
+	// if the publication has been soft-deleted, it is considered not found
+	if err != nil || publication.DeletedAt.Valid {
+		render.Render(w, r, ErrNotFound)
 		return
 	}
 
@@ -229,7 +233,8 @@ func (a *APICtrl) DeletePublication(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication ID"))) // publicationID is nil
 		return
 	}
-	if err != nil {
+	// if the publication has been soft-deleted, it is considered not found
+	if err != nil || publication.DeletedAt.Valid {
 		render.Render(w, r, ErrNotFound)
 		return
 	}
