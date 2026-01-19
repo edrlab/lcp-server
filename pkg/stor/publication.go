@@ -68,9 +68,12 @@ func (s publicationStore) Get(uuid string) (*Publication, error) {
 }
 
 func (s publicationStore) GetByAltID(altID string) (*Publication, error) {
-	// it is important to use Unscoped() here to be able to retrieve publications that have been soft-deleted.
+	// we don't use Unscoped() here to avoid retreiving soft-deleted publications. 
+	// if a new revision of a previously deleted publication is added with the same AltID, we want to create a new ID. 
+	// TODO: add a test to verify this behavior
+	// TODO: consider adding a filter on the provider as well, to allow multiple publications with the same AltID from different providers
 	var publication Publication
-	return &publication, s.db.Unscoped().Where("alt_id = ?", altID).First(&publication).Error
+	return &publication, s.db.Where("alt_id = ?", altID).First(&publication).Error
 }
 
 func (s publicationStore) Create(newPublication *Publication) error {
