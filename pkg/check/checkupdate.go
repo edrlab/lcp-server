@@ -137,7 +137,7 @@ func (c *LicenseChecker) CheckRenew() error {
 	}
 
 	if c.statusDoc.PotentialRights == nil || c.statusDoc.PotentialRights.End == nil {
-		log.Info("The license has no max end date, unlimited renewal is allowed")
+		log.Warning("The license has no max end date, unlimited renewal is allowed")
 	} else {
 		log.Info("The max end date for renewal is ", c.statusDoc.PotentialRights.End.Format(time.RFC822))
 	}
@@ -192,7 +192,7 @@ func (c *LicenseChecker) CheckRenew() error {
 	}
 
 	// if there is no max end date, do not request additional extensions
-	if c.statusDoc.PotentialRights.End == nil {
+	if c.statusDoc.PotentialRights == nil || c.statusDoc.PotentialRights.End == nil {
 		return nil
 	}
 
