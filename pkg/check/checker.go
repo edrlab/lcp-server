@@ -263,7 +263,7 @@ func CheckResource(href string) error {
 	elapsed := time.Since(start)
 
 	if elapsed > expectedDuration {
-		log.Warningf("Access to %s took %s, which is quite long", href, elapsed)
+		log.Warningf("Access to %s took %.2fs, which is quite long", href, elapsed.Seconds())
 	}
 	return err
 }
