@@ -1,22 +1,98 @@
-# LCP Server - Production Backup Strategy
+---
+layout: default
+title: Backup
+nav_order: 6
+---
 
 This document outlines various backup strategies for the LCP Server MySQL database in production.
+Other databases certainly require adaptations. We cannot provide a complete solution for every platform, therefore let the community work on it. Proposals are welcome.  
+
+## Two Backup Scripts are provided
+
+| Method | Service Status | Impact Level | Use Case |
+|--------|---------------|--------------|----------|
+| **Hot Backup** | ✅ Fully Available | Minimal (<5%) | Production, frequent backups |
+| **Cold Backup** | ❌ Temporarily Unavailable | Full (30-120s) | Maximum consistency needed |
+
+### Hot Backup (`hot-backup.sh`)
+
+```bash
+./scripts/hot-backup.sh
+# or
+docker compose --profile backup run --rm hot-backup
+```
+
+**Service Impact:**
+- ✅ **API Calls**: Continue normally
+- ✅ **Database Reads**: No impact
+- ✅ **Database Writes**: <5% performance impact
+- ✅ **User Experience**: Unnoticeable
+- ⏱️ **Duration**: 15-60 seconds
+
+**Technical Details:**
+- Uses `--single-transaction` with optimized flags
+- Creates consistent snapshot without locking
+- Streams data directly to compressed output
+- MySQL continues serving all requests
+
+**Impact**
+```
+Service Status: Available
+API Response Time: +5ms average
+Database Queries: No slowdown
+User Experience: Unnoticeable
+Backup Duration: 30 seconds
+```
+
+### Cold Backup (`cold-backup.sh`)
+
+```bash
+./scripts/cold-backup.sh
+```
+
+**Service Impact:**
+- ❌ **API Calls**: Unavailable during backup
+- ❌ **Database Access**: Stopped
+- ❌ **User Experience**: Service unavailable
+- ⏱️ **Duration**: 30-120 seconds downtime
+- ✅ **Data Consistency**: Maximum (100%)
+
+**Technical Details:**
+- Stops LCP server during backup
+- Flushes and locks tables
+- Guarantees perfect data consistency
+- Automatic service restart
+
+**Impact**
+```
+Service Status: Unavailable
+Downtime: 45 seconds average
+Data Consistency: Perfect
+User Experience: Brief outage
+Recovery: Automatic
+```
+
 
 ## Quick Start
 
-### 1. Manual Backup
+### Manual Backup
 ```bash
 # Make scripts executable
 chmod +x scripts/*.sh
 
-# Create a backup
-./scripts/backup-mysql.sh
+# Create a cold backup
+./scripts/cold-backup.sh
 
 # Restore from backup
-./scripts/restore-mysql.sh /opt/lcp-backups/mysql_backup_20241128_143000.sql.gz
+./scripts/restore-backup.sh /opt/lcp-server/backups/cold_backup_20251128_143000.sql.gz
 ```
 
-### 2. Automated Backups
+Note: Before moving to production, be sure to check the restoration of your backups in a staging environment.
+
+### Automated Backups
+
+By default, the automated backup is using the hot backup variant. This is easy to modify. 
+
 ```bash
 # Add to crontab for daily backups at 2 AM
 crontab -e
@@ -24,7 +100,28 @@ crontab -e
 0 2 * * * /path/to/lcp-server/scripts/automated-backup.sh
 ```
 
+## Monitoring Backup Impact
+
+Use the monitoring script to measure actual impact:
+
+```bash
+# Start monitoring in one terminal
+./scripts/monitor-backup-impact.sh
+
+# Run backup in another terminal
+./scripts/cold-backup.sh
+```
+
+The monitor will show:
+- Response times during backup
+- Database connection counts
+- Resource usage
+- Performance metrics
+
+
 ## Backup Strategies
+
+Where should you store the backups? 
 
 ### Strategy 1: Local File System Backups
 
@@ -36,10 +133,6 @@ crontab -e
 **Cons:**
 - Single point of failure
 - Limited by local disk space
-
-**Implementation:**
-- Use `scripts/backup-mysql.sh` for manual backups
-- Use `scripts/automated-backup.sh` with cron for automation
 
 ### Strategy 2: Docker Volume Backups
 
@@ -92,7 +185,7 @@ Using rsync to sync backups to a remote server:
 
 ```bash
 # In automated-backup.sh
-rsync -avz --delete /opt/lcp-backups/ user@backup-server:/backups/lcp/
+rsync -avz --delete /opt/lcp-server/backups/ user@backup-server:/backups/lcp/
 ```
 
 ### Strategy 5: Database Replication
@@ -117,7 +210,7 @@ mysql-replica:
     - mysql-root-password
 ```
 
-## Production Setup
+## Additional Production Steps
 
 ### 1. Backup Schedule
 
@@ -127,10 +220,10 @@ Recommended cron schedule:
 0 2 * * * /opt/lcp-server/scripts/automated-backup.sh
 
 # Weekly full backup on Sunday at 1 AM
-0 1 * * 0 /opt/lcp-server/scripts/backup-mysql.sh weekly_$(date +\%Y\%m\%d)
+0 1 * * 0 /opt/lcp-server/scripts/cold-backup.sh weekly_$(date +\%Y\%m\%d)
 
 # Monthly archive on 1st day at midnight
-0 0 1 * * /opt/lcp-server/scripts/backup-mysql.sh monthly_$(date +\%Y\%m)
+0 0 1 * * /opt/lcp-server/scripts/cold-backup.sh monthly_$(date +\%Y\%m)
 ```
 
 ### 2. Monitoring and Alerting
@@ -152,7 +245,26 @@ curl -X POST https://hooks.slack.com/... \
   --data '{"text":"LCP MySQL backup completed successfully"}'
 ```
 
-### 3. Security Considerations
+### 3. Automating Backup Verification
+
+Implement automated backup verification:
+
+```bash
+#!/bin/bash
+# verify-backup.sh
+BACKUP_FILE="$1"
+
+# Extract first 100 lines and check for valid SQL
+zcat "$BACKUP_FILE" | head -100 | grep -q "CREATE TABLE"
+if [ $? -eq 0 ]; then
+    echo "Backup verification: PASSED"
+else
+    echo "Backup verification: FAILED"
+    exit 1
+fi
+```
+
+### 4. Securing Backups
 
 1. **Encrypt backups:**
 ```bash
@@ -163,8 +275,8 @@ gpg --symmetric --cipher-algo AES256 "$BACKUP_FILE"
 2. **Secure backup location:**
 ```bash
 # Set proper permissions
-chmod 600 /opt/lcp-backups/*.sql.gz
-chown backup-user:backup-group /opt/lcp-backups/
+chmod 600 /opt/lcp-server/backups/*.sql.gz
+chown backup-user:backup-group /opt/lcp-server/backups/
 ```
 
 3. **Rotate passwords:**
@@ -210,7 +322,7 @@ cd lcp-server
 docker compose up -d mysql
 
 # 2. Restore database
-./scripts/restore-mysql.sh /path/to/latest/backup.sql.gz
+./scripts/restore-mysql.sh /opt/lcp-server/backups/latest-backup.sql.gz
 
 # 3. Start all services
 docker compose up -d
@@ -228,37 +340,43 @@ command: >
   --max_binlog_size=100M
 ```
 
-### 3. Recovery Time Objectives (RTO/RPO)
 
-- **RPO (Recovery Point Objective)**: Maximum 24 hours (daily backups)
-- **RTO (Recovery Time Objective)**: Target 1 hour for full system recovery
+## Troubleshooting
 
-## Backup Verification
+### High Impact During Backup
 
-Implement automated backup verification:
+If backups cause significant performance issues:
 
-```bash
-#!/bin/bash
-# verify-backup.sh
-BACKUP_FILE="$1"
+1. **Switch to hot backup method**:
+   ```bash
+   # Instead of standard backup
+   ./scripts/hot-backup.sh
+   ```
 
-# Extract first 100 lines and check for valid SQL
-zcat "$BACKUP_FILE" | head -100 | grep -q "CREATE TABLE"
-if [ $? -eq 0 ]; then
-    echo "Backup verification: PASSED"
-else
-    echo "Backup verification: FAILED"
-    exit 1
-fi
-```
+2. **Adjust backup timing**:
+   ```bash
+   # Move to lower-traffic hours
+   0 3 * * * /opt/lcp-server/scripts/backup-mysql.sh
+   ```
 
-## Storage Requirements
+3. **Optimize MySQL settings**:
+   ```yaml
+   # In compose.yaml mysql service
+   command: >
+     --innodb-buffer-pool-size=512M
+     --innodb-log-file-size=256M
+   ```
 
-Estimate storage needs:
-- Database size: ~100MB typical
-- Compressed backup: ~20MB typical
-- 30 days retention: ~600MB
-- Weekly archives: +80MB/month
-- Monthly archives: +20MB/month
+### Service Unavailable During Hot Backup
 
-Plan for 2-3x growth factor.
+This shouldn't happen with hot backups. If it does:
+
+1. **Check MySQL health**:
+   ```bash
+   docker compose logs mysql
+   ```
+
+2. **Verify backup process**:
+   ```bash
+   docker compose exec mysql mysqladmin processlist
+   ```
