@@ -7,6 +7,8 @@ package stor
 import (
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
@@ -69,9 +71,18 @@ func (s publicationStore) Get(uuid string) (*Publication, error) {
 
 func (s publicationStore) GetByAltID(altID string) (*Publication, error) {
 	// Unscoped() is used here also to retrieve publications that have been soft-deleted. 
-	// TODO: consider adding a filter on the provider as well, to allow multiple publications with the same AltID from different providers
+	// There may be several publications identified by the same AltId if some were soft-deleted; 
+	// this is why the request orders the results by date created desc, so that the latest one,
+	// the only one potentially not deleted, is retained.
+	// TODO: consider adding a filter on the provider as well, to allow multiple publications with the same AltID from different providers. Problem: the API endpoint is called as a GET, with the altid as unique parameter (/publications/altid/xxx); potential evolution = /publications/altid/provider:xxx.  
 	var publication Publication
-	return &publication, s.db.Unscoped().Where("alt_id = ?", altID).First(&publication).Error
+	// debug: list all publications with this AltID
+	var publications []Publication
+	s.db.Unscoped().Where("alt_id = ?", altID).Order("created_at DESC").Find(&publications)
+	for _, pub := range publications {
+		log.Debugf("Publication with AltID %s: UUID=%s, Provider=%s, CreatedAt=%v, DeletedAt=%v", altID, pub.UUID, pub.Provider, pub.CreatedAt, pub.DeletedAt)
+	}
+	return &publication, s.db.Unscoped().Where("alt_id = ?", altID).Order("created_at DESC").First(&publication).Error
 }
 
 func (s publicationStore) Create(newPublication *Publication) error {
