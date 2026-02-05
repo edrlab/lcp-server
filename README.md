@@ -91,6 +91,12 @@ go build -o $GOPATH/bin/lcpserver  ./cmd/lcpserver
 lcpserver
 ```
 
+Note: on a Linux Alpine server, the addition of the musl tag is required for building lcpserver. 
+
+```sh
+go build -tags musl -o $GOPATH/bin/lcpencrypt ./cmd/lcpencrypt
+```
+
 Note: the name of the executable is your choice. You can use `lcpserver2` to avoid a clash with the former version of the LCP Server executable. 
 
 The open-source codebase is provided with **SQLite**, **MySQL** and **PostgresQL** drivers. The default is sqlite. It is up to integrators to replace it by the driver of their choice if sqlite does not fit their needs.
