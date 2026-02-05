@@ -4,6 +4,11 @@
 log_level: "info"
 public_base_url: "https://your-lcp-server.com"
 port: 8989
+# DSN examples:
+# SQLite: "sqlite:///data/lcp.db"
+# MySQL with Docker secret: "mysql://lcp_user:PASSWORD_PLACEHOLDER@tcp(mysql:3306)/lcpserver"
+#   (password will be read from /run/secrets/mysql-password if MYSQL_PASSWORD_FILE is set)
+# MySQL with direct password: "mysql://user:password@tcp(host:3306)/database"
 dsn: "sqlite:///data/lcp.db"
 
 # Basic access configuration for LCP API

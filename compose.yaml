@@ -96,12 +96,16 @@ services:
       - LCPSERVER_DASHBOARD_LIMITTOLAST12MONTHS=${LCPSERVER_DASHBOARD_LIMITTOLAST12MONTHS}
       # Path inside the container (mounted via volume above)
       - LCPSERVER_RESOURCES=/resources
-      # This one will have to become a Docker secret in production
-      - LCPSERVER_JWT_SECRETKEY=${LCPSERVER_JWT_SECRETKEY}
       # Path to the access file for basic authentication and JWT admin accounts
       - LCPSERVER_ACCESS_FILE=/run/secrets/access
+      # Path to MySQL password file for secure DSN construction
+      - MYSQL_PASSWORD_FILE=/run/secrets/mysql-password
+      # Path to JWT secret key file for secure token signing
+      - JWT_SECRETKEY_FILE=/run/secrets/jwt-secretkey
     secrets:
       - access
+      - mysql-password
+      - jwt-secretkey
     depends_on:
       mysql:
         condition: service_healthy
@@ -242,5 +246,7 @@ secrets:
      file: config/mysql-root-password.txt
    mysql-password:
      file: config/mysql-password.txt
+   jwt-secretkey:
+     file: config/jwt-secretkey.txt
 
 
