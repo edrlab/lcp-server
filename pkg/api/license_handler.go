@@ -47,14 +47,14 @@ func (a *APICtrl) GenerateLicense(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required publication identifier in payload")))
 		return
 	}
+	// error if the database request was not successful
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(errors.New("invalid publication ID")))
 		return
 	}
-
 	// error if the publication has been soft-deleted
 	if pubInfo.DeletedAt.Valid {
-		render.Render(w, r, ErrInvalidRequest(errors.New("publication has been deleted")))
+		render.Render(w, r, ErrInvalidRequest(errors.New("the publication has been previously deleted")))
 		return
 	}
 

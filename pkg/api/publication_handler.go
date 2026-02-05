@@ -149,7 +149,6 @@ func (a *APICtrl) GetPublicationByAltID(w http.ResponseWriter, r *http.Request) 
 	var err error
 
 	if altID := chi.URLParam(r, "altID"); altID != "" {
-		log.Debugf("Get Publication By AltID: %s", altID)
 		publication, err = a.Store.Publication().GetByAltID(altID)
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required Alt ID")))
