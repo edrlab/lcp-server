@@ -1,0 +1,3 @@
+username:password
+bob:supersecret
+hugh:supersecret
