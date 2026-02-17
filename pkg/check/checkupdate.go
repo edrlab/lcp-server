@@ -329,11 +329,20 @@ func (c *LicenseChecker) CheckReturn() error {
 		log.Warning("Failed to get the fresh license after it was returned. This is not an error: ", err)
 		return nil
 	} else {
+		if c.license.Updated == nil {
+			log.Error("The fresh license update timestamp is absent")
+			return nil
+		}
+		if c.license.Rights.End == nil {
+			log.Error("The fresh license end timestamp is absent")
+			return nil
+		}
 		log.Info("The license end timestamp is now ", c.license.Rights.End.Format(time.RFC822))
-		if c.license.Updated.Before(returnTime) {
+		// takes into account a possible small difference of time between the server and the checker
+		if c.license.Updated.Before(returnTime.Add(-2 * time.Minute)) {
 			log.Error("The fresh license update timestamp was not properly updated")
 		}
-		if c.license.Rights.End.After(time.Now()) {
+		if c.license.Rights.End.After(time.Now().Add(2 * time.Minute)) {
 			log.Error("The fresh license end timestamp was not properly updated")
 		}
 	}
