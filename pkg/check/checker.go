@@ -210,6 +210,8 @@ func (c *LicenseChecker) GetStatusDoc() error {
 // Get a fresh license from the provider system
 func (c *LicenseChecker) GetFreshLicense() error {
 
+	log.Info("Retrieving a fresh license ...")
+
 	// get the url of the license
 	var lHref string
 	for _, s := range c.statusDoc.Links {

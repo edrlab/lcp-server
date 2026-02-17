@@ -291,6 +291,9 @@ func (c *LicenseChecker) CheckReturn() error {
 		return err
 	}
 
+	// init a returned time to check that the license is correctly updated after the return
+	returnTime := time.Now()
+
 	// request the return of the license
 	client := &http.Client{}
 	req, err := http.NewRequest("PUT", url, nil)
@@ -317,6 +320,9 @@ func (c *LicenseChecker) CheckReturn() error {
 		log.Info("License return was successful")
 	}
 
+	// 1/2sc pause
+	time.Sleep(500 * time.Millisecond)
+
 	// fetch the fresh license and check that it has been correctly updated
 	err = c.GetFreshLicense()
 	if err != nil {
@@ -324,8 +330,7 @@ func (c *LicenseChecker) CheckReturn() error {
 		return nil
 	} else {
 		log.Info("The license end timestamp is now ", c.license.Rights.End.Format(time.RFC822))
-		freshUpdate := time.Now().Add(-1 * time.Second)
-		if c.license.Updated.Before(freshUpdate) {
+		if c.license.Updated.Before(returnTime) {
 			log.Error("The fresh license update timestamp was not properly updated")
 		}
 		if c.license.Rights.End.After(time.Now()) {
