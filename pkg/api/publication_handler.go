@@ -7,6 +7,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"net/url"
 
 	log "github.com/sirupsen/logrus"
 
@@ -149,6 +150,10 @@ func (a *APICtrl) GetPublicationByAltID(w http.ResponseWriter, r *http.Request) 
 	var err error
 
 	if altID := chi.URLParam(r, "altID"); altID != "" {
+		// URL decode the alt ID (can contain special chars)
+		if decodedAltID, err := url.PathUnescape(altID); err == nil {
+			altID = decodedAltID
+		}
 		publication, err = a.Store.Publication().GetByAltID(altID)
 	} else {
 		render.Render(w, r, ErrInvalidRequest(errors.New("missing required Alt ID")))

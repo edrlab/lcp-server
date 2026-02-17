@@ -7,6 +7,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/edrlab/lcp-server/pkg/lic"
@@ -171,6 +172,14 @@ func getDeviceInfo(w http.ResponseWriter, r *http.Request) *lic.DeviceInfo {
 
 	device.ID = r.URL.Query().Get("id")
 	device.Name = r.URL.Query().Get("name")
+
+	// URL decode device ID and name (can contain special chars)
+	if decodedID, err := url.QueryUnescape(device.ID); err == nil {
+		device.ID = decodedID
+	}
+	if decodedName, err := url.QueryUnescape(device.Name); err == nil {
+		device.Name = decodedName
+	}
 
 	dILen := len(device.ID)
 	dNLen := len(device.Name)

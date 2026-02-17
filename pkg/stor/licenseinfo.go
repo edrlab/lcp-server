@@ -54,24 +54,31 @@ func (s licenseStore) List(pageNum, pageSize int) (*[]LicenseInfo, error) {
 	return &licenses, s.db.Offset((pageNum - 1) * pageSize).Limit(pageSize).Order("id DESC").Find(&licenses).Error
 }
 
-func (s licenseStore) FindByUser(userID string) (*[]LicenseInfo, error) {
+func (s licenseStore) FindByUser(userID string, pubinfo bool) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
-	return &licenses, s.db.Limit(1000).Where("user_id= ?", userID).Find(&licenses).Error
+	query := s.db.Limit(1000).Where("user_id= ?", userID).Order("license_infos.id DESC")
+	
+	if pubinfo {
+		// Join with the publication table to get publication title
+		query = query.Joins("Publication")
+	}
+	
+	return &licenses, query.Find(&licenses).Error
 }
 
 func (s licenseStore) FindByPublication(publicationID string) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
-	return &licenses, s.db.Limit(1000).Where("publication_id= ?", publicationID).Find(&licenses).Error
+	return &licenses, s.db.Limit(1000).Where("publication_id= ?", publicationID).Order("id DESC").Find(&licenses).Error
 }
 
 func (s licenseStore) FindByStatus(status string) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
-	return &licenses, s.db.Limit(1000).Where("status= ?", status).Find(&licenses).Error
+	return &licenses, s.db.Limit(1000).Where("status= ?", status).Order("id DESC").Find(&licenses).Error
 }
 
 func (s licenseStore) FindByDeviceCount(min int, max int) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
-	return &licenses, s.db.Limit(1000).Where("device_count >= ? AND device_count <= ?", min, max).Find(&licenses).Error
+	return &licenses, s.db.Limit(1000).Where("device_count >= ? AND device_count <= ?", min, max).Order("id DESC").Find(&licenses).Error
 }
 
 func (s licenseStore) Count() (int64, error) {

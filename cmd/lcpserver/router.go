@@ -113,6 +113,11 @@ func (s *Server) setRoutes() *chi.Mux {
 				})
 			})
 
+			// License events
+			r.Route("/license-events/{licenseID}", func(r chi.Router) {
+				r.Get("/", a.ListLicenseEvents) // GET /license-events/123
+			})
+
 			// License generation
 			r.Route("/licenses", func(r chi.Router) {
 				r.Post("/", a.GenerateLicense) // POST /licenses
@@ -135,10 +140,12 @@ func (s *Server) setRoutes() *chi.Mux {
 			r.Route("/dashdata", func(r chi.Router) {
 				r.Get("/data", a.GetDashboardData)            // GET /dashdata/data
 				r.Get("/overshared", a.GetOversharedLicenses) // GET /dashdata/overshared
-				r.Put("/revoke/{licenseID}", a.Revoke)        // PUT /dashdata/revoke/123
-				// these two dashboard routes allow alt authentication and a streamlined publication structure
+				r.Put("/revoke/{licenseID}", a.Revoke)        // PUT /dashdata/revoke/license123
+				// these dashboard routes allow alt authentication before accessing crud functions
 				r.With(paginate).Get("/publications", a.ListPublications) 		// GET /dashdata/publications
-				r.Delete("/publications/{publicationID}", a.DeletePublication) // DELETE /dashdata/publication/123
+				r.Delete("/publications/{publicationID}", a.DeletePublication) // DELETE /dashdata/publication/publication123
+				r.With(paginate).Get("/user-licenses/{userID}", a.ListUserLicenses) 			// GET /dashdata/user-licenses/user123
+				r.Get("/license-events/{licenseID}", a.ListLicenseEvents) 			// GET /dashdata/license-events/license123
 			})
 		})
 

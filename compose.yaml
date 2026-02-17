@@ -119,7 +119,6 @@ services:
 
   # LCP Dashboard service
   dashboard:
-    # TODO: build an EDRLab LCP Dashboard image supporting ARM64 and AMD64
     image: llemeur/lcp-dashboard:latest-arm64
     expose:
       - "8080"

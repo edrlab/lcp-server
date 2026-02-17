@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -48,14 +49,18 @@ func (a *APICtrl) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 
 	// search by user
 	if userID := r.URL.Query().Get("user"); userID != "" {
-		licenses, err = a.Store.License().FindByUser(userID)
+		// URL decode the user ID (can contain special chars like @ in emails)
+		if decodedUserID, err := url.QueryUnescape(userID); err == nil {
+			userID = decodedUserID
+		}
+		licenses, err = a.Store.License().FindByUser(userID, false)
 		// by publication
 	} else if pubID := r.URL.Query().Get("pub"); pubID != "" {
 		licenses, err = a.Store.License().FindByPublication(pubID)
 		// by status
 	} else if status := r.URL.Query().Get("status"); status != "" {
 		licenses, err = a.Store.License().FindByStatus(status)
-		// by count
+		// by device count
 	} else if count := r.URL.Query().Get("count"); count != "" {
 		// count is a "min:max" tuple
 		var min, max int
@@ -79,6 +84,33 @@ func (a *APICtrl) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrServer(err))
 		return
 	}
+	if err := render.RenderList(w, r, NewLicenseInfoListResponse(licenses)); err != nil {
+		render.Render(w, r, ErrRender(err))
+		return
+	}
+}
+
+// ListUserLicenses returns licenses for a specific user.
+// This is a similar but more direct way to get licenses for a user, compared to the search by user in SearchLicenses.
+func (a *APICtrl) ListUserLicenses(w http.ResponseWriter, r *http.Request) {
+	var licenses *[]stor.LicenseInfo
+	var err error
+
+	if userID := chi.URLParam(r, "userID"); userID != "" {
+		// URL decode the user ID (can contain special chars like @ in emails)
+		if decodedUserID, err := url.PathUnescape(userID); err == nil {
+			userID = decodedUserID
+		}
+		licenses, err = a.Store.License().FindByUser(userID, true)
+		if err != nil {
+			render.Render(w, r, ErrServer(err))
+			return
+		}
+	} else {
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required user ID"))) // userID is nil
+		return
+	}
+
 	if err := render.RenderList(w, r, NewLicenseInfoListResponse(licenses)); err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
@@ -231,6 +263,27 @@ func (a *APICtrl) DeleteLicense(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ListLicenseEvents returns all events for a specific license
+func (a *APICtrl) ListLicenseEvents(w http.ResponseWriter, r *http.Request) {
+	var events *[]stor.Event
+	var err error
+
+	if licenseID := chi.URLParam(r, "licenseID"); licenseID != "" {
+		events, err = a.Store.Event().List(licenseID)
+	} else {
+		render.Render(w, r, ErrInvalidRequest(errors.New("missing required license identifier")))
+		return
+	}
+	if err != nil {
+		render.Render(w, r, ErrServer(err))
+		return
+	}
+	if err := render.RenderList(w, r, NewEventListResponse(events)); err != nil {
+		render.Render(w, r, ErrRender(err))
+		return
+	}
+}
+
 // --
 // Request and Response payloads for the REST api.
 // --
@@ -248,7 +301,8 @@ type LicenseInfoResponse struct {
 	//CreatedAt   omit `json:"CreatedAt,omitempty"`
 	//UpdatedAt   omit `json:"UpdatedAt,omitempty"`
 	//DeletedAt   omit `json:"DeletedAt,omitempty"`
-	Publication omit `json:"Publication,omitempty"`
+	Publication      omit    `json:"Publication,omitempty"`
+	PublicationTitle *string `json:"publication_title,omitempty"`
 }
 
 // NewLicenseInfoListResponse creates a rendered list of licenses
@@ -272,5 +326,33 @@ func (l *LicenseInfoRequest) Bind(r *http.Request) error {
 
 // Render processes responses before marshalling.
 func (l *LicenseInfoResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	// Extract publication title if publication is loaded
+	if l.LicenseInfo.Publication.Title != "" {
+		l.PublicationTitle = &l.LicenseInfo.Publication.Title
+	}
+	return nil
+}
+
+// EventResponse is the response payload for events.
+type EventResponse struct {
+	*stor.Event
+}
+
+// NewEventListResponse creates a rendered list of events
+func NewEventListResponse(events *[]stor.Event) []render.Renderer {
+	list := []render.Renderer{}
+	for i := 0; i < len(*events); i++ {
+		list = append(list, NewEventResponse(&(*events)[i]))
+	}
+	return list
+}
+
+// NewEventResponse creates a rendered event
+func NewEventResponse(event *stor.Event) *EventResponse {
+	return &EventResponse{Event: event}
+}
+
+// Render processes event responses before marshalling.
+func (e *EventResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }

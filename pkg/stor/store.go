@@ -55,7 +55,7 @@ type (
 	LicenseRepository interface {
 		ListAll() (*[]LicenseInfo, error)
 		List(pageNum, pageSize int) (*[]LicenseInfo, error)
-		FindByUser(userID string) (*[]LicenseInfo, error)
+		FindByUser(userID string, pubinfo bool) (*[]LicenseInfo, error)
 		FindByPublication(publicationID string) (*[]LicenseInfo, error)
 		FindByStatus(status string) (*[]LicenseInfo, error)
 		FindByDeviceCount(min int, max int) (*[]LicenseInfo, error)
