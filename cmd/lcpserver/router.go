@@ -146,6 +146,7 @@ func (s *Server) setRoutes() *chi.Mux {
 				r.Delete("/publications/{publicationID}", a.DeletePublication) // DELETE /dashdata/publication/publication123
 				r.With(paginate).Get("/user-licenses/{userID}", a.ListUserLicenses) 			// GET /dashdata/user-licenses/user123
 				r.Get("/license-events/{licenseID}", a.ListLicenseEvents) 			// GET /dashdata/license-events/license123
+				r.Get("/report-licenses", a.ReportGeneratedLicenses) 			// GET /dashdata/report-licenses
 			})
 		})
 

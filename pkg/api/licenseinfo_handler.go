@@ -78,10 +78,10 @@ func (a *APICtrl) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 		licenses, err = a.Store.License().FindByDeviceCount(min, max)
 		// by month (format: YYYY-MM)
 	} else if month := r.URL.Query().Get("month"); month != "" {
-		licenses, err = a.Store.License().FindByDate(month)
+		licenses, err = a.Store.License().FindByDate(month, stor.ExcludePubInfo)
 		// by date (format: YYYY-MM-DD)
 	} else if date := r.URL.Query().Get("date"); date != "" {
-		licenses, err = a.Store.License().FindByDate(date)
+		licenses, err = a.Store.License().FindByDate(date, stor.ExcludePubInfo)
 	} else {
 		render.Render(w, r, ErrNotFound)
 		return
@@ -97,7 +97,7 @@ func (a *APICtrl) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListUserLicenses returns licenses for a specific user.
-// This is a similar but more direct way to get licenses for a user, compared to the search by user in SearchLicenses.
+// This is a similar but more direct way to get licenses for a user, compared to the search by user in SearchLicenses. It returns the title of the publication as well, which is useful for display in a user interface.
 func (a *APICtrl) ListUserLicenses(w http.ResponseWriter, r *http.Request) {
 	var licenses *[]stor.LicenseInfo
 	var err error

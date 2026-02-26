@@ -86,7 +86,7 @@ func (s licenseStore) FindByDeviceCount(min int, max int) (*[]LicenseInfo, error
 // dateStr can be:
 // - a specific date: "2024-02-15" (YYYY-MM-DD)
 // - a month: "2024-02" (YYYY-MM)
-func (s licenseStore) FindByDate(dateStr string) (*[]LicenseInfo, error) {
+func (s licenseStore) FindByDate(dateStr string, pubInfo bool) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
 	
 	// Check if it's a month (format: YYYY-MM) or a specific date (format: YYYY-MM-DD)
@@ -99,9 +99,16 @@ func (s licenseStore) FindByDate(dateStr string) (*[]LicenseInfo, error) {
 		// Get the start of next month
 		startOfNextMonth := startOfMonth.AddDate(0, 1, 0)
 		
-		return &licenses, s.db.Limit(1000).
-			Where("created_at >= ? AND created_at < ?", startOfMonth, startOfNextMonth).
-			Order("id DESC").Find(&licenses).Error
+		query := s.db.Limit(1000).
+			Where("license_infos.created_at >= ? AND license_infos.created_at < ?", startOfMonth, startOfNextMonth).
+			Order("license_infos.id DESC")
+			
+		if pubInfo {
+			// Join with the publication table to get publication info
+			query = query.Joins("Publication")
+		}
+		
+		return &licenses, query.Find(&licenses).Error
 	} else if len(dateStr) == 10 { // Date format: YYYY-MM-DD
 		// Parse the specific date
 		specificDate, err := time.Parse("2006-01-02", dateStr)
@@ -111,9 +118,16 @@ func (s licenseStore) FindByDate(dateStr string) (*[]LicenseInfo, error) {
 		// Get the start of next day
 		startOfNextDay := specificDate.AddDate(0, 0, 1)
 		
-		return &licenses, s.db.Limit(1000).
-			Where("created_at >= ? AND created_at < ?", specificDate, startOfNextDay).
-			Order("id DESC").Find(&licenses).Error
+		query := s.db.Limit(1000).
+			Where("license_infos.created_at >= ? AND license_infos.created_at < ?", specificDate, startOfNextDay).
+			Order("license_infos.id DESC")
+			
+		if pubInfo {
+			// Join with the publication table to get publication info
+			query = query.Joins("Publication")
+		}
+		
+		return &licenses, query.Find(&licenses).Error
 	} else {
 		return &licenses, errors.New("invalid date format: use YYYY-MM for month or YYYY-MM-DD for specific date")
 	}
