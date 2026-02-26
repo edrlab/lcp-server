@@ -160,12 +160,14 @@ func (s dashboardStore) GetDashboard(excessiveSharingThreshold int, limitToLast1
 	}
 
 	// Chart data - licenses created per month for the last 12 months
-	// Use a simpler approach that works across all database dialects
+	// and having been used at least once (status not "ready")
+	// Use a simple approach that works across all database dialects
 	// Get all licenses from the last 12 months and process them in Go
 	var licenses []LicenseInfo
 	if err := s.db.Model(&LicenseInfo{}).
 		Select("created_at").
 		Where("created_at >= ?", last12Months).
+		Where("status <> ?", "ready").
 		Find(&licenses).Error; err != nil {
 		return nil, err
 	}
