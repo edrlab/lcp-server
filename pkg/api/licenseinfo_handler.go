@@ -76,6 +76,12 @@ func (a *APICtrl) SearchLicenses(w http.ResponseWriter, r *http.Request) {
 			render.Render(w, r, ErrInvalidRequest(err))
 		}
 		licenses, err = a.Store.License().FindByDeviceCount(min, max)
+		// by month (format: YYYY-MM)
+	} else if month := r.URL.Query().Get("month"); month != "" {
+		licenses, err = a.Store.License().FindByDate(month)
+		// by date (format: YYYY-MM-DD)
+	} else if date := r.URL.Query().Get("date"); date != "" {
+		licenses, err = a.Store.License().FindByDate(date)
 	} else {
 		render.Render(w, r, ErrNotFound)
 		return

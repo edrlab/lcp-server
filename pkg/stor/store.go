@@ -59,6 +59,7 @@ type (
 		FindByPublication(publicationID string) (*[]LicenseInfo, error)
 		FindByStatus(status string) (*[]LicenseInfo, error)
 		FindByDeviceCount(min int, max int) (*[]LicenseInfo, error)
+		FindByDate(dateStr string) (*[]LicenseInfo, error)
 		Count() (int64, error)
 		Get(uuid string) (*LicenseInfo, error)
 		Create(p *LicenseInfo) error
