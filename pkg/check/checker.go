@@ -90,7 +90,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	// get the license status
 	err = c.GetStatusDoc()
 	if err != nil {
-		log.Errorf("Fata error getting the status document: %v", err)
+		log.Errorf("Fatal error getting the status document: %v", err)
 		return err
 	}
 
@@ -274,7 +274,7 @@ func CheckResource(href string) error {
 func getJson(url string, target interface{}) error {
 
 	client := http.Client{
-		Timeout: 2 * time.Second,
+		Timeout: 5 * time.Second,
 	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
