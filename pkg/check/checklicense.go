@@ -218,6 +218,7 @@ func (c *LicenseChecker) CheckSignature() error {
 
 	err := c.license.CheckSignature()
 	if err != nil {
+		log.Info(err.Error())
 		log.Errorf("The signature of the license is incorrect")
 	}
 	return nil
