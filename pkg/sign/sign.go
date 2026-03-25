@@ -178,7 +178,7 @@ func (checker *ecdsaSignChecker) Check(in interface{}, signature []byte) (err er
 	// make the structure canonical
 	canon, err := Canon(in)
 	if err != nil {
-		return
+		return errors.New("failed to make the structure canonical")
 	}
 
 	// generate a hash
@@ -190,7 +190,7 @@ func (checker *ecdsaSignChecker) Check(in interface{}, signature []byte) (err er
 
 	// check the hash vs the public key and signature
 	if !ecdsa.Verify(checker.key, hash[:], r, s) {
-		return errors.New("failed to verify the signature")
+		return errors.New("failed to verify the ecdsa signature")
 	}
 	return nil
 }
@@ -206,7 +206,7 @@ func (checker *rsaSignChecker) Check(in interface{}, signature []byte) (err erro
 	// make the structure canonical
 	canon, err := Canon(in)
 	if err != nil {
-		return
+		return errors.New("failed to make the structure canonical")
 	}
 
 	//fmt.Println(string(canon))
@@ -216,7 +216,7 @@ func (checker *rsaSignChecker) Check(in interface{}, signature []byte) (err erro
 	// check the hash vs the public key and signature
 	err = rsa.VerifyPKCS1v15(checker.key, crypto.SHA256, hash[:], signature)
 	if err != nil {
-		return
+		return errors.New("failed to verify the rsa signature")
 	}
 	return nil
 }

@@ -1,7 +1,7 @@
 ---
 layout: default
-title: Choices of development
-nav_order: 6
+title: Appendix - Choices of development
+nav_order: 7
 ---
 
 # Choices of development

@@ -224,13 +224,33 @@ func TestLicenses(t *testing.T) {
 
 	// get licenses by their user
 	var licenses *[]LicenseInfo
-	licenses, err = St.License().FindByUser("Morpheus")
+
+	// test FindByUser with pubinfo=false (publication not loaded)
+	licenses, err = St.License().FindByUser("Morpheus", false)
 	if err != nil {
-		t.Fatalf("Failed to get licenses by their user: %v", err)
+		t.Fatalf("Failed to get licenses by user with pubinfo=false: %v", err)
 	}
 	if len(*licenses) != 2 {
 		t.Fatal("Failed to get 2 licenses owned by Morpheus")
 	}
+	// verify that publication is not loaded (empty title)
+	if (*licenses)[0].Publication.Title != "" {
+		t.Fatal("Publication should not be loaded when pubinfo=false")
+	}
+
+	// test FindByUser with pubinfo=true (publication loaded)
+	licenses, err = St.License().FindByUser("Morpheus", true)
+	if err != nil {
+		t.Fatalf("Failed to get licenses by user with pubinfo=true: %v", err)
+	}
+	if len(*licenses) != 2 {
+		t.Fatal("Failed to get 2 licenses owned by Morpheus")
+	}
+	// verify that publication is loaded (title should be present)
+	if (*licenses)[0].Publication.Title == "" {
+		t.Fatal("Publication should be loaded when pubinfo=true")
+	}
+	t.Logf("Publication title loaded: %s", (*licenses)[0].Publication.Title)
 
 	// get licenses by their publication id
 	pubUUID := Licenses[5].PublicationID

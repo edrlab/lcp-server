@@ -25,19 +25,19 @@ type ChartDataPoint struct {
 }
 
 type DashboardData struct {
-	TotalPublications       int               `json:"totalPublications"`
-	TotalUsers              int               `json:"totalUsers"`
-	TotalLicenses           int               `json:"totalLicenses"`
-	LicensesLast12Months    int               `json:"licensesLast12Months"`
-	LicensesLastMonth       int               `json:"licensesLastMonth"`
-	LicensesLastWeek        int               `json:"licensesLastWeek"`
-	LicensesLastDay         int               `json:"licensesLastDay"`
-	OldestLicenseDate       string            `json:"oldestLicenseDate"`
-	LatestLicenseDate       string            `json:"latestLicenseDate"`
-	OversharedLicensesCount int               `json:"oversharedLicensesCount"`
-	PublicationTypes        []PublicationType `json:"publicationTypes"`
-	LicenseStatuses         []LicenseStatus   `json:"licenseStatuses"`
-	ChartData               []ChartDataPoint  `json:"chartData"`
+	TotalPublications       int               `json:"total_publications"`
+	TotalUsers              int               `json:"total_users"`
+	TotalLicenses           int               `json:"total_licenses"`
+	LicensesLast12Months    int               `json:"licenses_last_12_months"`
+	LicensesLastMonth       int               `json:"licenses_last_month"`
+	LicensesLastWeek        int               `json:"licenses_last_week"`
+	LicensesLastDay         int               `json:"licenses_last_day"`
+	OldestLicenseDate       string            `json:"oldest_license_date"`
+	LatestLicenseDate       string            `json:"latest_license_date"`
+	OversharedLicensesCount int               `json:"overshared_licenses_count"`
+	PublicationTypes        []PublicationType `json:"publication_types"`
+	LicenseStatuses         []LicenseStatus   `json:"license_statuses"`
+	ChartData               []ChartDataPoint  `json:"chart_data"`
 }
 
 // GetDashboard provides a summary of key metrics and statistics about the system.
@@ -160,12 +160,14 @@ func (s dashboardStore) GetDashboard(excessiveSharingThreshold int, limitToLast1
 	}
 
 	// Chart data - licenses created per month for the last 12 months
-	// Use a simpler approach that works across all database dialects
+	// and having been used at least once (status not "ready")
+	// Use a simple approach that works across all database dialects
 	// Get all licenses from the last 12 months and process them in Go
 	var licenses []LicenseInfo
 	if err := s.db.Model(&LicenseInfo{}).
 		Select("created_at").
 		Where("created_at >= ?", last12Months).
+		Where("status <> ?", "ready").
 		Find(&licenses).Error; err != nil {
 		return nil, err
 	}
@@ -208,10 +210,10 @@ func mapContentTypeToDisplayName(contentType string) string {
 
 type OversharedLicenseData struct {
 	ID      			string `json:"id"`
-	PublicationID string `json:"publicationId"`
-	AltID         string `json:"altId"`
+	PublicationID string `json:"publication_id"`
+	AltID         string `json:"alt_id"`
 	Title         string `json:"title"`
-	UserID        string `json:"userId"`
+	UserID        string `json:"user_id"`
 	Type    			string `json:"type"`
 	Status  			string `json:"status"`
 	Devices 			int    `json:"devices"`

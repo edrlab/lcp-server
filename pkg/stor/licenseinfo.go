@@ -5,6 +5,7 @@
 package stor
 
 import (
+	"errors"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -54,24 +55,82 @@ func (s licenseStore) List(pageNum, pageSize int) (*[]LicenseInfo, error) {
 	return &licenses, s.db.Offset((pageNum - 1) * pageSize).Limit(pageSize).Order("id DESC").Find(&licenses).Error
 }
 
-func (s licenseStore) FindByUser(userID string) (*[]LicenseInfo, error) {
+func (s licenseStore) FindByUser(userID string, pubinfo bool) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
-	return &licenses, s.db.Limit(1000).Where("user_id= ?", userID).Find(&licenses).Error
+	query := s.db.Limit(1000).Where("user_id= ?", userID).Order("license_infos.id DESC")
+	
+	if pubinfo {
+		// Join with the publication table to get publication title
+		query = query.Joins("Publication")
+	}
+	
+	return &licenses, query.Find(&licenses).Error
 }
 
 func (s licenseStore) FindByPublication(publicationID string) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
-	return &licenses, s.db.Limit(1000).Where("publication_id= ?", publicationID).Find(&licenses).Error
+	return &licenses, s.db.Limit(1000).Where("publication_id= ?", publicationID).Order("id DESC").Find(&licenses).Error
 }
 
 func (s licenseStore) FindByStatus(status string) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
-	return &licenses, s.db.Limit(1000).Where("status= ?", status).Find(&licenses).Error
+	return &licenses, s.db.Limit(1000).Where("status= ?", status).Order("id DESC").Find(&licenses).Error
 }
 
 func (s licenseStore) FindByDeviceCount(min int, max int) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
-	return &licenses, s.db.Limit(1000).Where("device_count >= ? AND device_count <= ?", min, max).Find(&licenses).Error
+	return &licenses, s.db.Limit(1000).Where("device_count >= ? AND device_count <= ?", min, max).Order("id DESC").Find(&licenses).Error
+}
+
+// FindByDate finds licenses by creation date or month
+// dateStr can be:
+// - a specific date: "2024-02-15" (YYYY-MM-DD)
+// - a month: "2024-02" (YYYY-MM)
+func (s licenseStore) FindByDate(dateStr string, pubInfo bool) (*[]LicenseInfo, error) {
+	licenses := []LicenseInfo{}
+	
+	// Check if it's a month (format: YYYY-MM) or a specific date (format: YYYY-MM-DD)
+	if len(dateStr) == 7 { // Month format: YYYY-MM
+		// Parse the month
+		startOfMonth, err := time.Parse("2006-01", dateStr)
+		if err != nil {
+			return &licenses, err
+		}
+		// Get the start of next month
+		startOfNextMonth := startOfMonth.AddDate(0, 1, 0)
+		
+		query := s.db.Limit(1000).
+			Where("license_infos.created_at >= ? AND license_infos.created_at < ?", startOfMonth, startOfNextMonth).
+			Order("license_infos.id DESC")
+			
+		if pubInfo {
+			// Join with the publication table to get publication info
+			query = query.Joins("Publication")
+		}
+		
+		return &licenses, query.Find(&licenses).Error
+	} else if len(dateStr) == 10 { // Date format: YYYY-MM-DD
+		// Parse the specific date
+		specificDate, err := time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			return &licenses, err
+		}
+		// Get the start of next day
+		startOfNextDay := specificDate.AddDate(0, 0, 1)
+		
+		query := s.db.Limit(1000).
+			Where("license_infos.created_at >= ? AND license_infos.created_at < ?", specificDate, startOfNextDay).
+			Order("license_infos.id DESC")
+			
+		if pubInfo {
+			// Join with the publication table to get publication info
+			query = query.Joins("Publication")
+		}
+		
+		return &licenses, query.Find(&licenses).Error
+	} else {
+		return &licenses, errors.New("invalid date format: use YYYY-MM for month or YYYY-MM-DD for specific date")
+	}
 }
 
 func (s licenseStore) Count() (int64, error) {
