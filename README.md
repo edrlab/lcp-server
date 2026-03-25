@@ -18,7 +18,7 @@ The `lcpserver`:
 
 `lcpencrypt`:
 
-- Is both available as a command line utility and a server associated with to a watch folder:
+- Is both available as a command line utility and as a server triggered from a watch folder.
 - Encrypts EPUBs, PDF documents, and packaged Web Publications.
 - Stores encrypted publications at a location given as a parameter. This location can be a file system or a Cloud repository.
 - Notifies the LCP Server of the availability of this new asset. 
