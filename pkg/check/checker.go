@@ -20,6 +20,7 @@ import (
 
 // LicenseChecker is the structure passed to every checker method
 type LicenseChecker struct {
+	jsonData		[]byte
 	license   *lic.License
 	statusDoc *lic.StatusDoc
 }
@@ -57,6 +58,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	}
 
 	c := LicenseChecker{}
+	c.jsonData = bytes
 	c.license = new(lic.License)
 
 	// parse json data -> license
@@ -90,7 +92,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	// get the license status
 	err = c.GetStatusDoc()
 	if err != nil {
-		log.Errorf("Fata error getting the status document: %v", err)
+		log.Errorf("Fatal error getting the status document: %v", err)
 		return err
 	}
 
@@ -210,6 +212,8 @@ func (c *LicenseChecker) GetStatusDoc() error {
 // Get a fresh license from the provider system
 func (c *LicenseChecker) GetFreshLicense() error {
 
+	log.Info("Retrieving a fresh license ...")
+
 	// get the url of the license
 	var lHref string
 	for _, s := range c.statusDoc.Links {
@@ -272,7 +276,7 @@ func CheckResource(href string) error {
 func getJson(url string, target interface{}) error {
 
 	client := http.Client{
-		Timeout: 2 * time.Second,
+		Timeout: 5 * time.Second,
 	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

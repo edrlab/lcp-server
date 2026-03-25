@@ -126,6 +126,49 @@ func Init(configFile string) (*Config, error) {
 		}
 	}
 
+	// Process MySQL password from Docker secret
+	if mysqlPasswordFile := os.Getenv("MYSQL_PASSWORD_FILE"); mysqlPasswordFile != "" {
+		data, err := os.ReadFile(mysqlPasswordFile)
+		if err != nil {
+			log.Printf("Could not read MySQL password from %s: %v", mysqlPasswordFile, err)
+		} else {
+			mysqlPassword := strings.TrimSpace(string(data))
+			if mysqlPassword != "" && c.Dsn != "" {
+				// Replace password placeholder in DSN
+				// Supports format: mysql://user:PASSWORD_PLACEHOLDER@host/db or mysql://user:oldpassword@host/db
+				c.Dsn = strings.Replace(c.Dsn, "PASSWORD_PLACEHOLDER", mysqlPassword, 1)
+				// Also try to replace any existing password in the DSN (between : and @)
+				if strings.Contains(c.Dsn, "mysql://") {
+					parts := strings.SplitN(c.Dsn, ":", 3)
+					if len(parts) == 3 {
+						// parts[0] = "mysql"
+						// parts[1] = "//user"
+						// parts[2] = "oldpassword@host/db"
+						atIndex := strings.Index(parts[2], "@")
+						if atIndex >= 0 {
+							c.Dsn = parts[0] + ":" + parts[1] + ":" + mysqlPassword + parts[2][atIndex:]
+						}
+					}
+				}
+				log.Println("MySQL password loaded from Docker secret")
+			}
+		}
+	}
+
+	// Process JWT secret key from Docker secret
+	if jwtSecretFile := os.Getenv("JWT_SECRETKEY_FILE"); jwtSecretFile != "" {
+		data, err := os.ReadFile(jwtSecretFile)
+		if err != nil {
+			log.Printf("Could not read JWT secret key from %s: %v", jwtSecretFile, err)
+		} else {
+			jwtSecret := strings.TrimSpace(string(data))
+			if jwtSecret != "" {
+				c.JWT.SecretKey = jwtSecret
+				log.Println("JWT secret key loaded from Docker secret")
+			}
+		}
+	}
+
 	// Set some defaults
 	if c.Port == 0 {
 		c.Port = 8989
