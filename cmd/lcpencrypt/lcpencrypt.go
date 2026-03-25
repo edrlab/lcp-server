@@ -138,6 +138,7 @@ func main() {
 	} else if filename != "." {
 		// run the utility as a command line tool, keeping the input file in place
 		err = processFile(c, filename, KeepFile)
+		err = processFile(c, *input, filename, KeepFile)
 		if err != nil {
 			log.Errorf("Error processing file: %v", err)
 		}

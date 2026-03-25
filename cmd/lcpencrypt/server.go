@@ -65,7 +65,7 @@ func processExistingFiles(c Config) {
 			continue
 		}
 		log.Printf("File found: %s", file.Name())
-		err = processFile(c, file.Name(), DeleteFile)
+		err = processFile(c, file.Name(), file.Name(), DeleteFile)
 		if err != nil {
 			log.Errorf("Error processing file %s: %v", file.Name(), err)
 		}
@@ -111,8 +111,8 @@ func watchFileChanges(ctx context.Context, c Config, wg *sync.WaitGroup, sem cha
 						return
 					}
 
-					fileName := filepath.Base(filePath)
-					err = processFile(c, fileName, DeleteFile)
+				fileName := filepath.Base(filePath)
+				err = processFile(c, fileName, fileName, DeleteFile)
 					if err != nil {
 						log.Errorf("Error processing file %s: %v", fileName, err)
 					}

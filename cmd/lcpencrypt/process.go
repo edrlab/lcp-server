@@ -8,9 +8,10 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -20,22 +21,26 @@ import (
 	"github.com/readium/readium-lcp-server/encrypt"
 )
 
-// processFile processes a single file
-func processFile(c Config, filename string, fileHandling FileHandling) error {
-	log.Printf("Processing file: %s", filename)
+// processFile processes a single file.
+// rawInput is the original -input value (full URL or local path); filename is filepath.Base of that.
+func processFile(c Config, rawInput string, filename string, fileHandling FileHandling) error {
+	log.Printf("Processing file: %s", rawInput)
 
-	// create a path from c.InputPath and filename
-	inputFilePath := path.Join(c.InputPath, filename)
+	inputFilePath, cleanup, err := processRemoteFile(rawInput, filename, c.InputPath)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
 
 	// extract the username and password from the url, remove them from the url
 	var username, password string
-	err := getUsernamePassword(&c.LCPServerUrl, &username, &password)
+	err = getUsernamePassword(&c.LCPServerUrl, &username, &password)
 	if err != nil {
 		return err
 	}
 
 	// if the publication UUID or AltID is imposed, check if the content already exists in the License Server.
-	// Note that the publication UUID or AltID may also have be set via the command line. 
+	// Note that the publication UUID or AltID may also have be set via the command line.
 	// If this is the case, get the content encryption key for the server, so that the new encryption
 	// keeps the same key.
 	// This is necessary to allow fresh licenses being capable of decrypting previously downloaded content.
@@ -65,11 +70,16 @@ func processFile(c Config, filename string, fileHandling FileHandling) error {
 
 	start := time.Now()
 
-	// encrypt the publication
-	// no specific temp directory, no specific output directory
-	// request a cover image
 	log.Println("Starting encryption...")
-	publication, err := encrypt.ProcessEncryption(c.UUID, contentkey, inputFilePath, "", "", c.StoragePath, c.StorageUrl, "", c.ExtractCover, c.PDFNoMeta)
+	workDir, cleanupWorkDir, err := createWorkDir()
+	if err != nil {
+		return err
+	}
+	defer cleanupWorkDir()
+	// @TODO: Remove this hardcoding and make it configurable
+	storageFilename := "encrypted/" + c.UUID
+
+	publication, err := encrypt.ProcessEncryption(c.UUID, contentkey, inputFilePath, workDir, "", c.StoragePath, c.StorageUrl, storageFilename, c.ExtractCover, c.PDFNoMeta)
 	if err != nil {
 		return err
 	}
@@ -104,14 +114,67 @@ func processFile(c Config, filename string, fileHandling FileHandling) error {
 
 	fmt.Println("The encryption took", elapsed)
 
-	if fileHandling == DeleteFile {
-		// delete the file
+	if fileHandling == DeleteFile && !isRemoteURL(rawInput) {
 		if err := os.Remove(inputFilePath); err != nil {
 			return err
 		}
 		log.Printf("Input file deleted: %s", filename)
 	}
 	return nil
+}
+
+// isRemoteURL checks if a string is a remote URL
+func isRemoteURL(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") || strings.HasPrefix(s, "ftp://")
+}
+
+// createWorkDir creates a temporary working directory with an "encrypted"
+// subdirectory so the encrypted output file (<uuid>.epub) never collides
+// with the input file. The returned cleanup function removes the entire tree.
+func createWorkDir() (workDir string, cleanup func(), err error) {
+	workDir, err = os.MkdirTemp("", "lcpencrypt-*")
+	if err != nil {
+		return "", nil, fmt.Errorf("creating work directory: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Join(workDir, "encrypted"), os.ModePerm); err != nil {
+		os.RemoveAll(workDir)
+		return "", nil, fmt.Errorf("creating encrypted dir: %w", err)
+	}
+
+	return workDir, func() { os.RemoveAll(workDir) }, nil
+}
+
+// processRemoteFile resolves the input to a local file path. For remote URLs,
+// it downloads the file to a randomly-named temp file so that the library's
+// internal temp file (named <contentID>.epub) never collides with it.
+// The returned cleanup function removes the temp file; for local inputs it is a no-op.
+func processRemoteFile(rawInput, filename, inputPath string) (localPath string, cleanup func(), err error) {
+	if !isRemoteURL(rawInput) {
+		return filepath.Join(inputPath, filename), func() {}, nil
+	}
+
+	tmpFile, err := os.CreateTemp("", "lcpinput-*"+filepath.Ext(filename))
+	if err != nil {
+		return "", nil, fmt.Errorf("creating temp file for download: %w", err)
+	}
+
+	resp, err := http.Get(rawInput)
+	if err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return "", nil, fmt.Errorf("downloading %s: %w", rawInput, err)
+	}
+	_, copyErr := io.Copy(tmpFile, resp.Body)
+	resp.Body.Close()
+	tmpFile.Close()
+	if copyErr != nil {
+		os.Remove(tmpFile.Name())
+		return "", nil, fmt.Errorf("saving downloaded file: %w", copyErr)
+	}
+
+	log.Debugf("Downloaded %s → %s", rawInput, tmpFile.Name())
+	return tmpFile.Name(), func() { os.Remove(tmpFile.Name()) }, nil
 }
 
 // getUsernamePassword looks for the username and password in the url
