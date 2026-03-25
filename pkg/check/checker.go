@@ -20,6 +20,7 @@ import (
 
 // LicenseChecker is the structure passed to every checker method
 type LicenseChecker struct {
+	jsonData		[]byte
 	license   *lic.License
 	statusDoc *lic.StatusDoc
 }
@@ -57,6 +58,7 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 	}
 
 	c := LicenseChecker{}
+	c.jsonData = bytes
 	c.license = new(lic.License)
 
 	// parse json data -> license

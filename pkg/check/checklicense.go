@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/url"
 	"regexp"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/edrlab/lcp-server/pkg/crypto"
 	"github.com/edrlab/lcp-server/pkg/lic"
+	"github.com/edrlab/lcp-server/pkg/sign"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -216,11 +218,36 @@ func (c *LicenseChecker) CheckIssueDate(endCertificate *time.Time) error {
 // Verifies the signature
 func (c *LicenseChecker) CheckSignature() error {
 
-	err := c.license.CheckSignature()
-	if err != nil {
-		log.Info(err.Error())
-		log.Errorf("The signature of the license is incorrect")
+	// extract the signature from the license 
+	signature := c.license.Signature
+	if signature == nil {
+		return errors.New("missing signature")
 	}
+
+	// unmarsal raw json data
+	var data map[string]any
+	err := json.Unmarshal(c.jsonData, &data)
+	if err != nil {
+		return errors.New("failed to unmarshal the license json data: " + err.Error())
+	}
+
+	// check the signature using the json data (instead of the license object) to be sure that extensions do not cause a signature check failure
+	signChecker, err := sign.NewSignChecker(signature.Certificate, signature.Algorithm)
+	if err != nil {
+		return errors.New("failed to create a sign checker: " + err.Error())
+	}
+
+	// remove the signature from the data to be checked
+	delete(data, "signature")
+
+	// check the signature
+	err = signChecker.Check(data, signature.Value)
+	if err != nil {
+		return err
+	}
+
+	log.Info("The signature is valid")
+
 	return nil
 }
 
