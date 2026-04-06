@@ -6,12 +6,12 @@ package check
 
 import (
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
-
-	"encoding/json"
 
 	"github.com/edrlab/lcp-server/pkg/lic"
 	log "github.com/sirupsen/logrus"
@@ -225,20 +225,22 @@ func (c *LicenseChecker) GetFreshLicense() error {
 		return errors.New("the status document is missing a link to a fresh license")
 	}
 
-	// fetch the fresh license
+	// fetch the fresh license as bytes
+	err, bytes := getBytes(lHref)
+	if err != nil {
+		log.Errorf("Failed to fetch the fresh license: %v", err)
+		return err
+	}
+
+	// parse the fresh license as json
 	freshLicense := new(lic.License)
-	err := getJson(lHref, freshLicense)
+	err = json.Unmarshal(bytes, freshLicense)
 	if err != nil {
 		log.Errorf("Failed to parse the license: %v", err)
 		return err
 	}
 
 	// check the validity of the license using the json schema
-	bytes, err := json.Marshal(freshLicense)
-	if err != nil {
-		log.Errorf("Failed to marshal the license: %v", err)
-		return err
-	}
 	err = validateLicense(bytes)
 	if err != nil {
 		log.Errorf("Failed to validate the license: %v", err)
@@ -246,6 +248,7 @@ func (c *LicenseChecker) GetFreshLicense() error {
 	}
 
 	// update the current license
+	c.jsonData = bytes
 	c.license = freshLicense
 	return nil
 }
@@ -272,21 +275,22 @@ func CheckResource(href string) error {
 	return err
 }
 
-// getJson initializes any json struct with data fetched via http
-func getJson(url string, target interface{}) error {
+// fetchBody performs a GET request and returns the response body as bytes.
+// It handles HTTP errors by logging the server message.
+func fetchBody(url string) ([]byte, error) {
 
 	client := http.Client{
 		Timeout: 5 * time.Second,
 	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Some reverse-proxies respond with a 403 error if the User-Agent is empty.
 	req.Header.Set("User-Agent", "LCPChecker/1.0")
 	r, err := client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer r.Body.Close()
 
@@ -304,8 +308,25 @@ func getJson(url string, target interface{}) error {
 		} else {
 			log.Infof("Server message, title: %s", errResponse.Title)
 		}
-		return errors.New("failed to fetch the resource")
+		return nil, errors.New("failed to fetch the resource")
 	}
 
-	return json.NewDecoder(r.Body).Decode(target)
+	return io.ReadAll(r.Body)
+}
+
+// getJson initializes any json struct with data fetched via http
+func getJson(url string, target interface{}) error {
+
+	body, err := fetchBody(url)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(body, target)
+}
+
+// getBytes fetches data from a URL and returns it as a byte slice
+func getBytes(url string) (error, []byte) {
+
+	body, err := fetchBody(url)
+	return err, body
 }
