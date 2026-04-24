@@ -21,7 +21,9 @@
 .vscode/settings.json
 
 # local config and log files
-config/
+config/privkey-production.pem
+config/cert-production.pem
+config/lib/
 config-vm/
 logs/
 backups/

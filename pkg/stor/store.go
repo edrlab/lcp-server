@@ -55,10 +55,11 @@ type (
 	LicenseRepository interface {
 		ListAll() (*[]LicenseInfo, error)
 		List(pageNum, pageSize int) (*[]LicenseInfo, error)
-		FindByUser(userID string) (*[]LicenseInfo, error)
+		FindByUser(userID string, pubinfo bool) (*[]LicenseInfo, error)
 		FindByPublication(publicationID string) (*[]LicenseInfo, error)
 		FindByStatus(status string) (*[]LicenseInfo, error)
 		FindByDeviceCount(min int, max int) (*[]LicenseInfo, error)
+		FindByDate(dateStr string, pubInfo bool) (*[]LicenseInfo, error)
 		Count() (int64, error)
 		Get(uuid string) (*LicenseInfo, error)
 		Create(p *LicenseInfo) error
@@ -115,6 +116,12 @@ const (
 	EVENT_RETURN     = "return"
 	EVENT_REVOKE     = "revoke"
 	EVENT_CANCEL     = "cancel"
+)
+
+// Publication info constants
+const (
+	IncludePubInfo = true
+	ExcludePubInfo = false
 )
 
 // Init initializes the database

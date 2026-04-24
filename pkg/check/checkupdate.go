@@ -291,6 +291,10 @@ func (c *LicenseChecker) CheckReturn() error {
 		return err
 	}
 
+	// init a returned time to check that the license is correctly updated after the return
+	returnTime := time.Now()
+	log.Info("Requesting license return at ", returnTime.Format(time.RFC822))
+
 	// request the return of the license
 	client := &http.Client{}
 	req, err := http.NewRequest("PUT", url, nil)
@@ -317,18 +321,31 @@ func (c *LicenseChecker) CheckReturn() error {
 		log.Info("License return was successful")
 	}
 
+	// 1/2sc pause
+	time.Sleep(500 * time.Millisecond)
+
 	// fetch the fresh license and check that it has been correctly updated
 	err = c.GetFreshLicense()
 	if err != nil {
 		log.Warning("Failed to get the fresh license after it was returned. This is not an error: ", err)
 		return nil
 	} else {
+		if c.license.Updated == nil {
+			log.Error("The fresh license update timestamp is absent")
+			return nil
+		}
+		if c.license.Rights.End == nil {
+			log.Error("The fresh license end timestamp is absent")
+			return nil
+		}
 		log.Info("The license end timestamp is now ", c.license.Rights.End.Format(time.RFC822))
-		freshUpdate := time.Now().Add(-1 * time.Second)
-		if c.license.Updated.Before(freshUpdate) {
+		// takes into account a possible small difference of time between the server and the checker
+		if c.license.Updated.Before(returnTime.Add(-2 * time.Minute)) {
+			log.Info("License updated at ", c.license.Updated.Format(time.RFC822))
 			log.Error("The fresh license update timestamp was not properly updated")
 		}
-		if c.license.Rights.End.After(time.Now()) {
+		if c.license.Rights.End.After(time.Now().Add(2 * time.Minute)) {
+			log.Info("License end timestamp is ", c.license.Rights.End.Format(time.RFC822))
 			log.Error("The fresh license end timestamp was not properly updated")
 		}
 	}

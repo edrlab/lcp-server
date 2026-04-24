@@ -328,28 +328,3 @@ func setSignature(l *License, cert *tls.Certificate) error {
 
 	return nil
 }
-
-// CheckSignature verifies the signature of a license
-func (license *License) CheckSignature() error {
-	if license.Signature == nil {
-		return errors.New("missing signature")
-	}
-
-	// extract the signature from the license
-	signature := license.Signature
-	// raz the embedded signature
-	license.Signature = nil
-
-	signChecker, err := sign.NewSignChecker(signature.Certificate, signature.Algorithm)
-	if err != nil {
-		return err
-	}
-
-	err = signChecker.Check(license, signature.Value)
-	if err != nil {
-		return err
-	}
-	// put back the signature in place
-	license.Signature = signature
-	return nil
-}

@@ -2,7 +2,7 @@
 
 This is a major evolution of the Readium LCP Server available on https://github.com/readium/readium-lcp-server. Because it is not an incremental evolution, and this codebase is entirely maintained by EDRLab, we decided to create a new repository on the EDRLab Github space. 
 
-**Note: This project is almost ready for production. We are currently testing it on a demo plateform before release.**
+**Note: This project is now ready for production. Its tagged versions started at 2.0.0.**
 
 This project is made of three executables: 
 
@@ -18,7 +18,7 @@ The `lcpserver`:
 
 `lcpencrypt`:
 
-- Is both available as a command line utility and a server associated with to a watch folder:
+- Is both available as a command line utility and as a server triggered from a watch folder.
 - Encrypts EPUBs, PDF documents, and packaged Web Publications.
 - Stores encrypted publications at a location given as a parameter. This location can be a file system or a Cloud repository.
 - Notifies the LCP Server of the availability of this new asset. 
@@ -103,6 +103,14 @@ The open-source codebase is provided with **SQLite**, **MySQL** and **PostgresQL
 
 This is achieved by adding a tag at build time: 
 > go build -tags MYSQL -o $GOPATH/bin/lcpserver2  ./cmd/lcpserver
+
+Compile lcpencrypt and lcpchecker using: 
+
+```sh
+# Compile and create the binary in the Go bin folder
+go build -o $GOPATH/bin/lcpencrypt  ./cmd/lcpencrypt
+go build -o $GOPATH/bin/lcpchecker  ./cmd/lcpchecker
+```
 
 # More
 
