@@ -70,9 +70,11 @@ func NewLicenseCtrl(cf *conf.Config, st stor.Store) *LicenseCtrl {
 // NewStatusDoc returns a Status Document
 func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 
-	// TODO: if the date of update of the publication is more recent than the date of creation of the license,
-	// the content has been updated: the date of update of the license must therefore be set to the date of update
-	// of the publication
+	// TODO: Study if an update of the publication could be conveyed to the user,
+	// so that the client can ask the user if the new version of the publication 
+	// has to be downloaded. 
+	// The status document could include an additional field with the 
+	// publication update date, and the client could compare it with cached data.
 
 	// set license updated
 	var licUpdated, statUpdated time.Time
