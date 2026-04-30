@@ -69,7 +69,7 @@ For that, you'll need first to sign a contract with EDRLab and obtain confidenti
 
 If you wish to prepare an installation in Production mode, you must first clone the software. 
 
-Create a working folder (ex. lcp-server), and from this folder, enter:
+Create a working folder (ex. `edrlab`) and, from this folder, enter:
 
 ```sh
 git clone https://github.com/edrlab/lcp-server.git
