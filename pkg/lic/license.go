@@ -164,12 +164,12 @@ func setEncryption(profile string, l *License, pub *stor.Publication, encryption
 	}
 
 	// if the profile contains a jocker, generate a random number between 0 and 9
-	if encryption.Profile == "2.x" {
+	if encryption.Profile == "http://readium.org/lcp/profile-2.x" {
 		randomDigit, err := generateRandomDigit()
 		if err != nil {
 			return nil, errors.New("unable to generate a random digit")
 		}
-		encryption.Profile = "2." + strconv.Itoa(randomDigit)
+		encryption.Profile = "http://readium.org/lcp/profile-2." + strconv.Itoa(randomDigit)
 	}
 
 	// generate the user key
