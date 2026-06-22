@@ -35,7 +35,7 @@ func processFile(c Config, filename string, fileHandling FileHandling) error {
 	}
 
 	// if the publication UUID or AltID is imposed, check if the content already exists in the License Server.
-	// Note that the publication UUID or AltID may also have be set via the command line. 
+	// Note that the publication UUID or AltID may also have be set via the command line.
 	// If this is the case, get the content encryption key for the server, so that the new encryption
 	// keeps the same key.
 	// This is necessary to allow fresh licenses being capable of decrypting previously downloaded content.
@@ -65,11 +65,18 @@ func processFile(c Config, filename string, fileHandling FileHandling) error {
 
 	start := time.Now()
 
+	// get S3 options from the lcpencrypt configuration
+	s3opts := &encrypt.S3Options{
+		Endpoint:       c.s3opts.Endpoint,
+		ForcePathStyle: c.s3opts.ForcePathStyle,
+		DisableSSL:     c.s3opts.DisableSSL,
+	}
+
 	// encrypt the publication
 	// no specific temp directory, no specific output directory
 	// request a cover image
 	log.Println("Starting encryption...")
-	publication, err := encrypt.ProcessEncryption(c.UUID, contentkey, inputFilePath, "", "", c.StoragePath, c.StorageUrl, "", c.ExtractCover, c.PDFNoMeta)
+	publication, err := encrypt.ProcessEncryption(c.UUID, contentkey, inputFilePath, "", "", c.StoragePath, c.StorageUrl, "", c.ExtractCover, c.PDFNoMeta, *s3opts)
 	if err != nil {
 		return err
 	}

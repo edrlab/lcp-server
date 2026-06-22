@@ -18,19 +18,27 @@ import (
 
 // LCP Encrypt configuration
 type Config struct {
-	InputPath    string `split_words:"true"`
-	ProviderUri  string `split_words:"true"`
+	InputPath     string `split_words:"true"`
+	ProviderUri   string `split_words:"true"`
 	UseFilenameAs string `split_words:"true"`
-	UUID         string
-	AltID        string
-	Verbose      bool
-	V2           bool
-	ExtractCover bool
-	PDFNoMeta    bool   `split_words:"true"`
-	StoragePath  string `split_words:"true"`
-	StorageUrl   string `split_words:"true"`
-	LCPServerUrl string `envconfig:"lcpserver_url"`
-	CMSUrl       string `split_words:"true" envconfig:"cms_url"`
+	UUID          string
+	AltID         string
+	Verbose       bool
+	V2            bool
+	ExtractCover  bool
+	PDFNoMeta     bool   `split_words:"true"`
+	StoragePath   string `split_words:"true"`
+	StorageUrl    string `split_words:"true"`
+	LCPServerUrl  string `envconfig:"lcpserver_url"`
+	CMSUrl        string `split_words:"true" envconfig:"cms_url"`
+	s3opts        *S3Options
+}
+
+// S3Options holds S3 configuration options for S3-based storage.
+type S3Options struct {
+	Endpoint       string `split_words:"true" envconfig:"s3_endpoint"`
+	ForcePathStyle bool   `split_words:"true" envconfig:"s3_force_path_style"`
+	DisableSSL     bool   `split_words:"true" envconfig:"s3_disable_ssl"`
 }
 
 // create an enum with two values: keep_file and delete_file
@@ -51,7 +59,7 @@ func init() {
 }
 
 func usage() {
-	fmt.Println("Usage: lcpencrypt [-v2] [-serve] [-input] [-usefnas] [-uuid] [-altid] [-verbose] [-pdfnometa] [-cover] [-lcpsv][-cms] [-storage] [-url]")
+	fmt.Println("Usage: lcpencrypt [-v2] [-serve] [-input] [-usefnas] [-uuid] [-altid] [-verbose] [-pdfnometa] [-cover] [-lcpsv][-cms] [-storage] [-url] [-s3endpoint] [-s3pathstyle] [-s3disablessl]")
 	flag.PrintDefaults()
 }
 
@@ -64,7 +72,10 @@ func main() {
 	storagePath := flag.String("storage", "", "storage path")
 	storageUrl := flag.String("url", "", "storage URL")
 	lcpServerUrl := flag.String("lcpsv", "", "LCP Server URL")
-	cmsUrl := flag.String("cms", "", "CMS URL")		
+	cmsUrl := flag.String("cms", "", "CMS URL")
+	s3Endpoint := flag.String("s3endpoint", "", "S3 endpoint URL")
+	s3ForcePathStyle := flag.Bool("s3pathstyle", false, "if set, forces path style addressing for S3")
+	s3DisableSSL := flag.Bool("s3disablessl", false, "if set, disables SSL for S3")
 	verbose := flag.Bool("verbose", false, "if set, display info messages; if not set, display only warnings and errors.")
 	v2 := flag.Bool("v2", true, "indicates a v2 License server")
 	cover := flag.Bool("cover", true, "indicates if a cover should be exported")
@@ -98,10 +109,16 @@ func main() {
 	c.V2 = *v2
 	c.ExtractCover = *cover
 	c.PDFNoMeta = *pdfnometa
+	c.s3opts = &S3Options{
+		Endpoint:       *s3Endpoint,
+		ForcePathStyle: *s3ForcePathStyle,
+		DisableSSL:     *s3DisableSSL,
+	}
 
 	// TODO: Move provider URI and input path to a map as LCPENCRYPT_PROVIDERS="prov1:path1, prov2:path2"
 	// UUID and ALTID make no sense as environment variables.
 	// INPUT_PATH must be a directory when set as an environment variable for use in server mode.
+
 	// The following environment variables are supported:
 	// LCPENCRYPT_INPUT_PATH
 	// LCPENCRYPT_PROVIDER_URI
@@ -114,6 +131,10 @@ func main() {
 	// LCPENCRYPT_STORAGE_URL
 	// LCPENCRYPT_LCPSERVER_URL
 	// LCPENCRYPT_CMS_URL
+	// LCPENCRYPT_S3_ENDPOINT
+	// LCPENCRYPT_S3_FORCE_PATH_STYLE
+	// LCPENCRYPT_S3_DISABLE_SSL
+
 	// process environment variables
 	err := envconfig.Process("lcpencrypt", &c)
 	if err != nil {
