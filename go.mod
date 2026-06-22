@@ -14,7 +14,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jtacoma/uritemplates v1.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/readium/readium-lcp-server v1.13.2
+	github.com/readium/readium-lcp-server v1.14.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/text v0.33.0
@@ -27,7 +27,7 @@ require (
 )
 
 require (
-	filippo.io/edwards25519 v1.1.0 // indirect
+	filippo.io/edwards25519 v1.1.1 // indirect
 	github.com/abbot/go-http-auth v0.4.0 // indirect
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/aws/aws-sdk-go v1.55.8 // indirect
