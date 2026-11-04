@@ -270,11 +270,11 @@ type PublicationRequest struct {
 // PublicationResponse is the response publication payload.
 type PublicationResponse struct {
 	*stor.Publication
-	// TODO do not serialize the following properties
-	//ID omit `json:"ID,omitempty"`
-	//CreatedAt omit `json:"CreatedAt,omitempty"`
-	//UpdatedAt omit `json:"UpdatedAt,omitempty"`
-	//DeletedAt omit `json:"DeletedAt,omitempty"`
+	// do not serialize the following properties
+	ID        omit `json:"ID,omitempty"`
+	CreatedAt omit `json:"CreatedAt,omitempty"`
+	UpdatedAt omit `json:"UpdatedAt,omitempty"`
+	DeletedAt omit `json:"DeletedAt,omitempty"`
 }
 
 // NewPublicationListResponse creates a rendered list of publications

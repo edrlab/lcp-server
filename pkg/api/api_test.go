@@ -46,7 +46,7 @@ type PublicationTest struct {
 
 // LicenseTest data model, no gorm data, no join
 type LicenseTest struct {
-	CreatedAt     time.Time  `json:"created_at"`
+	CreatedAt     time.Time  `json:"created"`
 	Updated       *time.Time `json:"updated,omitempty"`
 	UUID          string     `json:"uuid"`
 	UserID        string     `json:"user_id"`

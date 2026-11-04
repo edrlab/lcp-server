@@ -77,11 +77,12 @@ func TestUpdateLicenseInfo(t *testing.T) {
 	inLic, _ := createLicense(t)
 
 	// update some fields
-	inLic.Status = "revoked"
+	inLic.Status = "active"
 	now := time.Now()
-	inLic.StatusUpdated = &now
+	// the license is being updated now
 	inLic.Updated = &now
-	inLic.End = &now
+	// the status is being updated now
+	inLic.StatusUpdated = &now
 
 	data, err := json.Marshal((inLic))
 	if err != nil {
@@ -102,6 +103,27 @@ func TestUpdateLicenseInfo(t *testing.T) {
 		t.Error("Updating License failed.")
 	}
 
+	// check the updated fields
+	req, _ = http.NewRequest("GET", path, nil)
+	response = executeRequest(req)
+	if checkResponseCode(t, http.StatusOK, response) {
+		var outLic LicenseTest
+		if err := json.Unmarshal(response.Body.Bytes(), &outLic); err != nil {
+			t.Fatal(err)
+		}
+		if outLic.UUID != inLic.UUID {
+			t.Errorf("Expected UUID to be preserved")
+		}
+		if outLic.Status != "active" {
+			t.Errorf("Expected status 'active', got '%s'", outLic.Status)
+		}
+		if !outLic.CreatedAt.Equal(inLic.CreatedAt) {
+			t.Errorf("Expected created timestamp to be preserved")
+		}
+		if outLic.Updated == nil || !outLic.Updated.Equal(*inLic.Updated) {
+			t.Errorf("Expected updated timestamp to be preserved")
+		}
+	}
 	// delete the license
 	deleteLicense(t, inLic.UUID)
 

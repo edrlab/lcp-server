@@ -213,6 +213,7 @@ func (a *APICtrl) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// set updated fields
+	license.Updated = licUpdates.Updated
 	license.Provider = licUpdates.Provider
 	license.UserID = licUpdates.UserID
 	license.Start = licUpdates.Start
@@ -303,10 +304,10 @@ type LicenseInfoRequest struct {
 type LicenseInfoResponse struct {
 	*stor.LicenseInfo
 	// do not serialize the following properties
-	//ID omit `json:"ID,omitempty"`
-	//CreatedAt   omit `json:"CreatedAt,omitempty"`
-	//UpdatedAt   omit `json:"UpdatedAt,omitempty"`
-	//DeletedAt   omit `json:"DeletedAt,omitempty"`
+	ID               omit    `json:"ID,omitempty"`
+	CreatedAt        omit    `json:"CreatedAt,omitempty"`
+	UpdatedAt        omit    `json:"UpdatedAt,omitempty"`
+	DeletedAt        omit    `json:"DeletedAt,omitempty"`
 	Publication      omit    `json:"Publication,omitempty"`
 	PublicationTitle *string `json:"publication_title,omitempty"`
 }

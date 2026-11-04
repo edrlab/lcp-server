@@ -18,8 +18,8 @@ import (
 // therefore we keep the Updated property, which must be maintained manually.
 type LicenseInfo struct {
 	gorm.Model
-	CreatedAt     time.Time   `gorm:"index"`             // index on created_at, useful for dashboard queries
-	Updated       *time.Time  `json:"updated,omitempty"` // see comment above
+	CreatedAt     time.Time   `json:"created" gorm:"index"` // index on created, useful for dashboard queries
+	Updated       *time.Time  `json:"updated,omitempty"`    // see comment above
 	UUID          string      `json:"uuid" validate:"required,uuid" gorm:"type:varchar(100);uniqueIndex"`
 	Provider      string      `json:"provider" validate:"required,url" gorm:"type:varchar(255)"`
 	UserID        string      `json:"user_id,omitempty" validate:"required" gorm:"type:varchar(100);index"`
@@ -58,12 +58,12 @@ func (s licenseStore) List(pageNum, pageSize int) (*[]LicenseInfo, error) {
 func (s licenseStore) FindByUser(userID string, pubinfo bool) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
 	query := s.db.Limit(1000).Where("user_id= ?", userID).Order("license_infos.id DESC")
-	
+
 	if pubinfo {
 		// Join with the publication table to get publication title
 		query = query.Joins("Publication")
 	}
-	
+
 	return &licenses, query.Find(&licenses).Error
 }
 
@@ -88,7 +88,7 @@ func (s licenseStore) FindByDeviceCount(min int, max int) (*[]LicenseInfo, error
 // - a month: "2024-02" (YYYY-MM)
 func (s licenseStore) FindByDate(dateStr string, pubInfo bool) (*[]LicenseInfo, error) {
 	licenses := []LicenseInfo{}
-	
+
 	// Check if it's a month (format: YYYY-MM) or a specific date (format: YYYY-MM-DD)
 	if len(dateStr) == 7 { // Month format: YYYY-MM
 		// Parse the month
@@ -98,16 +98,16 @@ func (s licenseStore) FindByDate(dateStr string, pubInfo bool) (*[]LicenseInfo, 
 		}
 		// Get the start of next month
 		startOfNextMonth := startOfMonth.AddDate(0, 1, 0)
-		
+
 		query := s.db.Limit(1000).
 			Where("license_infos.created_at >= ? AND license_infos.created_at < ?", startOfMonth, startOfNextMonth).
 			Order("license_infos.id DESC")
-			
+
 		if pubInfo {
 			// Join with the publication table to get publication info
 			query = query.Joins("Publication")
 		}
-		
+
 		return &licenses, query.Find(&licenses).Error
 	} else if len(dateStr) == 10 { // Date format: YYYY-MM-DD
 		// Parse the specific date
@@ -117,16 +117,16 @@ func (s licenseStore) FindByDate(dateStr string, pubInfo bool) (*[]LicenseInfo, 
 		}
 		// Get the start of next day
 		startOfNextDay := specificDate.AddDate(0, 0, 1)
-		
+
 		query := s.db.Limit(1000).
 			Where("license_infos.created_at >= ? AND license_infos.created_at < ?", specificDate, startOfNextDay).
 			Order("license_infos.id DESC")
-			
+
 		if pubInfo {
 			// Join with the publication table to get publication info
 			query = query.Joins("Publication")
 		}
-		
+
 		return &licenses, query.Find(&licenses).Error
 	} else {
 		return &licenses, errors.New("invalid date format: use YYYY-MM for month or YYYY-MM-DD for specific date")

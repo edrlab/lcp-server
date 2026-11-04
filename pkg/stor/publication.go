@@ -16,7 +16,7 @@ import (
 // Publication data model
 type Publication struct {
 	gorm.Model
-	CreatedAt     time.Time `gorm:"index"` // index on created_at, useful for dashboard queries
+	CreatedAt     time.Time `json:"created" gorm:"index"` // index on created, useful for dashboard queries
 	Provider      string    `json:"provider,omitempty" validate:"omitempty,url" gorm:"type:varchar(255)"`
 	UUID          string    `json:"uuid" validate:"omitempty,uuid" gorm:"type:varchar(100);uniqueIndex"`
 	AltID         string    `json:"alt_id,omitempty" validate:"omitempty" gorm:"type:varchar(255);index"`
@@ -70,11 +70,11 @@ func (s publicationStore) Get(uuid string) (*Publication, error) {
 }
 
 func (s publicationStore) GetByAltID(altID string) (*Publication, error) {
-	// Unscoped() is used here also to retrieve publications that have been soft-deleted. 
-	// There may be several publications identified by the same AltId if some were soft-deleted; 
+	// Unscoped() is used here also to retrieve publications that have been soft-deleted.
+	// There may be several publications identified by the same AltId if some were soft-deleted;
 	// this is why the request orders the results by date created desc, so that the latest one,
 	// the only one potentially not deleted, is retained.
-	// TODO: consider adding a filter on the provider as well, to allow multiple publications with the same AltID from different providers. Problem: the API endpoint is called as a GET, with the altid as unique parameter (/publications/altid/xxx); potential evolution = /publications/altid/provider:xxx.  
+	// TODO: consider adding a filter on the provider as well, to allow multiple publications with the same AltID from different providers. Problem: the API endpoint is called as a GET, with the altid as unique parameter (/publications/altid/xxx); potential evolution = /publications/altid/provider:xxx.
 	var publication Publication
 	// debug: list all publications with this AltID
 	var publications []Publication
