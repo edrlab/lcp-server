@@ -177,6 +177,10 @@ func (c *LicenseChecker) CheckLicenseLink() {
 	}
 
 	// check that the fresh license can be fetched
+	if licHref == "http://mock" {
+		log.Info("The fresh license link is a mock URL, skipping resource check")
+		return
+	}
 	err := CheckResource(licHref)
 	if err != nil {
 		log.Errorf("The fresh license at %s is unreachable", licHref)

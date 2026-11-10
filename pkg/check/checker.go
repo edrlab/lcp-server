@@ -20,7 +20,7 @@ import (
 
 // LicenseChecker is the structure passed to every checker method
 type LicenseChecker struct {
-	jsonData		[]byte
+	jsonData  []byte
 	license   *lic.License
 	statusDoc *lic.StatusDoc
 }
@@ -108,11 +108,11 @@ func Checker(bytes []byte, passphrase string, level uint) error {
 		log.Info("-- The End --")
 		return nil
 	}
-	log.Info("-- Check the fresh license --")
 
-	// get the fresh license
+	log.Info("-- Check the fresh license --")
+	// get a fresh license
 	err = c.GetFreshLicense()
-	// no fatal error
+	// the fresh license URL may be empty for testing purpose, so this is not a fatal error
 	if err == nil {
 		// check the fresh license
 		err = c.CheckLicense(passphrase)
@@ -221,8 +221,9 @@ func (c *LicenseChecker) GetFreshLicense() error {
 			lHref = s.Href
 		}
 	}
-	if lHref == "" {
-		return errors.New("the status document is missing a link to a fresh license")
+	if lHref == "http://mock" {
+		log.Info("The fresh license link is a mock URL, skipping resource retrieval")
+		return errors.New("retrieving the fresh license is skipped")
 	}
 
 	// fetch the fresh license as bytes

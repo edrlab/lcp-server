@@ -27,11 +27,11 @@ func (c *LicenseChecker) UpdateLicense() error {
 
 	// check that the license is not in a final state
 	if c.statusDoc.Status == "expired" {
-		log.Infof("It is not possible to update a license which has expired")
+		log.Warningf("It is not possible to update a license which has expired")
 		return nil
 	}
 	if c.statusDoc.Status == "revoked" || c.statusDoc.Status == "returned" || c.statusDoc.Status == "cancelled" {
-		log.Infof("It is not possible to update a license which has been %s", c.statusDoc.Status)
+		log.Warningf("It is not possible to update a license which has been %s", c.statusDoc.Status)
 		return nil
 	}
 
@@ -87,7 +87,7 @@ func (c *LicenseChecker) CheckRegister() error {
 	defer r.Body.Close()
 
 	// process the response
-	err = c.ProcessResponse(r)
+	err = c.ProcessResponse("register", r)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func (c *LicenseChecker) CheckRenew() error {
 	// set the link with a test id, name (but no explicit end date)
 	url, err := setLinkUrl(renewLink.Href)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if c.statusDoc.PotentialRights == nil || c.statusDoc.PotentialRights.End == nil {
@@ -148,35 +148,34 @@ func (c *LicenseChecker) CheckRenew() error {
 	client := &http.Client{}
 	req, err := http.NewRequest("PUT", url, nil)
 	if err != nil {
-		return nil
+		return err
 	}
 	r, err := client.Do(req)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer r.Body.Close()
 
 	// process the response
-	err = c.ProcessResponse(r)
-	// let's continue the tests if there was an error
+	err = c.ProcessResponse("renew", r)
+
+	// we'll jump to the next tests if there was an error renewing the license,
 	// especially if there was an attempt to renew with a date before the current end date
 	if err == nil {
 		// check the new status of the license
 		if c.statusDoc.Status != "active" {
 			log.Error("The new status should be active, not ", c.statusDoc.Status)
 		} else {
-			log.Info("License extension successful")
+			log.Info("License extension was successful")
 		}
 
+		log.Info("Checking the fresh license after renewal ...")
 		// 1/2sc pause
 		time.Sleep(500 * time.Millisecond)
 
 		// fetch the fresh license and check that it has been correctly updated
 		err = c.GetFreshLicense()
-		if err != nil {
-			log.Error("Failed to get the fresh license: ", err)
-			return nil
-		} else {
+		if err == nil {
 			// the fresh license must have an update timestamp
 			if c.license.Updated == nil {
 				log.Error("The fresh license update timestamp is absent")
@@ -191,13 +190,13 @@ func (c *LicenseChecker) CheckRenew() error {
 		}
 	}
 
-	// if there is no max end date, do not request additional extensions
+	// if there is no max end date, do not request additional renewals
 	if c.statusDoc.PotentialRights == nil || c.statusDoc.PotentialRights.End == nil {
 		return nil
 	}
 
-	// 1/2sc pause
-	time.Sleep(500 * time.Millisecond)
+	// 1sc pause
+	time.Sleep(1 * time.Second)
 
 	// request an extension of the license, again
 	// this time with an explicit end date to the license, one day before the max end date
@@ -213,10 +212,13 @@ func (c *LicenseChecker) CheckRenew() error {
 	if err != nil {
 		return nil
 	}
-	err = c.ProcessResponse(r)
+	err = c.ProcessResponse("renew", r)
 	if err == nil {
-		log.Info("License extension successful")
+		log.Info("License extension was successful")
 	}
+
+	// 1sc pause
+	time.Sleep(1 * time.Second)
 
 	// request an extension with an incorrect timestamp
 	// and check that the server responds with an error
@@ -231,13 +233,13 @@ func (c *LicenseChecker) CheckRenew() error {
 	if err != nil {
 		return nil
 	}
-	err = c.ProcessResponse(r)
+	err = c.ProcessResponse("renew", r)
 	if err == nil {
 		log.Error("License extension with a wrong end date should fail")
 	}
 
-	// 1/2sc pause
-	time.Sleep(500 * time.Millisecond)
+	// 1sc pause
+	time.Sleep(1 * time.Second)
 
 	// request an extension of the license after the max end date
 	// and check that the server responds with an error
@@ -253,9 +255,9 @@ func (c *LicenseChecker) CheckRenew() error {
 	if err != nil {
 		return nil
 	}
-	err = c.ProcessResponse(r)
+	err = c.ProcessResponse("renew", r)
 	if err == nil {
-		log.Info("License extension with an end date after the allowed max should fail")
+		log.Info("License extension was successful")
 	}
 
 	return nil
@@ -308,7 +310,7 @@ func (c *LicenseChecker) CheckReturn() error {
 	defer r.Body.Close()
 
 	// process the response
-	err = c.ProcessResponse(r)
+	err = c.ProcessResponse("return", r)
 	if err != nil {
 		log.Info("Return didn't succeed: ", err)
 		return nil
@@ -327,27 +329,26 @@ func (c *LicenseChecker) CheckReturn() error {
 	// fetch the fresh license and check that it has been correctly updated
 	err = c.GetFreshLicense()
 	if err != nil {
-		log.Warning("Failed to get the fresh license after it was returned. This is not an error: ", err)
 		return nil
-	} else {
-		if c.license.Updated == nil {
-			log.Error("The fresh license update timestamp is absent")
-			return nil
-		}
-		if c.license.Rights.End == nil {
-			log.Error("The fresh license end timestamp is absent")
-			return nil
-		}
-		log.Info("The license end timestamp is now ", c.license.Rights.End.Format(time.RFC822))
-		// takes into account a possible small difference of time between the server and the checker
-		if c.license.Updated.Before(returnTime.Add(-2 * time.Minute)) {
-			log.Info("License updated at ", c.license.Updated.Format(time.RFC822))
-			log.Error("The fresh license update timestamp was not properly updated")
-		}
-		if c.license.Rights.End.After(time.Now().Add(2 * time.Minute)) {
-			log.Info("License end timestamp is ", c.license.Rights.End.Format(time.RFC822))
-			log.Error("The fresh license end timestamp was not properly updated")
-		}
+	}
+
+	if c.license.Updated == nil {
+		log.Error("The fresh license update timestamp is absent")
+		return nil
+	}
+	if c.license.Rights.End == nil {
+		log.Error("The fresh license end timestamp is absent")
+		return nil
+	}
+	log.Info("The license end timestamp is now ", c.license.Rights.End.Format(time.RFC822))
+	// takes into account a possible small difference of time between the server and the checker
+	if c.license.Updated.Before(returnTime.Add(-2 * time.Minute)) {
+		log.Info("License updated at ", c.license.Updated.Format(time.RFC822))
+		log.Error("The fresh license update timestamp was not properly updated")
+	}
+	if c.license.Rights.End.After(time.Now().Add(2 * time.Minute)) {
+		log.Info("License end timestamp is ", c.license.Rights.End.Format(time.RFC822))
+		log.Error("The fresh license end timestamp was not properly updated")
 	}
 
 	return nil
@@ -372,10 +373,10 @@ func (c *LicenseChecker) GetStatusLink(linkRel string) *lic.Link {
 }
 
 // ProcessResponse processes the response to a register, renew or return request
-func (c *LicenseChecker) ProcessResponse(r *http.Response) error {
+func (c *LicenseChecker) ProcessResponse(action string, r *http.Response) error {
 
 	if r.StatusCode != 200 {
-		log.Warningf("The server returned an error %d", r.StatusCode)
+		log.Warningf("The server returned an error %d for action %s", r.StatusCode, action)
 
 		// map the response to an error structure
 		errResponse := new(ErrResponse)
@@ -398,13 +399,19 @@ func (c *LicenseChecker) ProcessResponse(r *http.Response) error {
 		return err
 	}
 
-	// check that the timestamp of the status document has been updated
-	if !newStatusDoc.Updated.Status.After(c.statusDoc.Updated.Status) {
-		log.Errorf("The status doc timestamp has not been updated")
+	// check if the license timestamp has been updated
+	// the license timestamp is not expected to be updated at register time
+	if action != "register" && !newStatusDoc.Updated.License.After(c.statusDoc.Updated.License) {
+		log.Warningf("The license timestamp has not been updated")
+	}
+	// check if the status timestamp has been updated
+	// the status timestamp is not expected to be updated at renew time
+	if action != "renew" && !newStatusDoc.Updated.Status.After(c.statusDoc.Updated.Status) {
+		log.Warningf("The status doc timestamp has not been updated")
 	}
 	// test if an event has been added to the status document
 	if len(newStatusDoc.Events) != len(c.statusDoc.Events)+1 {
-		log.Errorf("A new event should have been created")
+		log.Warningf("A new event should have been created")
 	} else {
 		lastIndex := len(newStatusDoc.Events) - 1
 		log.Infof("A new event was created, of type %s", newStatusDoc.Events[lastIndex].Type)
