@@ -71,9 +71,9 @@ func NewLicenseCtrl(cf *conf.Config, st stor.Store) *LicenseCtrl {
 func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 
 	// TODO: Study if an update of the publication could be conveyed to the user,
-	// so that the client can ask the user if the new version of the publication 
-	// has to be downloaded. 
-	// The status document could include an additional field with the 
+	// so that the client can ask the user if the new version of the publication
+	// has to be downloaded.
+	// The status document could include an additional field with the
 	// publication update date, and the client could compare it with cached data.
 
 	// set license updated
@@ -133,7 +133,7 @@ func (lc *LicenseCtrl) NewStatusDoc(license *stor.LicenseInfo) *StatusDoc {
 func setStatusLinks(statusDoc *StatusDoc, publicBaseUrl, freshLicenseLink string, renewMaxDays int, renewLink string) error {
 	var links []Link
 	var actions []string
-	
+
 	if renewMaxDays == 0 { // no renew or return allowed
 		actions = []string{"license", "register"}
 	} else {
@@ -230,7 +230,10 @@ func (lc *LicenseCtrl) Register(licenseID string, device *DeviceInfo) (*StatusDo
 	license.DeviceCount++
 	now := time.Now().Truncate(time.Second)
 	license.StatusUpdated = &now
-	lc.Store.License().Update(license)
+	if err = lc.Store.License().Update(license); err != nil {
+		log.Errorf("Failed to update the license: %v", err)
+		return nil, err
+	}
 
 	// create an event
 	event := &stor.Event{
@@ -254,7 +257,7 @@ func (lc *LicenseCtrl) Register(licenseID string, device *DeviceInfo) (*StatusDo
 // Renew extends the end date of a license
 func (lc *LicenseCtrl) Renew(licenseID string, device *DeviceInfo, newEnd *time.Time) (*StatusDoc, error) {
 
-	// Get license info
+	// get license info
 	license, err := lc.Store.License().Get(licenseID)
 	if err != nil {
 		return nil, ErrLicenseNotFound
@@ -266,16 +269,38 @@ func (lc *LicenseCtrl) Renew(licenseID string, device *DeviceInfo, newEnd *time.
 		return nil, errors.New("requesting a renew on a license that has no end date")
 	}
 
+	// set the new end date
+	now := time.Now().Truncate(time.Second)
+	if newEnd == nil { // no explicit end date
+		// the extension is based on the current timestamp, not the current end date
+		days := lc.Config.Status.RenewDefaultDays
+		if days <= 0 { // the ultimate default is 7 days
+			days = 7
+		}
+		e := now.AddDate(0, 0, days)
+		newEnd = &e
+	} else if (*newEnd).Before(now) {
+		// the new end date cannot be in the past
+		log.Warning("The new end date is in the past")
+		return nil, errors.New("the new end date is in the past")
+	} else if (*newEnd).Before(*license.End) {
+		// the new end date cannot be before the current end date
+		// this ensures that the license cannot be shortened by a renew request
+		// checking this after verifying that the new end date is not in the past ensures that we test unexpired licenses
+		log.Warning("The new end date is before the current end date")
+		return nil, errors.New("the new end date is before the current end date")
+	}
+
 	// if the provider has explicitly allowed it, expired licenses are reactivated and extended
 	if license.Status == stor.STATUS_EXPIRED && lc.Config.Status.AllowRenewOnExpiredLicenses {
 		license.Status = stor.STATUS_ACTIVE
 	}
+
 	// check that the license is in active state
 	if license.Status != stor.STATUS_ACTIVE {
 		log.Warning("Requesting a renew on a non-active license is prohibited")
 		return nil, errors.New("requesting a renew on a non-active license is prohibited")
 	}
-
 	// check that the device had been registered for this license
 	_, err = lc.Store.Event().GetRegisterByDevice(license.UUID, device.ID)
 	if err != nil {
@@ -283,29 +308,21 @@ func (lc *LicenseCtrl) Renew(licenseID string, device *DeviceInfo, newEnd *time.
 		return nil, errors.New("requesting a renew on a license which has not been registered by this device is prohibited")
 	}
 
-	// set the new end date
-	if newEnd != nil {
-		// consider an explicit end date
-		if license.MaxEnd != nil && newEnd.After(*license.MaxEnd) {
-			log.Println("License extension limit is ", license.MaxEnd.Format(time.RFC822))
-			license.End = license.MaxEnd
-		} else {
-			license.End = newEnd
-		}
-		// no explicit new end date; consider a default end date set in the configuration file
-	} else if lc.Config.Status.RenewDefaultDays != 0 {
-		// the number of days of the extension is based on the current timestamp, not the current end date
-		*license.End = time.Now().AddDate(0, 0, lc.Config.Status.RenewDefaultDays)
-		// the ultimate default is 7 days
+	// check if the new end date exceeds the maximum allowed end date
+	if license.MaxEnd != nil && (*newEnd).After(*license.MaxEnd) {
+		log.Infof("License extension limit is %s", license.MaxEnd.Format(time.RFC822))
+		license.End = license.MaxEnd
 	} else {
-		*license.End = time.Now().AddDate(0, 0, 7)
+		license.End = newEnd
 	}
-	log.Println("License extension; the new end date is ", license.End.Format(time.RFC822))
+	log.Infof("License extension; the new end date is %s", license.End.Format(time.RFC822))
 
 	// update the license in the db
-	now := time.Now().Truncate(time.Second)
 	license.Updated = &now
-	lc.Store.License().Update(license)
+	if err = lc.Store.License().Update(license); err != nil {
+		log.Errorf("Failed to update the license: %v", err)
+		return nil, err
+	}
 
 	// create an event
 	event := &stor.Event{
@@ -364,13 +381,16 @@ func (lc *LicenseCtrl) Return(licenseID string, device *DeviceInfo) (*StatusDoc,
 	// set the new end date
 	license.End = &now
 
-	log.Println("License returned; the new end date is ", license.End.Format(time.RFC822))
+	log.Infof("License returned; the new end date is %s", license.End.Format(time.RFC822))
 
 	// update the license and status document in the db
 	license.Updated = &now
 	license.Status = stor.STATUS_RETURNED
 	license.StatusUpdated = &now
-	lc.Store.License().Update(license)
+	if err = lc.Store.License().Update(license); err != nil {
+		log.Errorf("Failed to update the license: %v", err)
+		return nil, err
+	}
 
 	// create an event
 	event := &stor.Event{
@@ -416,7 +436,7 @@ func (lc *LicenseCtrl) Revoke(licenseID string) (*StatusDoc, error) {
 	now := time.Now().Truncate(time.Second)
 	license.End = &now
 
-	log.Println("License revoked or cancelled; the new end date is ", license.End.Format(time.RFC822))
+	log.Infof("License revoked or cancelled; the new end date is %s", license.End.Format(time.RFC822))
 
 	// update the license and status document in the db
 	license.Updated = &now
@@ -426,7 +446,10 @@ func (lc *LicenseCtrl) Revoke(licenseID string) (*StatusDoc, error) {
 		license.Status = stor.STATUS_REVOKED
 	}
 	license.StatusUpdated = &now
-	lc.Store.License().Update(license)
+	if err = lc.Store.License().Update(license); err != nil {
+		log.Errorf("Failed to update the license: %v", err)
+		return nil, err
+	}
 
 	// create an event
 	event := &stor.Event{

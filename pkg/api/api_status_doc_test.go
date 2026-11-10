@@ -85,8 +85,9 @@ func TestRenew(t *testing.T) {
 		}
 	}
 
-	// calculate now + 13 days
-	newEnd := time.Now().Add(13 * 24 * time.Hour).Format(time.RFC3339)
+	// calculate now + 35 days, which is after the original end date of the license (30 days)
+	// and before the max end date (40 days)
+	newEnd := time.Now().Add(35 * 24 * time.Hour).Format(time.RFC3339)
 
 	// send a renew command
 	path = "/renew/" + inLic.UUID + "?id=1&name=device1&end=" + url.QueryEscape(newEnd)
