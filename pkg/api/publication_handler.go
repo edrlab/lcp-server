@@ -58,8 +58,7 @@ func (a *APICtrl) SearchPublications(w http.ResponseWriter, r *http.Request) {
 			contentType = "application/pdf"
 		case "lcpdf":
 			contentType = "application/pdf+lcp"
-		case "lcpa":
-		case "lcpau":
+		case "lcpa", "lcpau":
 			contentType = "application/audiobook+lcp"
 		case "lcpdi":
 			contentType = "application/divina+lcp"

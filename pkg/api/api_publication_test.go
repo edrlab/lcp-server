@@ -149,116 +149,129 @@ func TestDeletePublication(t *testing.T) {
 }
 
 func TestListPublications(t *testing.T) {
-
 	var inPubs []*PublicationTest
-	// create some publications
 	for i := 0; i < 10; i++ {
-		pub, _ := createPublication(t)
+		pub, response := createPublication(t)
+		if !checkResponseCode(t, http.StatusCreated, response) {
+			t.Fatal("Failed to create publication")
+		}
+		t.Cleanup(func() {
+			checkResponseCode(t, http.StatusOK, deletePublication(t, pub.UUID))
+		})
 		inPubs = append(inPubs, pub)
 	}
 
-	// get the list of publications
-	path := "/publications/"
-	req, _ := http.NewRequest("GET", path, nil)
+	req, err := http.NewRequest("GET", "/publications/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	response := executeRequest(req)
-
-	if checkResponseCode(t, http.StatusOK, response) {
-		var list []PublicationTest
-
-		if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
-			t.Fatal(err)
-		}
-
-		if len(list) != len(inPubs) {
-			t.Error("Failed to get the same list size")
-			return
-		}
-		for idx, outPub := range list {
-			same := comparePublications(inPubs[idx], &outPub)
-			if !same {
-				t.Error("Failed to get the same content back")
-			}
-		}
+	if !checkResponseCode(t, http.StatusOK, response) {
+		return
 	}
 
-	// delete the publications
-	for _, pub := range inPubs {
-		deletePublication(t, pub.UUID)
+	var list []PublicationTest
+	if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(list) != len(inPubs) {
+		t.Fatalf("Expected %d publications, got %d", len(inPubs), len(list))
+	}
+	for idx, outPub := range list {
+		expected := inPubs[len(inPubs)-1-idx]
+		if !comparePublications(expected, &outPub) {
+			t.Errorf("Publication at index %d: expected UUID %s and matching content, got UUID %s", idx, expected.UUID, outPub.UUID)
+		}
 	}
 }
 
 func TestSearchPublications(t *testing.T) {
-
-	var inPubs []*PublicationTest
-	// create some epub publications
-	for i := 0; i < 10; i++ {
-		pub, _ := createPublication(t)
-		inPubs = append(inPubs, pub)
-	}
-	// create an lcpdf publication
-	lastpub := newPublication()
-	lastpub.ContentType = "application/pdf+lcp"
-	data, _ := json.Marshal((lastpub))
-	// create the publication
-	path := "/publications/"
-	req, _ := http.NewRequest("POST", path, bytes.NewReader(data))
-	executeRequest(req)
-
-	// search publications by format
-	formats := []string{"epub", "lcpdf", "lcpa", "lcpau", "lcpdi", "unknown"}
-	for _, format := range formats {
-		path = "/publications/search"
-		req, _ = http.NewRequest("GET", path, nil)
-		q := req.URL.Query()
-		q.Add("format", format)
-		req.URL.RawQuery = q.Encode()
-		response := executeRequest(req)
-
-		switch format {
-		case "epub":
-			if checkResponseCode(t, http.StatusOK, response) {
-				var list []PublicationTest
-
-				if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
-					t.Fatal(err)
-				}
-
-				if len(list) != len(inPubs) {
-					t.Error("Failed to get the same list size")
-					return
-				}
-				for idx, outPub := range list {
-					same := comparePublications(inPubs[idx], &outPub)
-					if !same {
-						t.Error("Failed to get the same content back")
-					}
-				}
-
-			}
-
-		case "lcpdf":
-			var list []PublicationTest
-			if checkResponseCode(t, http.StatusOK, response) {
-				if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
-					t.Fatal(err)
-				}
-				if len(list) != 1 {
-					t.Error("Failed to get an lcpdf back")
-				}
-			}
-		case "lcpa", "lcpau", "lcpdi":
-			checkResponseCode(t, http.StatusOK, response)
-		case "unknown":
-			checkResponseCode(t, http.StatusBadRequest, response)
+	publications := make(map[string][]*PublicationTest)
+	create := func(contentType string) {
+		t.Helper()
+		pub := newPublication()
+		pub.ContentType = contentType
+		data, err := json.Marshal(pub)
+		if err != nil {
+			t.Fatal(err)
 		}
+		req, err := http.NewRequest("POST", "/publications/", bytes.NewReader(data))
+		if err != nil {
+			t.Fatal(err)
+		}
+		response := executeRequest(req)
+		if !checkResponseCode(t, http.StatusCreated, response) {
+			t.Fatal("Failed to create publication")
+		}
+		t.Cleanup(func() {
+			checkResponseCode(t, http.StatusOK, deletePublication(t, pub.UUID))
+		})
+		publications[contentType] = append(publications[contentType], pub)
 	}
 
-	// delete the publications
-	for _, pub := range inPubs {
-		deletePublication(t, pub.UUID)
+	for i := 0; i < 10; i++ {
+		create("application/epub+zip")
 	}
-	deletePublication(t, lastpub.UUID)
+	create("application/pdf")
+	create("application/pdf+lcp")
+	create("application/audiobook+lcp")
 
+	tests := []struct {
+		format      string
+		contentType string
+		status      int
+	}{
+		{"epub", "application/epub+zip", http.StatusOK},
+		{"pdf", "application/pdf", http.StatusOK},
+		{"lcpdf", "application/pdf+lcp", http.StatusOK},
+		{"lcpa", "application/audiobook+lcp", http.StatusOK},
+		{"lcpau", "application/audiobook+lcp", http.StatusOK},
+		{"lcpdi", "application/divina+lcp", http.StatusOK},
+		{"unknown", "", http.StatusBadRequest},
+		{"", "", http.StatusBadRequest},
+	}
+	for _, tt := range tests {
+		t.Run(tt.format, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/publications/search", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.format != "" {
+				q := req.URL.Query()
+				q.Set("format", tt.format)
+				req.URL.RawQuery = q.Encode()
+			}
+			response := executeRequest(req)
+			if !checkResponseCode(t, tt.status, response) || tt.status != http.StatusOK {
+				return
+			}
+
+			var list []PublicationTest
+			if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
+				t.Fatal(err)
+			}
+			expected := publications[tt.contentType]
+			if len(list) != len(expected) {
+				t.Fatalf("Expected %d publications, got %d", len(expected), len(list))
+			}
+			byID := make(map[string]*PublicationTest, len(expected))
+			for _, pub := range expected {
+				byID[pub.UUID] = pub
+			}
+			for _, pub := range list {
+				inPub, ok := byID[pub.UUID]
+				if !ok || !comparePublications(inPub, &pub) {
+					t.Errorf("Unexpected publication: %+v", pub)
+					continue
+				}
+				delete(byID, pub.UUID)
+			}
+			if len(byID) != 0 {
+				t.Errorf("Missing %d expected publications", len(byID))
+			}
+		})
+	}
 }
 
 func TestDeleteNoExistingPublication(t *testing.T) {

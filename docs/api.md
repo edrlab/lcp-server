@@ -171,7 +171,7 @@ You can also:
 1. Get a list of publications via:
 
 - GET {LCPServerURL}/publications/, with `page` and `per_page` pagination parameters.
-- GET {LCPServerURL}/publications/search/ with a `format` parameter taking as a value: `epub`, `pdf`, `lcpdf`, `lcpa` or `lcpdi`. 
+- GET {LCPServerURL}/publications/search/ with a `format` parameter taking as a value: `epub`, `pdf`, `lcpdf`, `lcpa` (or its alias `lcpau`) or `lcpdi`.
 
 2. Fetch, update or delete (the info relative to) a publication via:
 
