@@ -144,7 +144,7 @@ with no payload.
 
 ### CRUD on a publication
 
-You can add a publicationto the LCP Server via:
+You can add a publication to the LCP Server via:
 
 POST {LCPServerURL}/publications/ 
 

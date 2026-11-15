@@ -44,6 +44,9 @@ license:
 status:
   # url of a fresh license, served via a License Gateway 
   # must be templated using {license_id} as parameter
+  # "http://mock" is a special value. If used, the lcpchecker utility doesn't
+  #   try to fetch a fresh license, which simplifies testing the core configuration 
+  #   of the server.
   fresh_license_link: "https://lcp.edrlab.org/freshlicense/{license_id}"
   # max number of days of extension of a license. 
   # if not set ot set to zero, there will be not renew/return links in status documents

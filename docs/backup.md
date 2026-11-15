@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Backup
-nav_order: 6
+nav_order: 8
 ---
 
 This document outlines various backup strategies for the LCP Server MySQL database in production.
