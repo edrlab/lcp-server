@@ -43,24 +43,46 @@ This lightweight content management system has been developed for demonstration 
 
 See https://github.com/edrlab/pubstore. 
 
-## Test Installation
+## Quickstart
 
-Assuming a working Go installation (Go 1.24 or higher) ... 
+Assuming a working Go installation (Go 1.24 or higher), the project builds and runs with Go modules. `GOPATH` is not required.
 
-You can install the different tools in Test mode using:
+The repository includes a default test configuration at `config/default.yaml`. It uses SQLite and the test certificate bundled with the project, so it is suitable for local development only.
+
+Run the test suite:
 
 ```sh
-# fetch, build and install the different packages and their dependencies
-go install github.com/edrlab/lcp-server/cmd/lcpserver@latest
-go install github.com/edrlab/lcp-server/cmd/lcpencrypt@latest
-go install github.com/edrlab/lcp-server/cmd/lcpchecker@latest
+go test ./...
 ```
 
-Before testing, the LCP Server requires proper configuration, expressed is a yaml config file and/or environment variables. [Read the documentation to create one](https://edrlab.github.io/lcp-server/).
+Build the three executables locally:
 
-After install, the LCP Server is launched by the `lcpserver` command. 
+```sh
+mkdir -p build
+go build -o ./build/lcpserver ./cmd/lcpserver
+go build -o ./build/lcpencrypt ./cmd/lcpencrypt
+go build -o ./build/lcpchecker ./cmd/lcpchecker
+```
 
-`lcpencrypt` and `lcpchecker` require command-line arguments. There again, the documentation is a useful read.
+Run the LCP Server from the sources:
+
+```sh
+LCPSERVER_CONFIG=./config/default.yaml go run ./cmd/lcpserver
+```
+
+Or run the built server binary:
+
+```sh
+LCPSERVER_CONFIG=./config/default.yaml ./build/lcpserver
+```
+
+The server listens on `http://localhost:8989`. You can check it with:
+
+```sh
+curl http://localhost:8989/health
+```
+
+`lcpencrypt` and `lcpchecker` are command-line tools; run them with `-help` to list their options.
 
 ### Installing the LCP Server before moving to its Production mode
 
@@ -79,22 +101,23 @@ Option 1: For testing the lcpserver application without compiling it, use:
 
 ```sh
 # From the lcp-server directory
-go run ./cmd/lcpserver/.
+LCPSERVER_CONFIG=./config/default.yaml go run ./cmd/lcpserver
 ```
 
 Option 2: For compiling the lcpserver application, use:
 
 ```sh
-# Compile and create the binary in the Go bin folder
-go build -o $GOPATH/bin/lcpserver  ./cmd/lcpserver
+# Compile and create the binary in the local build folder
+mkdir -p build
+go build -o ./build/lcpserver ./cmd/lcpserver
 # Launch the application
-lcpserver
+LCPSERVER_CONFIG=./config/default.yaml ./build/lcpserver
 ```
 
 Note: on a Linux Alpine server, the addition of the musl tag is required for building lcpserver. 
 
 ```sh
-go build -tags musl -o $GOPATH/bin/lcpencrypt ./cmd/lcpencrypt
+go build -tags musl -o ./build/lcpencrypt ./cmd/lcpencrypt
 ```
 
 Note: the name of the executable is your choice. You can use `lcpserver2` to avoid a clash with the former version of the LCP Server executable. 
@@ -102,14 +125,15 @@ Note: the name of the executable is your choice. You can use `lcpserver2` to avo
 The open-source codebase is provided with **SQLite**, **MySQL** and **PostgresQL** drivers. The default is sqlite. It is up to integrators to replace it by the driver of their choice if sqlite does not fit their needs.
 
 This is achieved by adding a tag at build time: 
-> go build -tags MYSQL -o $GOPATH/bin/lcpserver2  ./cmd/lcpserver
+> go build -tags MYSQL -o ./build/lcpserver ./cmd/lcpserver
 
 Compile lcpencrypt and lcpchecker using: 
 
 ```sh
-# Compile and create the binary in the Go bin folder
-go build -o $GOPATH/bin/lcpencrypt  ./cmd/lcpencrypt
-go build -o $GOPATH/bin/lcpchecker  ./cmd/lcpchecker
+# Compile and create the binaries in the local build folder
+mkdir -p build
+go build -o ./build/lcpencrypt ./cmd/lcpencrypt
+go build -o ./build/lcpchecker ./cmd/lcpchecker
 ```
 
 # More

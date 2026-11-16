@@ -1,0 +1,36 @@
+# Local test configuration for the LCP Server.
+# Do not use these credentials, keys, or URLs in production.
+
+log_level: "info"
+public_base_url: "http://localhost:8989"
+port: 8989
+dsn: "sqlite3://./lcp-server.db"
+
+access:
+  username: "lcp_api_user"
+  password: "lcp_api_password"
+
+certificate:
+  cert: "config/cert-edrlab-test.pem"
+  private_key: "config/privkey-edrlab-test.pem"
+
+license:
+  provider: "http://localhost:8989"
+  profile: "http://readium.org/lcp/basic-profile"
+  hint_link: "http://localhost:8989/help/{license_id}"
+
+status:
+  fresh_license_link: "http://localhost:8989/licenses/{license_id}"
+  allow_renew_on_expired_licenses: true
+  renew_default_days: 7
+  renew_max_days: 40
+  renew_link: "http://localhost:8989/renew/{license_id}"
+
+dashboard:
+  excessive_sharing_threshold: 5
+  limit_to_last_12_months: true
+
+jwt:
+  secret_key: "local-development-secret-change-me"
+  admin:
+    admin: "supersecret"
