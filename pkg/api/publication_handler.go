@@ -5,9 +5,11 @@
 package api
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
 	"net/url"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -197,6 +199,8 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	licenseDocumentChanged := publicationChangesLicenseDocument(publication, pubUpdates)
+
 	// set updated fields
 	publication.AltID = pubUpdates.AltID
 	publication.Provider = pubUpdates.Provider
@@ -216,10 +220,62 @@ func (a *APICtrl) UpdatePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if licenseDocumentChanged {
+		if err := a.touchLicensesForPublicationUpdate(publication.UUID); err != nil {
+			render.Render(w, r, ErrServer(err))
+			return
+		}
+	}
+
 	if err := render.Render(w, r, NewPublicationResponse(publication)); err != nil {
 		render.Render(w, r, ErrRender(err))
 		return
 	}
+}
+
+func publicationChangesLicenseDocument(current, updates *stor.Publication) bool {
+	return current.Title != updates.Title ||
+		!bytes.Equal(current.EncryptionKey, updates.EncryptionKey) ||
+		current.Href != updates.Href ||
+		current.ContentType != updates.ContentType ||
+		current.Size != updates.Size ||
+		current.Checksum != updates.Checksum
+}
+
+func (a *APICtrl) touchLicensesForPublicationUpdate(publicationID string) error {
+	licenses, err := a.Store.License().FindByPublication(publicationID)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().Truncate(time.Second)
+
+	for i := range *licenses {
+		licenseInfo := &(*licenses)[i]
+
+		// Important: a publication update changes the License Document,
+		// not the license status. If StatusUpdated is nil, NewStatusDoc()
+		// falls back to Updated for updated.status. Make the initial status
+		// timestamp explicit so only updated.license moves forward.
+		if licenseInfo.StatusUpdated == nil {
+			statusUpdated := licenseInfo.CreatedAt
+			licenseInfo.StatusUpdated = &statusUpdated
+		}
+
+		licenseInfo.Updated = &now
+
+		if err := a.Store.License().Update(licenseInfo); err != nil {
+			return err
+		}
+	}
+
+	log.Infof(
+		"Publication %s changed; marked %d related licenses as updated",
+		publicationID,
+		len(*licenses),
+	)
+
+	return nil
 }
 
 // DeletePublication removes an existing Publication from the database.
