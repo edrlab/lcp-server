@@ -136,6 +136,12 @@ func Init(dsn string) (Store, error) {
 	// add parameters specific to the dialect
 	cnx = addDialectSpecificParams(cnx, dialect)
 
+	// PostgreSQL driver expects a full URI (postgres://...); others use the fragment after "://"
+	dialectorDSN := cnx
+	if dialect == "postgres" {
+		dialectorDSN = dialect + "://" + cnx
+	}
+
 	// database logger
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
@@ -147,7 +153,7 @@ func Init(dsn string) (Store, error) {
 		},
 	)
 
-	db, err := gorm.Open(GormDialector(cnx), &gorm.Config{
+	db, err := gorm.Open(GormDialector(dialectorDSN), &gorm.Config{
 		Logger: newLogger,
 	})
 	if err != nil {
